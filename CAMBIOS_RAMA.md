@@ -45,6 +45,11 @@ Se extrajo lógica pura (antes encerrada en Composables y en el ViewModel) a hel
 
 > Verificado localmente: `./gradlew testDebugUnitTest` → **BUILD SUCCESSFUL, 24 pruebas, 0 fallos**; `./gradlew assembleDebug` → **BUILD SUCCESSFUL**.
 
+### 9. Insets del reproductor (reportado en dispositivo)
+Con `targetSdk 37` la app es *edge-to-edge*, así que el contenido se dibuja bajo la barra de estado/cámara.
+- `gui/FullScreenPlayer.kt`: se agregó `windowInsetsPadding(WindowInsets.safeDrawing)`. El header (flecha, "Reproduciendo desde", ⋮) ya no queda bajo la barra de estado ni el *cutout* de la cámara, y el panel inferior no queda bajo la barra de navegación.
+- `MainActivity.kt` (`BottomPlayerBar`): `navigationBarsPadding()` para que el mini-reproductor no quede tapado por la barra de gestos.
+
 ---
 
 ## Checklist de prueba sugerido (en dispositivo)
@@ -57,6 +62,7 @@ Se extrajo lógica pura (antes encerrada en Composables y en el ViewModel) a hel
 - [ ] **Buscar** y tocar un **artista** → abre el detalle del artista.
 - [ ] Pestaña **Carpetas** → lista carpetas; tocar una muestra sus canciones y permite reproducir/aleatorio.
 - [ ] Las **listas de reproducción** existentes siguen cargando tras el cambio de formato.
+- [ ] En el reproductor a pantalla completa, el header (flecha, "Reproduciendo desde", ⋮) queda **debajo** de la cámara/barra de estado, y el mini-reproductor no queda tapado por la barra de gestos.
 
 ---
 
