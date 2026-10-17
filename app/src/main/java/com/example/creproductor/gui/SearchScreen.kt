@@ -54,6 +54,8 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.creproductor.SongItem
 import com.example.creproductor.data.Song
+import com.example.creproductor.data.SongOrganizer
+
 enum class SearchSubTab(val title: String){
     ALL("Todas"),
     SONGS("Canciones"),
@@ -98,7 +100,11 @@ fun SearchOverlayScreen(
             song.title.contains(searchQuery, ignoreCase = true) ||
             song.artist.contains(searchQuery, ignoreCase = true) ||
             song.album.contains(searchQuery, ignoreCase = true)
-        }
+        }.sortedWith(
+            compareBy <Song> { it.album }
+                .thenBy { if (it.trackNumber > 0) it.trackNumber else Int.MAX_VALUE }
+                .thenBy { it.title }
+        )
     }
 
     val matchingAlbums = remember (searchQuery, allSongs){
@@ -144,7 +150,12 @@ fun SearchOverlayScreen(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(
-                        onSearch = {keyboardController?.hide()}
+                        onSearch = {
+                            if (searchQuery.isNotBlank()){
+                                onAddSearchHistory(searchQuery)
+                            }
+                            keyboardController?.hide()
+                        }
                     ),
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -248,9 +259,12 @@ fun SearchOverlayScreen(
                         )
                     }
                     items(visibleSongs, key = { "song_${it.id}"}){ song ->
+                        val isSelected = song.id == currentSongId
+
                         SongItem(
                             song = song,
-                            isPlaying = isPlaying,
+                            isSelected = isSelected,
+                            isPlaying = isPlaying && isSelected,
                             onClick = {
                                 if (searchQuery.isNotBlank()){
                                     onAddSearchHistory(searchQuery)
@@ -308,10 +322,11 @@ fun SearchOverlayScreen(
                                         if (searchQuery.isNotBlank()){
                                             onAddSearchHistory(searchQuery)
                                         }
-                                        onAlbumClick(
-                                            albumSong.album,
-                                            allSongs.filter { it.album == albumSong.album }
+
+                                        val sortedAlbumSongs = SongOrganizer.getAlbumSongsSorted(
+                                            allSongs.filter { it.album.equals(albumSong.album, ignoreCase = true)}
                                         )
+                                        onAlbumClick(albumSong.album, sortedAlbumSongs)
                                     }
                                 )
                             }
@@ -345,10 +360,14 @@ fun SearchOverlayScreen(
                             subtitle = "$artistAlbumsCount álbumes •  $artistSongsCounts canciones",
                             imageModel = song.albumArtUri,
                             onClick = {
-                                onArtistClick(
-                                    song.artist,
+
+                                if (searchQuery.isNotBlank()){
+                                    onAddSearchHistory(searchQuery)
+                                }
+                                val sortedArtistSongs = SongOrganizer.getArtisSorted(
                                     allSongs.filter { it.artist.equals(song.artist, ignoreCase = true) }
                                 )
+                                onArtistClick(song.artist, sortedArtistSongs)
                             }
                         )
                     }

@@ -358,7 +358,7 @@ private fun QuickSelectTrackItem(
             overflow = TextOverflow.Ellipsis
         )
 
-        val artistText = if (song.artist.isBlank() || song.artist.equals("unknown", ignoreCase = true)){
+        val artistText = if (song.artist.isBlank() || song.artist.equals("<unknown>", ignoreCase = true) || song.artist.equals("unknown", ignoreCase = true)){
             "Artista desconocido"
             }else{
                 song.artist
@@ -367,7 +367,7 @@ private fun QuickSelectTrackItem(
             Text(
                 text = "$artistText • ${formatDuration(song.duration)}",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant,
                 overflow = TextOverflow.Ellipsis
             )
         }

@@ -79,4 +79,19 @@ object SongOrganizer {
             artist.contains(query, ignoreCase = true) ||
             album.contains(query, ignoreCase = true)
     }
+
+    fun getAlbumSongsSorted(albumSongs: List<Song>): List<Song>{
+        return albumSongs.sortedWith(
+            compareBy<Song> { if (it.trackNumber > 0) it.trackNumber else Int.MAX_VALUE }
+                .thenBy { it.title }
+        )
+    }
+
+    fun getArtisSorted(artistSong: List<Song>): List<Song>{
+        return artistSong.sortedWith(
+            compareBy<Song> { it.album }
+                .thenBy { if (it.trackNumber > 0) it.trackNumber else Int.MAX_VALUE }
+                .thenBy { it.title }
+        )
+    }
 }

@@ -360,6 +360,8 @@ fun MainScreen(
                                 )
                                 AppTab.SONGS -> SongListScreen(
                                     songs = filteredSongs,
+                                    currentSongId = currentSong?.id,
+                                    isPlaying = isPlaying,
                                     onSongClick = {song ->
                                         viewModel.playSong(song, customQueue = filteredSongs)
                                     },

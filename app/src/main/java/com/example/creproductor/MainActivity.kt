@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.ImageLoader
@@ -240,6 +241,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun SongListScreen(
     songs: List<Song>,
+    currentSongId: Long? = null,
+    isPlaying: Boolean = false,
     onSongClick: (Song) -> Unit,
     onEditSong: (Song) -> Unit
 ) {
@@ -249,8 +252,11 @@ fun SongListScreen(
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         items(items = songs, key = { it.id }) { song ->
+            val isSelected = song.id == currentSongId
             SongItem(
                 song = song,
+                isSelected = isSelected,
+                isPlaying = isSelected && isPlaying,
                 onClick = { onSongClick(song) },
                 onEditClick = { onEditSong(song) }
             )
@@ -315,7 +321,8 @@ fun SongItem(
                 Text(
                     text = song.title,
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -330,7 +337,7 @@ fun SongItem(
                 Text(
                     text = "$artistName • ${formatDuration(song.duration)}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
