@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -274,13 +275,25 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
      * El `mediaId` es el id de la canción porque el servicio lo usa para saber
      * si el tema actual es favorito (ver `MusicService.toggleCurrentFavorite`).
      */
-    private fun buildMediaItems(queue: List<Song>): List<MediaItem> =
-        queue.map { song ->
+    private fun buildMediaItems(queue: List<Song>): List<MediaItem> {
+        var porRuta = 0
+        val items = queue.map { song ->
+            val uri = playbackUri(song)
+            if (uri.scheme == "file") porRuta++
             MediaItem.Builder()
                 .setMediaId(song.id.toString())
-                .setUri(playbackUri(song))
+                .setUri(uri)
                 .build()
         }
+        // Si la ruta no es legible, la app cae a content:// sin avisar y el
+        // ahorro de `playbackUri` no se aplica; esta línea lo deja claro.
+        Log.i(
+            "DezzSeek",
+            "cola de ${queue.size} pistas: $porRuta por file://, " +
+                "${queue.size - porRuta} por content://"
+        )
+        return items
+    }
 
     /**
      * URI con el que se le entrega el archivo a ExoPlayer.

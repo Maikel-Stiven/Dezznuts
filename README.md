@@ -111,14 +111,24 @@ Los archivos se entregan por **ruta directa** (`file://`) cuando se pueden leer,
 `content://` de MediaStore: cada *seek* fuera del búfer reabre la fuente, y `content://` añade una
 llamada al proveedor de medios en cada apertura.
 
-Un límite que **no** se puede tocar desde el código: si el FLAC no trae el bloque `SEEKTABLE`, Media3
-localiza el fotograma con una búsqueda binaria sobre el archivo (`FlacBinarySearchSeeker`). Se arregla
-**en el archivo**, sin recodificar y sin pérdida:
+Un límite que **no** se puede tocar desde el código, y la causa medida de que el *seek* en FLAC tarde
+más que en MP3: el **índice del propio archivo**. `FlacSeekTableSeekMap` devuelve las entradas del
+bloque `SEEKTABLE` tal cual, y ExoPlayer empieza a leer en la entrada **anterior** al punto pedido,
+descartando todo el audio intermedio. La tabla que escribe `flac` por defecto tiene un punto cada
+**10 s**, así que cada salto lee y tira hasta 10 s de audio (~2,4 MB). MP3 no lo sufre porque su
+índice es mucho más fino.
+
+Se arregla **en el archivo**, sin recodificar y sin pérdida:
 
 ```bash
-metaflac --list archivo.flac | grep -i seektable   # ¿lo trae?
-metaflac --add-seekpoint=10s archivo.flac          # se lo añade
+metaflac --list "cancion.flac" | grep -i seektable   # ¿lo trae y cada cuánto?
+metaflac --add-seekpoint=1s "cancion.flac"           # tabla densa (1 punto/s)
+
+# Toda la biblioteca de una vez:
+find /ruta/a/musica -name '*.flac' -print0 | xargs -0 metaflac --add-seekpoint=1s
 ```
+
+Verificado: el **MD5 del audio no cambia** y el archivo ocupa lo mismo (se consume el `PADDING`).
 
 Y si aun así "se siente lento", no hay que suponer: `PlaybackDiagnostics` imprime una línea de tiempo
 en logcat con lo que tarda cada fase (lectura, decodificador, `AudioTrack` y el instante real en que

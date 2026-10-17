@@ -4,6 +4,7 @@ package com.example.creproductor.service
 
 import android.util.Log
 import androidx.annotation.OptIn
+import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
@@ -269,12 +270,13 @@ object PlaybackDiagnostics {
         }
 
         /**
-         * Inicios de lectura durante un *seek*.
+         * Desde dónde pide el reproductor la siguiente carga durante un *seek*.
          *
-         * Esta es la línea que delata la **búsqueda binaria** del extractor de
-         * FLAC: si el archivo no trae bloque `SEEKTABLE`, aparecen varias
-         * lecturas en offsets dispersos (adelante, atrás, por el medio…) hasta
-         * localizar el fotograma. Con `SEEKTABLE` hay una sola lectura.
+         * Ojo: es la posición **solicitada**, no el offset de bytes en el que el
+         * extractor empieza a leer de verdad. ExoPlayer rellena el `dataSpec` del
+         * evento *antes* de abrir la fuente, así que su `position` siempre vale 0
+         * y no sirve como diagnóstico (se comprobó en
+         * `ProgressiveMediaPeriod.ExtractingLoadable.load()`).
          */
         override fun onLoadStarted(
             eventTime: AnalyticsListener.EventTime,
@@ -282,10 +284,13 @@ object PlaybackDiagnostics {
             mediaLoadData: MediaLoadData
         ) {
             if (inSeekWindow()) {
-                log(
-                    "inicio de lectura en el byte ${loadEventInfo.dataSpec.position} " +
-                        "(tarea ${loadEventInfo.loadTaskId})"
-                )
+                val startTimeMs = mediaLoadData.mediaStartTimeMs
+                val desde = if (startTimeMs == C.TIME_UNSET) {
+                    "posición desconocida"
+                } else {
+                    "$startTimeMs ms"
+                }
+                log("carga solicitada desde $desde (tarea ${loadEventInfo.loadTaskId})")
             }
         }
 

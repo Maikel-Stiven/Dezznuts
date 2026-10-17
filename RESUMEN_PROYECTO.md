@@ -98,9 +98,34 @@ streaming) por unos de reproducción local:
 | `bufferForPlaybackMs` | `2500` | `1000` | Tras un *seek*, ExoPlayer espera a tener esa cantidad antes de reanudar. |
 | `bufferForPlaybackAfterRebufferMs` | `5000` | `2000` | Igual, tras un corte o una pausa larga. |
 
-Si el FLAC no incluye un bloque `SEEKTABLE`, el extractor de Media3 hace una búsqueda binaria sobre
-el archivo (`FlacBinarySearchSeeker`) para localizar el fotograma; eso es propio del formato y no se
-puede ajustar desde la app (con `SEEKTABLE` usa `FlacSeekTableSeekMap`, que es inmediato).
+### Por qué el *seek* en FLAC tarda más que en MP3 (causa medida)
+
+Medido con `PlaybackDiagnostics`: un *seek* que cae **dentro** de la ventana buffereada tarda ~170 ms
+(igual en FLAC que en MP3); uno que cae **fuera** tarda 1-2 s en FLAC y 0,2-0,4 s en MP3. La
+diferencia está en **cómo indexa cada formato**, no en la app:
+
+- **MP3** (Xing/Info o CBR): el offset se calcula por tabla o por aritmética → inmediato.
+- **FLAC con `SEEKTABLE`**: `FlacSeekTableSeekMap` devuelve las entradas de la tabla tal cual, y
+  ExoPlayer empieza a leer en la entrada **anterior** al punto pedido: todo el audio intermedio se lee
+  y se **descarta**. Con la tabla que escribe `flac` por defecto (un punto cada **10 s**, verificado:
+  438272 muestras) eso son hasta 10 s de audio por salto, unos **2,4 MB**, que es exactamente lo que
+  aparece en la traza (`lectura que tardó 1576 ms (2456043 bytes)`).
+- **FLAC sin `SEEKTABLE`**: Media3 recurre a una búsqueda binaria sobre el archivo
+  (`FlacBinarySearchSeeker`), que también es lenta.
+
+**Arreglo: densificar la tabla en el archivo.** No se recodifica nada y no hace falta tocar la app:
+
+```bash
+# Un archivo
+metaflac --add-seekpoint=1s cancion.flac
+
+# Toda la biblioteca
+find /ruta/a/musica -name '*.flac' -print0 | xargs -0 metaflac --add-seekpoint=1s
+```
+
+Verificado en local: un archivo de 120 s pasa de **12 a 120 puntos**, el **MD5 del audio no cambia**
+(es solo metadato) y el archivo ocupa exactamente lo mismo, porque se consume el bloque `PADDING` que
+`flac` deja reservado. El descarte baja de 10 s a 1 s, así que el salto se queda en ~200-300 ms.
 
 ### Ruta de acceso al archivo (`file://` en vez de `content://`)
 
