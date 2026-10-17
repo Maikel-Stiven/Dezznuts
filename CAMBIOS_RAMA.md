@@ -33,16 +33,30 @@ Base: `main` @ `81f2aa4`.
 - `AndroidManifest.xml`: se quitó el permiso `INTERNET` duplicado.
 - `app/proguard-rules.pro`: se creó el archivo que `app/build.gradle.kts` referenciaba y no existía (con reglas `keep` para jaudiotagger).
 
+### 7. Refactor para poder probar
+Se extrajo lógica pura (antes encerrada en Composables y en el ViewModel) a helpers reutilizables:
+- `data/PlaylistSerializer.kt`: serialización de listas, **codificando los campos** para que nombres con `;`, `|` o `,` ya no corrompan los datos (antes sí lo hacían).
+- `data/SongOrganizer.kt`: agrupaciones (álbum/artista/género/carpeta) y búsqueda, como funciones puras y genéricas.
+- `MusicViewModel`, `GridScreens` y `ArtistInterfaceScreen` ahora usan esos helpers (mismo comportamiento, menos duplicación).
+
+### 8. Pruebas unitarias + CI
+- 6 archivos de test en `app/src/test/...` (**24 pruebas**): serialización de playlists, `YoutubeTitleCleaner`, `fixEncoding`, `RepeatMode.next`, agrupaciones/búsqueda y `formatDuration`.
+- `.github/workflows/android.yml`: CI que corre las pruebas y compila el APK en cada push/PR.
+
+> Verificado localmente: `./gradlew testDebugUnitTest` → **BUILD SUCCESSFUL, 24 pruebas, 0 fallos**; `./gradlew assembleDebug` → **BUILD SUCCESSFUL**.
+
 ---
 
 ## Checklist de prueba sugerido (en dispositivo)
 
-- [ ] La app **compila** (`./gradlew assembleDebug`).
-- [ ] Botón **Aleatorio** del reproductor: al activarlo, la siguiente canción es aleatoria y el icono queda resaltado; persiste al reabrir el reproductor.
+- [x] La app **compila** (`./gradlew assembleDebug`) — verificado.
+- [x] Las **pruebas unitarias** pasan (`./gradlew testDebugUnitTest`) — 24/24 verificado.
+- [ ] Botón **Aleatorio** del reproductor: al activarlo, la siguiente canción es aleatoria y el icono queda resaltado.
 - [ ] Botón de **Favorito en la notificación**: cambia el ícono y, al abrir la app, la canción aparece/desaparece de Favoritos.
 - [ ] **Buscar** y tocar un **álbum** → abre el detalle del álbum.
 - [ ] **Buscar** y tocar un **artista** → abre el detalle del artista.
 - [ ] Pestaña **Carpetas** → lista carpetas; tocar una muestra sus canciones y permite reproducir/aleatorio.
+- [ ] Las **listas de reproducción** existentes siguen cargando tras el cambio de formato.
 
 ---
 

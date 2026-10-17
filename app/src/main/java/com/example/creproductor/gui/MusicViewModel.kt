@@ -26,7 +26,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import androidx.core.content.edit
 import com.example.creproductor.data.Playlist
+import com.example.creproductor.data.PlaylistSerializer
 import com.example.creproductor.data.RepeatMode
+import com.example.creproductor.data.SongOrganizer
 import com.example.creproductor.data.next
 
 sealed interface UiState {
@@ -142,10 +144,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                 SongFilter.FAVORITES -> song.isFavorite
                 SongFilter.RECENT -> true
             }
-            val matchesQuery = query.isBlank() ||
-                    song.title.contains(query, ignoreCase = true) ||
-                    song.artist.contains(query, ignoreCase = true) ||
-                    song.album.contains(query, ignoreCase = true)
+            val matchesQuery = SongOrganizer.matchesQuery(song.title, song.artist, song.album, query)
             matchesFilter && matchesQuery
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
@@ -536,27 +535,12 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     }
 
     private fun savePlaylists(list: List<Playlist>){
-        val serialized = list.joinToString (";") { p ->
-            "${p.id}|${p.name}|${p.coverUri ?: ""}|${p.songIds.joinToString(",")}"
-        }
-        prefs.edit {putString("saved_playlist", serialized)}
+        prefs.edit { putString("saved_playlist", PlaylistSerializer.encode(list)) }
     }
 
     private fun loadPlaylist(){
         val str = prefs.getString("saved_playlist", "") ?: ""
-        if (str.isNotBlank()){
-            val parsed =str.split(";").mapNotNull { line ->
-                val parts = line.split("|")
-                if (parts.size >= 4){
-                    val id = parts[0]
-                    val name = parts[1]
-                    val cover = parts[2].ifBlank { null }
-                    val songIds = parts[3].split(",").mapNotNull { it.toLongOrNull() }
-                    Playlist(id = id, name = name, coverUri = cover, songIds = songIds)
-                }else null
-            }
-            _playlists.value = parsed
-        }
+        _playlists.value = PlaylistSerializer.decode(str)
     }
 
 

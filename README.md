@@ -130,6 +130,14 @@ Dezznuts/
 
 El APK de depuración quedará en `app/build/outputs/apk/debug/`.
 
+### Pruebas
+
+```bash
+./gradlew testDebugUnitTest   # pruebas unitarias (JUnit)
+```
+
+Cubren la lógica pura del proyecto: serialización de listas de reproducción, limpieza de títulos tipo YouTube, reparación de codificación de texto, agrupaciones/búsqueda y formato de duración. Además hay CI (`.github/workflows/android.yml`) que corre las pruebas y compila el APK en cada push/PR.
+
 > No existe `local.properties` en el repo (está en `.gitignore`); Android Studio lo genera al abrir el proyecto.
 
 ---

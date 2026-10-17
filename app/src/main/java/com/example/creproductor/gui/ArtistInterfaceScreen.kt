@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.creproductor.data.ArtistImageFetcher
 import com.example.creproductor.data.Song
+import com.example.creproductor.data.SongOrganizer
 import com.example.creproductor.formatDuration
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
@@ -91,13 +92,7 @@ fun ArtistDetailScreen (
     }
 
     val albumsMap = remember (artistSongs){
-        artistSongs
-            .filter {
-                it.album.isNotBlank() &&
-                        !it.album.equals("<unknown>", ignoreCase = true) &&
-                        !it.album.equals("<unknown>" , ignoreCase = true)
-            }
-            .groupBy { it.album }
+        SongOrganizer.groupByAlbum(artistSongs) { it.album }
     }
 
     val statsText = remember (artistSongs) {

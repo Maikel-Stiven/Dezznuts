@@ -1,0 +1,27 @@
+name: Android CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Pruebas unitarias
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      - name: Compilar APK de depuración
+        run: ./gradlew assembleDebug --stacktrace

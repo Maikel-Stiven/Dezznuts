@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.creproductor.data.ArtistImageFetcher
 import com.example.creproductor.data.Song
+import com.example.creproductor.data.SongOrganizer
 import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
@@ -71,13 +72,7 @@ fun AlbumsGridScreen(
 ){
 
     val albumsMap = remember (songs){
-        songs
-            .filter {
-                it.album.isNotBlank() &&
-                        !it.album.equals("<unknown>", ignoreCase = true) &&
-                        !it.album.equals("unknown", ignoreCase = true)
-            }
-            .groupBy { it.album }
+        SongOrganizer.groupByAlbum(songs) { it.album }
     }
 
     if (albumsMap.isEmpty()){
@@ -186,13 +181,7 @@ fun GenresGridScreen(
 ){
 
     val genresMap = remember (songs) {
-        songs.groupBy { song ->
-            if (song.genre.isBlank() || song.genre.equals("<unknown>", ignoreCase = true)){
-                "Desconocido"
-            }else{
-                song.genre
-            }
-        }
+        SongOrganizer.groupByGenre(songs) { it.genre }
     }
 
     if (genresMap.isEmpty()){
@@ -281,13 +270,7 @@ fun ArtistsListScreen(
     val context = LocalContext.current
 
     val artistsMap = remember(songs) {
-        songs.groupBy { song ->
-            if (song.artist.isBlank() || song.artist.equals("<unknown>", ignoreCase = true)){
-                "Artista desconocido"
-            }else{
-                song.artist
-            }
-        }
+        SongOrganizer.groupByArtist(songs) { it.artist }
     }
 
     if (artistsMap.isEmpty()){
@@ -400,14 +383,7 @@ fun FoldersListScreen(
     onFolderClick: (folderName: String, folderSongs: List<Song>) -> Unit = { _, _ -> }
 ){
     val foldersMap = remember(songs) {
-        songs.groupBy { song ->
-            val path = song.path
-            if (path.isBlank()) {
-                "Sin carpeta"
-            } else {
-                path.substringBeforeLast('/', missingDelimiterValue = "Sin carpeta").ifBlank { "/" }
-            }
-        }
+        SongOrganizer.groupByFolder(songs) { it.path }
     }
 
     if (foldersMap.isEmpty()){
