@@ -21,6 +21,7 @@ sealed class DrawerMenuItem(
     object SearchDuplicates : DrawerMenuItem("Buscar duplicados o audios de whatsapp", Icons.Default.FindInPage)
     object AudioCutter : DrawerMenuItem("Cortador de audio", Icons.Default.ContentCut)
     object SleepTimer: DrawerMenuItem("Temporizador", Icons.Default.Timer)
+    object ClearImageCache : DrawerMenuItem("Borrar caché de imágenes", Icons.Default.DeleteSweep)
     object About: DrawerMenuItem("Acerca de", Icons.Default.Info)
     object  SendFeedback : DrawerMenuItem("Enviar comentarios", Icons.AutoMirrored.Filled.HelpOutline)
 }
@@ -62,6 +63,7 @@ fun AppDrawerContent(
                     DrawerMenuItem.SearchDuplicates,
                     DrawerMenuItem.AudioCutter,
                     DrawerMenuItem.SleepTimer,
+                    DrawerMenuItem.ClearImageCache,
                     DrawerMenuItem.About,
                     DrawerMenuItem.SendFeedback
                 )

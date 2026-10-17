@@ -195,6 +195,16 @@ object ArtistImageFetcher {
     }
 
     /**
+     * Tamaño en bytes que ocupan las imágenes de artistas ya descargadas.
+     * Se usa para mostrarlo en el diálogo de "borrar caché".
+     */
+    fun artistImageCacheSize(context: Context): Long {
+        val dir = File(context.filesDir, IMAGE_DIR)
+        val files = dir.listFiles() ?: return 0L
+        return files.sumOf { if (it.isFile) it.length() else 0L }
+    }
+
+    /**
      * Borra la caché de imágenes de artistas (archivos descargados + URLs recordadas).
      * Pensado para la futura opción de "limpiar caché" desde los ajustes.
      */
