@@ -92,7 +92,12 @@ fun ArtistDetailScreen (
     }
 
     val albumsMap = remember (artistSongs){
-        SongOrganizer.groupByAlbum(artistSongs) { it.album }
+        SongOrganizer.groupByAlbum(
+            items = artistSongs,
+            albumOf = {it.album},
+            trackNumberOf = {it.trackNumber},
+            titleOf = {it.title}
+        )
     }
 
     val statsText = remember (artistSongs) {

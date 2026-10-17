@@ -46,6 +46,7 @@ import com.example.creproductor.gui.UiState
 import com.example.creproductor.ui.theme.DEZZNUTStheme
 import kotlinx.coroutines.launch
 import coil.Coil
+import com.example.creproductor.gui.PlayingEqualizerIcon
 
 
 class MainActivity : ComponentActivity() {
@@ -267,12 +268,20 @@ fun formatDuration(durationMs: Long): String{
 @Composable
 fun SongItem(
     song: Song,
+    isSelected: Boolean = false,
+    isPlaying: Boolean = false,
     onClick: () -> Unit,
     onEditClick: () -> Unit
 ) {
+    val backgroundColor = if (isSelected){
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+    }else{
+        MaterialTheme.colorScheme.background
+    }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(backgroundColor)
                 .clickable(onClick = onClick)
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -294,7 +303,7 @@ fun SongItem(
                     Icon(
                         imageVector = Icons.Default.MusicNote,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(26.dp)
                     )
                 }
@@ -324,6 +333,14 @@ fun SongItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            if (isSelected){
+                PlayingEqualizerIcon(
+                    color = MaterialTheme.colorScheme.primary,
+                    isPlaying = isPlaying,
+                    modifier = Modifier.padding(end = 6.dp)
                 )
             }
 

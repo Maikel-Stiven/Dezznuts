@@ -9,6 +9,7 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import androidx.core.content.edit
 
 object ArtistImageFetcher {
 
@@ -60,7 +61,7 @@ object ArtistImageFetcher {
                     val photoUrl = firstItem.optString("picture_big", null)
 
                     if (!photoUrl.isNullOrBlank()){
-                        prefs.edit().putString(cleanArtist, photoUrl).apply()
+                        prefs.edit { putString(cleanArtist, photoUrl) }
                         return@withContext photoUrl
                     }
                 }

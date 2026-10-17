@@ -72,7 +72,12 @@ fun AlbumsGridScreen(
 ){
 
     val albumsMap = remember (songs){
-        SongOrganizer.groupByAlbum(songs) { it.album }
+        SongOrganizer.groupByAlbum(
+            items = songs,
+            albumOf = {it.album},
+            trackNumberOf = {it.trackNumber},
+            titleOf = {it.title}
+        )
     }
 
     if (albumsMap.isEmpty()){

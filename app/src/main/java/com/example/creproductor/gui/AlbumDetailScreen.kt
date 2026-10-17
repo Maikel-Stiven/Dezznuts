@@ -67,7 +67,7 @@ fun AlbumDetailScreen(
     albumSongs: List<Song>,
     currentSongId: Long? = null,
     isPlaying: Boolean = false,
-    onSongClick: (Song) -> Unit,
+    onSongClick: (song: Song, albumQueue: List<Song>) -> Unit,
     onPlayAllClick: () -> Unit,
     onShuffleClick: () -> Unit,
     onBackClick: () -> Unit,
@@ -263,7 +263,7 @@ fun AlbumDetailScreen(
                     song = song,
                     isSelected = isSelected,
                     isPlaying = isSelected && isPlaying,
-                    onClick = {onSongClick(song)},
+                    onClick = {onSongClick(song, albumSongs)},
                     onEditClick = {onEditSongClick(song)}
                 )
             }

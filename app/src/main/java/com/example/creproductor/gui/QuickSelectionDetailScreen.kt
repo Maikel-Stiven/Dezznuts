@@ -55,7 +55,7 @@ fun QuickSelectDetailScreen(
     categorySongs: List<Song>,
     currentSongId: Long? = null,
     isPlaying: Boolean =false,
-    onSongClick: (Song) -> Unit,
+    onSongClick: (song: Song, categoryQueue: List<Song>) -> Unit,
     onPlayAllClick: () -> Unit,
     onShuffleClick: () -> Unit,
     onBackClick: () -> Unit,
@@ -189,7 +189,7 @@ fun QuickSelectDetailScreen(
                     song = song,
                     isSelected = isSelected,
                     isPlaying = isSelected && isPlaying,
-                    onClick = {onSongClick(song)},
+                    onClick = {onSongClick(song, categorySongs)},
                     onEditClick = {onEditSongClick(song)}
                 )
             }

@@ -70,8 +70,11 @@ fun SearchOverlayScreen(
     searchHistory: List<String>,
     onHistoryItemClick: (String) -> Unit,
     onDeleteHistoryItem: (String) -> Unit,
+    onAddSearchHistory: (String) -> Unit,
     allSongs: List<Song>,
-    onSongClick: (Song) -> Unit,
+    currentSongId: Long? = null,
+    isPlaying: Boolean = false,
+    onSongClick: (Song, List<Song>) -> Unit,
     onCloseSearch: () -> Unit,
     onAlbumClick: (albumName: String, albumSongs: List<Song>) -> Unit = { _, _ -> },
     onArtistClick: (artistName: String, artistSongs: List<Song>) -> Unit = { _, _ -> }
@@ -247,10 +250,13 @@ fun SearchOverlayScreen(
                     items(visibleSongs, key = { "song_${it.id}"}){ song ->
                         SongItem(
                             song = song,
-
+                            isPlaying = isPlaying,
                             onClick = {
+                                if (searchQuery.isNotBlank()){
+                                    onAddSearchHistory(searchQuery)
+                                }
                                 keyboardController?.hide()
-                                onSongClick(song)
+                                onSongClick(song, matchingSongs)
                             },
                             onEditClick = {}
                         )
@@ -299,6 +305,9 @@ fun SearchOverlayScreen(
                                     song = albumSong,
                                     modifier = Modifier.weight(1f),
                                     onClick = {
+                                        if (searchQuery.isNotBlank()){
+                                            onAddSearchHistory(searchQuery)
+                                        }
                                         onAlbumClick(
                                             albumSong.album,
                                             allSongs.filter { it.album == albumSong.album }

@@ -14,15 +14,34 @@ object SongOrganizer {
     const val UNKNOWN_GENRE = "Desconocido"
     const val NO_FOLDER = "Sin carpeta"
 
-    fun <T> groupByAlbum(items: List<T>, albumOf: (T) -> String): Map<String, List<T>> =
-        items
+    fun <T> groupByAlbum(
+        items: List<T>,
+        albumOf: (T) -> String,
+        trackNumberOf: ((T) -> Int)? = null,
+        titleOf: ((T) -> String)?= null
+    ): Map<String, List<T>> {
+        val grouped = items
             .filter {
                 val album = albumOf(it)
                 album.isNotBlank() &&
-                    !album.equals("<unknown>", ignoreCase = true) &&
-                    !album.equals("unknown", ignoreCase = true)
+                        !album.equals("<unknown>", ignoreCase = true) &&
+                        !album.equals("unknown", ignoreCase = true)
             }
             .groupBy(albumOf)
+
+        if (trackNumberOf == null) return grouped
+
+        return grouped.mapValues { (_, albumsSongs) ->
+            albumsSongs.sortedWith(
+                compareBy<T> {
+                    val track = trackNumberOf(it)
+                    if (track > 0) track else Int.MAX_VALUE
+                }.thenBy {
+                    titleOf?.invoke(it) ?: ""
+                }
+            )
+        }
+    }
 
     fun <T> groupByArtist(items: List<T>, artistOf: (T) -> String): Map<String, List<T>> =
         items.groupBy { item ->

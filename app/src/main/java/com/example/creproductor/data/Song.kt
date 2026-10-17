@@ -16,6 +16,7 @@ data class Song (
     val contentUri: Uri,
     val albumArtUri: Uri? = null,
     val year: Int = 0,
+    val trackNumber: Int = 0,
     val path: String = "",
     val playCount: Int = 0,
     val isFavorite: Boolean = false,
