@@ -97,7 +97,7 @@ fun MainScreen(
             categorySongs = selectedQuickSelectSongs,
             currentSongId = currentSong?.id,
             isPlaying = isPlaying,
-            onSongClick = { song -> viewModel.playSong(song, customQueue = selectedQuickSelectSongs) },
+            onSongClick = { song, queue -> viewModel.playSong(song, customQueue = queue) },
             onPlayAllClick = {
                 if (selectedQuickSelectSongs.isNotEmpty()){
                   viewModel.playSong(selectedQuickSelectSongs.first(), customQueue = selectedQuickSelectSongs)
@@ -117,11 +117,9 @@ fun MainScreen(
             albumSongs = selectedAlbumsSongs,
             currentSongId = currentSong?.id,
             isPlaying = isPlaying,
-            onSongClick = {song -> viewModel.playSong(song, customQueue = selectedAlbumsSongs)},
+            onSongClick = {song, queue -> viewModel.playSong(song, customQueue = queue)},
             onPlayAllClick = {
                 if (selectedAlbumsSongs.isNotEmpty()){
-
-
                     viewModel.playSong(selectedAlbumsSongs.first(), customQueue = selectedAlbumsSongs)
                 }
             },
@@ -191,7 +189,7 @@ fun MainScreen(
             categorySongs = selectedFolderSongs,
             currentSongId = currentSong?.id,
             isPlaying = isPlaying,
-            onSongClick = {song -> viewModel.playSong(song, customQueue = selectedFolderSongs)},
+            onSongClick = {song, queue -> viewModel.playSong(song, customQueue = queue)},
             onPlayAllClick = {
                 if (selectedFolderSongs.isNotEmpty()){
                     viewModel.playSong(selectedFolderSongs.first(), customQueue = selectedFolderSongs)
@@ -264,10 +262,15 @@ fun MainScreen(
                     onDeleteHistoryItem = {item ->
                         viewModel.removeFromHistory(item)
                     },
+                    onAddSearchHistory = { query ->
+                        viewModel.addSearchHistory(query)
+                    },
                     allSongs = songs,
-                    onSongClick = { song ->
+                    currentSongId = currentSong?.id,
+                    isPlaying = isPlaying,
+                    onSongClick = { song, searchQueue ->
                         viewModel.addSearchHistory(searchQuery)
-                        onSongClick(song)
+                        viewModel.playSong(song, customQueue = searchQueue)
                     },
                     onAlbumClick = { albumName, albumSongs ->
                         isSearchActive = false
@@ -357,6 +360,8 @@ fun MainScreen(
                                 )
                                 AppTab.SONGS -> SongListScreen(
                                     songs = filteredSongs,
+                                    currentSongId = currentSong?.id,
+                                    isPlaying = isPlaying,
                                     onSongClick = {song ->
                                         viewModel.playSong(song, customQueue = filteredSongs)
                                     },

@@ -55,6 +55,8 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.creproductor.SongItem
 import com.example.creproductor.data.Song
+import com.example.creproductor.data.SongOrganizer
+
 enum class SearchSubTab(val title: String){
     ALL("Todas"),
     SONGS("Canciones"),
@@ -71,8 +73,11 @@ fun SearchOverlayScreen(
     searchHistory: List<String>,
     onHistoryItemClick: (String) -> Unit,
     onDeleteHistoryItem: (String) -> Unit,
+    onAddSearchHistory: (String) -> Unit,
     allSongs: List<Song>,
-    onSongClick: (Song) -> Unit,
+    currentSongId: Long? = null,
+    isPlaying: Boolean = false,
+    onSongClick: (Song, List<Song>) -> Unit,
     onCloseSearch: () -> Unit,
     onAlbumClick: (albumName: String, albumSongs: List<Song>) -> Unit = { _, _ -> },
     onArtistClick: (artistName: String, artistSongs: List<Song>) -> Unit = { _, _ -> }
@@ -96,7 +101,11 @@ fun SearchOverlayScreen(
             song.title.contains(searchQuery, ignoreCase = true) ||
             song.artist.contains(searchQuery, ignoreCase = true) ||
             song.album.contains(searchQuery, ignoreCase = true)
-        }
+        }.sortedWith(
+            compareBy <Song> { it.album }
+                .thenBy { if (it.trackNumber > 0) it.trackNumber else Int.MAX_VALUE }
+                .thenBy { it.title }
+        )
     }
 
     val matchingAlbums = remember (searchQuery, allSongs){
@@ -148,7 +157,12 @@ fun SearchOverlayScreen(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(
-                        onSearch = {keyboardController?.hide()}
+                        onSearch = {
+                            if (searchQuery.isNotBlank()){
+                                onAddSearchHistory(searchQuery)
+                            }
+                            keyboardController?.hide()
+                        }
                     ),
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -252,12 +266,18 @@ fun SearchOverlayScreen(
                         )
                     }
                     items(visibleSongs, key = { "song_${it.id}"}){ song ->
+                        val isSelected = song.id == currentSongId
+
                         SongItem(
                             song = song,
-
+                            isSelected = isSelected,
+                            isPlaying = isPlaying && isSelected,
                             onClick = {
+                                if (searchQuery.isNotBlank()){
+                                    onAddSearchHistory(searchQuery)
+                                }
                                 keyboardController?.hide()
-                                onSongClick(song)
+                                onSongClick(song, matchingSongs)
                             },
                             onEditClick = {}
                         )
@@ -306,10 +326,14 @@ fun SearchOverlayScreen(
                                     song = albumSong,
                                     modifier = Modifier.weight(1f),
                                     onClick = {
-                                        onAlbumClick(
-                                            albumSong.album,
-                                            allSongs.filter { it.album == albumSong.album }
+                                        if (searchQuery.isNotBlank()){
+                                            onAddSearchHistory(searchQuery)
+                                        }
+
+                                        val sortedAlbumSongs = SongOrganizer.getAlbumSongsSorted(
+                                            allSongs.filter { it.album.equals(albumSong.album, ignoreCase = true)}
                                         )
+                                        onAlbumClick(albumSong.album, sortedAlbumSongs)
                                     }
                                 )
                             }
@@ -345,10 +369,14 @@ fun SearchOverlayScreen(
                             // consigue, se cae a la portada de una de sus canciones.
                             imageModel = rememberArtistPhoto(song.artist, song.albumArtUri),
                             onClick = {
-                                onArtistClick(
-                                    song.artist,
+
+                                if (searchQuery.isNotBlank()){
+                                    onAddSearchHistory(searchQuery)
+                                }
+                                val sortedArtistSongs = SongOrganizer.getArtisSorted(
                                     allSongs.filter { it.artist.equals(song.artist, ignoreCase = true) }
                                 )
+                                onArtistClick(song.artist, sortedArtistSongs)
                             }
                         )
                     }

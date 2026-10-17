@@ -67,7 +67,7 @@ fun AlbumDetailScreen(
     albumSongs: List<Song>,
     currentSongId: Long? = null,
     isPlaying: Boolean = false,
-    onSongClick: (Song) -> Unit,
+    onSongClick: (song: Song, albumQueue: List<Song>) -> Unit,
     onPlayAllClick: () -> Unit,
     onShuffleClick: () -> Unit,
     onBackClick: () -> Unit,
@@ -210,7 +210,8 @@ fun AlbumDetailScreen(
                         text = formattedTotalDuration,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f, fill = false).basicMarquee()
                     )
 
                     Spacer(modifier =  Modifier.height(16.dp))
@@ -238,7 +239,8 @@ fun AlbumDetailScreen(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(8.dp),
                             colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.primary, disabledContentColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.primary,
+                                disabledContentColor = MaterialTheme.colorScheme.primary,
                                 disabledContainerColor = MaterialTheme.colorScheme.primary
                             )
                         ) {
@@ -257,13 +259,14 @@ fun AlbumDetailScreen(
             itemsIndexed(albumSongs, key = { _, song -> "track_${song.id}" }) {index, song ->
 
                 val isSelected = song.id == currentSongId
+                val displayTracknumber = if (song.trackNumber > 0) song.trackNumber else index + 1
 
                 AlbumTrackItem(
-                    trackNumber = index + 1,
+                    trackNumber = displayTracknumber,
                     song = song,
                     isSelected = isSelected,
                     isPlaying = isSelected && isPlaying,
-                    onClick = {onSongClick(song)},
+                    onClick = {onSongClick(song, albumSongs)},
                     onEditClick = {onEditSongClick(song)}
                 )
             }

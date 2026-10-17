@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.ImageLoader
@@ -48,6 +49,7 @@ import com.example.creproductor.gui.UiState
 import com.example.creproductor.ui.theme.DEZZNUTStheme
 import kotlinx.coroutines.launch
 import coil.Coil
+import com.example.creproductor.gui.PlayingEqualizerIcon
 
 
 class MainActivity : ComponentActivity() {
@@ -256,6 +258,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun SongListScreen(
     songs: List<Song>,
+    currentSongId: Long? = null,
+    isPlaying: Boolean = false,
     onSongClick: (Song) -> Unit,
     onEditSong: (Song) -> Unit
 ) {
@@ -265,8 +269,11 @@ fun SongListScreen(
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         items(items = songs, key = { it.id }) { song ->
+            val isSelected = song.id == currentSongId
             SongItem(
                 song = song,
+                isSelected = isSelected,
+                isPlaying = isSelected && isPlaying,
                 onClick = { onSongClick(song) },
                 onEditClick = { onEditSong(song) }
             )
@@ -284,12 +291,20 @@ fun formatDuration(durationMs: Long): String{
 @Composable
 fun SongItem(
     song: Song,
+    isSelected: Boolean = false,
+    isPlaying: Boolean = false,
     onClick: () -> Unit,
     onEditClick: () -> Unit
 ) {
+    val backgroundColor = if (isSelected){
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+    }else{
+        MaterialTheme.colorScheme.background
+    }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(backgroundColor)
                 .clickable(onClick = onClick)
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -311,7 +326,7 @@ fun SongItem(
                     Icon(
                         imageVector = Icons.Default.MusicNote,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(26.dp)
                     )
                 }
@@ -323,7 +338,8 @@ fun SongItem(
                 Text(
                     text = song.title,
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -338,9 +354,17 @@ fun SongItem(
                 Text(
                     text = "$artistName • ${formatDuration(song.duration)}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            if (isSelected){
+                PlayingEqualizerIcon(
+                    color = MaterialTheme.colorScheme.primary,
+                    isPlaying = isPlaying,
+                    modifier = Modifier.padding(end = 6.dp)
                 )
             }
 

@@ -241,24 +241,25 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     }
 
     private fun loadSearchHistory(){
-        val historySet = prefs.getStringSet("search_history", emptySet()) ?: emptySet()
-        _searchHistory.value = historySet.toList()
+        val raw = prefs.getString("search_history_str", "") ?: ""
+        _searchHistory.value = if (raw.isBlank()) emptyList() else raw.split("|")
     }
 
     fun addSearchHistory(query: String){
-        if (query.isBlank()) return
+        val cleanQuery = query.trim()
+        if (cleanQuery.isBlank()) return
         val currentList = _searchHistory.value.toMutableList()
-        currentList.remove(query)
-        currentList.add(0, query)
+        currentList.remove(cleanQuery)
+        currentList.add(0, cleanQuery)
         val updatedList = currentList.take(10)
         _searchHistory.value = updatedList
-        prefs.edit{putStringSet("search_history", updatedList.toSet())}
+        prefs.edit{putString("search_history_str", updatedList.joinToString ("|"))}
     }
 
     fun removeFromHistory(query: String){
         val updatedList = _searchHistory.value.filter { it != query }
         _searchHistory.value = updatedList
-        prefs.edit{putStringSet("search_history", updatedList.toSet())}
+        prefs.edit{putString("search_history_str", updatedList.joinToString("|"))}
     }
 
     fun setFilter(filter: SongFilter){
@@ -369,6 +370,13 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
 
         prefs.edit { putLong("last_song_id", song.id) }
     }
+
+    fun playQueue(songs: List<Song>, startIndex: Int = 0){
+        if (songs.isEmpty() || startIndex !in songs.indices) return
+        val targetSong = songs[startIndex]
+        playSong(targetSong, customQueue = songs)
+    }
+
     fun playSong(song: Song, customQueue: List<Song>? = null){
 
         val queueToUse= if (!customQueue.isNullOrEmpty()) customQueue else (_uiState.value as? UiState.Success)?.songs ?: listOf(song)

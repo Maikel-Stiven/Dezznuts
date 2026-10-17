@@ -26,7 +26,8 @@ class MediaStoreScanner (private  val context: Context) {
             MediaStore.Audio.Media.DURATION,
             MediaStore.Audio.Media.ALBUM_ID,
             MediaStore.Audio.Media.YEAR,
-            MediaStore.Audio.Media.DATA
+            MediaStore.Audio.Media.DATA,
+            MediaStore.Audio.Media.TRACK
         ).apply {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
                 add(MediaStore.Audio.Media.GENRE)
@@ -51,6 +52,7 @@ class MediaStoreScanner (private  val context: Context) {
             val albumIdCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
             val yearColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
             val dataCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
+            val trackCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TRACK)
             val genreCol = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
                 cursor.getColumnIndex(MediaStore.Audio.Media.GENRE)
             }else -1
@@ -66,6 +68,8 @@ class MediaStoreScanner (private  val context: Context) {
                 val albumId = cursor.getLong(albumIdCol)
                 val year = cursor.getInt(yearColumn)
                 val path = cursor.getString(dataCol) ?: ""
+                val rawTrack = cursor.getInt(trackCol)
+                val trackNumber = if (rawTrack >= 1000) rawTrack % 1000 else rawTrack
                 val rawGenre = if (genreCol != -1) cursor.getString(genreCol) else null
                 val genre = if (!rawGenre.isNullOrBlank()) rawGenre.fixEncoding() else "Desconocido"
 
@@ -90,6 +94,7 @@ class MediaStoreScanner (private  val context: Context) {
                         contentUri = contentUri,
                         albumArtUri = albumArtUri,
                         year = year,
+                        trackNumber = trackNumber,
                         path = path,
                         genre = genre
                     )
