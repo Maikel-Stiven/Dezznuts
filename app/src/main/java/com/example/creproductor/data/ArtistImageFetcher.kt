@@ -10,6 +10,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import androidx.core.content.edit
+import java.io.File
 
 object ArtistImageFetcher {
 
@@ -20,6 +21,22 @@ object ArtistImageFetcher {
         val network = connectivityManager.activeNetwork ?: return false
         val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    fun cachedArtistImage(context: Context, artist: String): String?{
+        val cleanArtist = artist.trim()
+        if (cleanArtist.isBlank() ||
+            cleanArtist.equals("Artista desconocido", ignoreCase = true) ||
+            cleanArtist.equals("<unknown>", ignoreCase = true)
+            ){
+            return null
+        }
+        val  prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getString(cleanArtist, null)
+    }
+
+    suspend fun fetchArtistImage(context: Context, artist: String): String?{
+        return fetchArtistImageUrl(context, artist)
     }
 
     suspend fun fetchArtistImageUrl(context: Context, artist: String): String? = withContext(Dispatchers.IO) {
@@ -70,5 +87,21 @@ object ArtistImageFetcher {
             e.printStackTrace()
         }
         return@withContext null
+    }
+
+    fun artistImageCacheSize(context: Context): Long {
+        val cacheDir = File(context.cacheDir, "artist_image_cache")
+        if (!cacheDir.exists()) return 0L
+        return cacheDir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+    }
+
+    fun clearArtistImageCache(context: Context){
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit{clear()}
+
+        val cacheDir = File(context.cacheDir, "artist_image_cache")
+        if (cacheDir.exists()){
+            cacheDir.deleteRecursively()
+        }
     }
 }
