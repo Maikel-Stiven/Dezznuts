@@ -87,6 +87,21 @@ nueva configuración y lo intercambia con `MediaSession.setPlayer()`: la sesión
 > que negocie la tasa. El diálogo muestra esa frecuencia nativa
 > (`AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE`).
 
+### Ajuste de latencia de *seek*
+
+`MusicService.buildLoadControl()` sustituye los valores por defecto de ExoPlayer (pensados para
+streaming) por unos de reproducción local:
+
+| Ajuste | Por defecto | DEZZNUTS | Por qué |
+|--------|------------|----------|---------|
+| `backBufferDurationMs` | `0` | `30 s` | Con 0 no hay audio decodificado detrás del cursor: retroceder obliga a releer y recodificar. |
+| `bufferForPlaybackMs` | `2500` | `1000` | Tras un *seek*, ExoPlayer espera a tener esa cantidad antes de reanudar. |
+| `bufferForPlaybackAfterRebufferMs` | `5000` | `2000` | Igual, tras un corte o una pausa larga. |
+
+Si el FLAC no incluye un bloque `SEEKTABLE`, el extractor de Media3 hace una búsqueda binaria sobre
+el archivo (`FlacBinarySearchSeeker`) para localizar el fotograma; eso es propio del formato y no se
+puede ajustar desde la app (con `SEEKTABLE` usa `FlacSeekTableSeekMap`, que es inmediato).
+
 ### Persistencia actual (SharedPreferences)
 
 | Clave | Contenido |

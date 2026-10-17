@@ -12,6 +12,7 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaSession
@@ -74,6 +75,36 @@ class MusicService : MediaSessionService(){
         return ExoPlayer.Builder(this, renderersFactory)
             .setAudioAttributes(audioAttributes, true)
             .setHandleAudioBecomingNoisy(true)
+            .setLoadControl(buildLoadControl())
+            .build()
+    }
+
+    /**
+     * Control de carga afinado para reproducción **local** (no streaming).
+     *
+     * Los valores por defecto de ExoPlayer están pensados para internet y hacen
+     * que el *seek* se sienta lento. Aquí se ajustan tres cosas:
+     *
+     * - **backBufferDurationMs = 30 s**: por defecto es 0, así que al retroceder
+     *   no hay nada decodificado detrás y hay que releer y recodificar el tramo.
+     *   Con búfer trasero, retroceder es instantáneo.
+     * - **bufferForPlaybackMs = 1 s** (era 2.5 s): tras un *seek* ExoPlayer espera
+     *   a tener esa cantidad y solo entonces reanuda. Bajarlo reanuda antes.
+     * - **bufferForPlaybackAfterRebufferMs = 2 s** (era 5 s): lo mismo tras un
+     *   corte o una pausa larga.
+     */
+    private fun buildLoadControl(): DefaultLoadControl {
+        return DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                /* minBufferMs= */ 50_000,
+                /* maxBufferMs= */ 50_000,
+                /* bufferForPlaybackMs= */ 1_000,
+                /* bufferForPlaybackAfterRebufferMs= */ 2_000
+            )
+            .setBackBuffer(
+                /* backBufferDurationMs= */ 30_000,
+                /* retainBackBufferFromKeyframe= */ true
+            )
             .build()
     }
 
