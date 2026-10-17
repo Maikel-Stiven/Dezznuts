@@ -1,10 +1,11 @@
 # Resumen técnico del proyecto — DEZZNUTS
 
-Documento de apoyo para quien se incorpora a colaborar. Explica **cómo está construido**, **qué funciona**, **qué falta** y **por dónde empezar**. No modifica código: es solo análisis del estado actual.
+Documento de apoyo para quien se incorpora a colaborar. Explica **cómo está construido**, **qué funciona**, **qué falta** y **por dónde empezar**.
 
-- **Última revisión:** commit `dbe5b86` (rama `main`).
+- **Última revisión:** rama `fix/bugs-y-conexiones` (arreglos + pruebas sobre `main`).
 - **Versión interna mostrada en la app:** `DEZZNUTS Player Alpha.0.0.1`.
-- **Tamaño del código Kotlin:** ~6.700 líneas repartidas en 28 archivos.
+- **Tamaño del código Kotlin:** ~7.000 líneas (app + 2 helpers nuevos + 6 archivos de pruebas).
+- **Estado:** el proyecto **compila**, tiene **24 pruebas unitarias** que pasan y **CI** (GitHub Actions).
 
 ---
 
@@ -43,6 +44,17 @@ Arquitectura **MVVM** sencilla apoyada en Compose y un servicio de reproducción
 - **`MusicViewModel`** es el cerebro. Mantiene todo el estado como `StateFlow` (biblioteca, canción actual, cola, filtros, búsqueda, favoritos, listas, historial) y controla el `MediaController` de Media3. Persiste datos en `SharedPreferences` (`dezznuts_prefs`).
 - **`MusicService`** extiende `MediaSessionService`. Crea el `ExoPlayer`, la `MediaSession` y la notificación (con botones personalizados de *Favorito* y *Cerrar*). Declara el permiso de reproducción y `handleAudioBecomingNoisy` (se pausa al desconectar audífonos).
 - **`MainActivity`** pide el permiso de audio, arma el `ModalNavigationDrawer`, el `MainScreen` y superpone el `FullScreenPlayer` y el `EditTagDialog`.
+- **`PlaylistSerializer`** (`data/`): convierte las listas de reproducción a/desde texto para `SharedPreferences`. **Codifica los campos** (URL-encoding) para que un nombre con `;`, `|` o `,` no corrompa los datos. Lo usa `MusicViewModel` en `savePlaylists`/`loadPlaylist`.
+- **`SongOrganizer`** (`data/`): agrupaciones (álbum/artista/género/carpeta) y búsqueda como **funciones puras y genéricas**. Lo usan `GridScreens`, `ArtistInterfaceScreen` y el `filteredSongs` del ViewModel; al ser puras, están cubiertas por pruebas.
+
+### Insets / edge-to-edge
+
+Con `targetSdk 37` la app se dibuja **edge-to-edge**, es decir, por debajo de la barra de estado y del *cutout* de la cámara. Las pantallas de detalle usan `statusBarsPadding()`; el **reproductor a pantalla completa** usa `WindowInsets.safeDrawing` y el **mini-reproductor** `navigationBarsPadding()`, para que ni el header ni la barra inferior queden tapados.
+
+### Pruebas y CI
+
+- **6 archivos JUnit** (24 pruebas) sobre la lógica pura: `PlaylistSerializerTest`, `SongOrganizerTest`, `YoutubeTitleCleanerTest`, `SongEncodingTest`, `RepeatModeTest`, `DurationFormatTest`.
+- **CI** en `.github/workflows/android.yml`: en cada push/PR corre `testDebugUnitTest` y `assembleDebug`.
 
 ### Flujo de reproducción
 
@@ -78,28 +90,30 @@ Arquitectura **MVVM** sencilla apoyada en Compose y un servicio de reproducción
 | `CoverFetcher.kt` | Metadata/carátula oficial (iTunes) | ✅ |
 | `ArtistImageFetcher.kt` | Foto de artista (Deezer) + caché | ✅ |
 | `YoutubeTitleCleaner.kt` | Limpia nombres tipo `Artista - Tema (Official Video)` | ✅ |
+| `PlaylistSerializer.kt` | Serializa las listas para `SharedPreferences` (campos codificados) | ✅ |
+| `SongOrganizer.kt` | Agrupaciones (álbum/artista/género/carpeta) y búsqueda, puras y testeables | ✅ |
 
 ### Paquete `service/`
 
 | Archivo | Rol | Estado |
 |---------|-----|--------|
-| `MusicService.kt` | Reproducción en 2º plano y sesión | ✅ (favorito de notificación no funcional) |
+| `MusicService.kt` | Reproducción en 2º plano y sesión | ✅ |
 
 ### Paquete `gui/` (interfaz Compose)
 
 | Archivo | Rol | Estado |
 |---------|-----|--------|
 | `MusicViewModel.kt` | Estado central de la app | ✅ |
-| `MainScreen.kt` | Scaffold, pestañas y navegación interna | ✅ (carpetas pendiente) |
-| `FullScreenPlayer.kt` | Reproductor completo + cola arrastrable | ✅ (shuffle visual) |
+| `MainScreen.kt` | Scaffold, pestañas y navegación interna | ✅ |
+| `FullScreenPlayer.kt` | Reproductor completo + cola arrastrable + shuffle real | ✅ |
 | `AppDrawerContent.kt` | Menú lateral | ✅ (ítems sin lógica) |
-| `SearchScreen.kt` | Búsqueda con historial y sub-pestañas | 🟡 (álbumes/artistas no navegan) |
+| `SearchScreen.kt` | Búsqueda con historial y sub-pestañas | ✅ |
 | `GridScreens.kt` | Grillas de álbumes/géneros y lista de artistas | ✅ |
 | `QuickSelectionScreen.kt` / `QuickSelectionDetailScreen.kt` | Filas rápidas y su detalle | ✅ |
 | `AlbumDetailScreen.kt` | Detalle de álbum + animación de ecualizador | ✅ |
 | `ArtistInterfaceScreen.kt` | Detalle de artista | ✅ |
 | `GenreDetailScreen.kt` | Detalle de género | ✅ |
-| `PlaylistScreen.kt` | Lista de listas de reproducción | ⚠️ **error de compilación** |
+| `PlaylistScreen.kt` | Lista de listas de reproducción | ✅ |
 | `PlaylistDetailScreen.kt` | Detalle de lista | ✅ |
 | `EditTagDialog.kt` | Editar etiquetas + "Auto-web" + galería | ✅ |
 | `CreatePlaylistDialog.kt` | Crear lista | ✅ |
@@ -108,6 +122,17 @@ Arquitectura **MVVM** sencilla apoyada en Compose y un servicio de reproducción
 ### `ui/theme/`
 
 `Color.kt`, `Theme.kt` (paleta oscura) y `Type.kt` (tipografía). ✅
+
+### Pruebas (`app/src/test/java/...`)
+
+| Archivo | Qué cubre |
+|---------|-----------|
+| `PlaylistSerializerTest.kt` | Serialización round-trip y nombres con `;` `|` `,` |
+| `SongOrganizerTest.kt` | Agrupaciones (álbum/artista/género/carpeta) y búsqueda |
+| `YoutubeTitleCleanerTest.kt` | Parseo de `Artista - Tema (Official Video)` |
+| `SongEncodingTest.kt` | `String.fixEncoding()` (mojibake de acentos) |
+| `RepeatModeTest.kt` | Ciclo de `RepeatMode.next()` |
+| `DurationFormatTest.kt` | `formatDuration` |
 
 ---
 
@@ -132,10 +157,10 @@ Arquitectura **MVVM** sencilla apoyada en Compose y un servicio de reproducción
 | Edición de etiquetas ID3 | ✅ |
 | Auto-web de carátula/metadata | ✅ |
 | Fotos de artista (Deezer) | ✅ |
-| **Shuffle real en el reproductor** | 🟡 UI solamente |
-| **Pestaña Carpetas** | 🟡 Placeholder |
-| **Navegar desde búsqueda (álbum/artista)** | 🟡 Sin acción |
-| **Favorito desde la notificación** | 🟡 Sin efecto |
+| **Shuffle real en el reproductor** | ✅ |
+| **Pestaña Carpetas** | ✅ |
+| **Navegar desde búsqueda (álbum/artista)** | ✅ |
+| **Favorito desde la notificación** | ✅ |
 | **Menús ⋮ y "Restaurar"** | 🟡 Sin lógica |
 | **Ecualizador** | 🔴 Pendiente |
 | **Escanear archivos (manual)** | 🔴 Pendiente |
@@ -148,33 +173,32 @@ Arquitectura **MVVM** sencilla apoyada en Compose y un servicio de reproducción
 
 ## 5. Problemas y deuda técnica
 
-### ❗ Bloqueante
+### ✅ Corregidos en la rama `fix/bugs-y-conexiones`
 
-1. **`PlaylistScreen.kt` línea 198** contiene `imageVector = Icons.Default.,` (código inválido). Para compilar debe cambiarse por un icono válido, muy probablemente `Icons.Default.MoreVert` (ya está importado en el archivo). **Sin esto, el proyecto no compila.**
+1. **`PlaylistScreen.kt` no compilaba** (`Icons.Default.,` → `Icons.Default.MoreVert`). Era el bug bloqueante.
+2. **Shuffle sin efecto:** `FullScreenPlayer` ahora recibe `isShuffleEnabled`/`onToggleShuffle` y el ViewModel lo aplica con `controller.shuffleModeEnabled` (reordena la cola de verdad).
+3. **Favorito en notificación:** `MusicService.toggleCurrentFavorite()` actualiza `fav_ids`; el ViewModel lo detecta con un `OnSharedPreferenceChangeListener` y refresca la UI.
+4. **Búsqueda por álbum/artista:** `SearchScreen` recibe `onAlbumClick`/`onArtistClick` y `MainScreen` los conecta a la navegación.
+5. **Navegación de artistas** desde grillas/búsqueda: conectada.
+6. **Pestaña Carpetas:** implementada (`FoldersListScreen` en `GridScreens.kt`, agrupa con `SongOrganizer.groupByFolder`).
+7. **Persistencia frágil** (era deuda #9): mitigada con `PlaylistSerializer` (campos codificados).
+8. **`INTERNET` duplicado** (era deuda #15): eliminado.
+9. **`proguard-rules.pro` inexistente** (era deuda #19): creado.
+10. **Sin tests** (era deuda #17): 24 pruebas + CI.
+11. **Condiciones `equals("<unknown>")` duplicadas** en `ArtistInterfaceScreen` (era deuda #14): unificadas en `SongOrganizer`.
+12. **Insets del reproductor** (reportado en dispositivo): `FullScreenPlayer` y `BottomPlayerBar` respetan ahora la barra de estado/cámara y la de gestos.
 
-### Bugs y comportamientos incompletos
+### Pendientes y deuda técnica
 
-2. **Shuffle sin efecto:** en `FullScreenPlayer.kt`, `isShuffleActive` es un estado local que solo cambia el color; no se pasa al `ViewModel`.
-3. **Favorito en notificación:** `MusicService.ACTION_FAVORITE` no hace nada.
-4. **Búsqueda por álbum/artista:** los `onClick` de `AlbumGridCard` y `SearchCategoryItem` están vacíos.
-5. **Navegación de artistas desde `GridScreens`/búsqueda:** no abre el detalle del artista.
-6. **`Folders`:** muestra un `Text` de placeholder.
-7. **`onRestoreClick` / "Restaurar lista":** sin lógica.
-8. **Icono `MusicNote` en varios sitios** con `tint = surfaceVariant` sobre fondo `surfaceVariant` (poca visibilidad) — detalle estético.
-
-### Deuda técnica / riesgos
-
-9. **Persistencia frágil:** `saved_playlist` usa `;`, `|` y `,` como separadores. Un nombre con esos caracteres rompe el parseo. Migrar a **Room** o **DataStore + JSON**.
-10. **Historial de búsqueda con `StringSet`:** no conserva el orden de inserción.
-11. **`MediaStore.GENRE` requiere API 30+:** en Android < 11 todo aparece como "Desconocido".
-12. **Escritura de etiquetas vía `contentUri` en modo `rwt`:** puede fallar por SAF en almacenamiento scoped.
-13. **Fetch de fotos de artista por cada fila** (`LaunchedEffect` con `delay`): muchas peticiones simultáneas en listas grandes; considerar carga perezosa/por lotes.
-14. **`ArtistInterfaceScreen`** filtra álbumes con dos condiciones `equals("<unknown>")` duplicadas (inofensivo, pero es ruido).
-15. **`INTERNET` duplicado** en el `AndroidManifest.xml`.
-16. **`sortOrder = TITLE ASC`** ignora mayúsculas y acentos; podría usar `COLLATE NOCASE`/locale.
-17. **Sin tests reales:** los archivos `ExampleUnitTest`/`ExampleInstrumentedTest` son plantillas.
-18. **Toolchain muy nuevo** (Gradle 9.6, AGP 9.4.1, SDK 37): asegúrate de tener Android Studio actualizado o fallará el build por versión.
-19. **`proguard-rules.pro` referenciado en `app/build.gradle.kts` no existe.** Como `isMinifyEnabled = false`, no rompe hoy; conviene crear el archivo o migrar a `keepRules/` antes de activar R8.
+1. **Menús ⋮ y "Restaurar lista":** sin lógica.
+2. **Icono `MusicNote` en varios sitios** con `tint = surfaceVariant` sobre fondo `surfaceVariant` (poca visibilidad) — detalle estético.
+3. **Historial de búsqueda con `StringSet`:** no conserva el orden de inserción.
+4. **`MediaStore.GENRE` requiere API 30+:** en Android < 11 todo aparece como "Desconocido".
+5. **Escritura de etiquetas vía `contentUri` en modo `rwt`:** puede fallar por SAF en almacenamiento scoped.
+6. **Fetch de fotos de artista por cada fila** (`LaunchedEffect` con `delay`): muchas peticiones simultáneas en listas grandes; considerar carga perezosa/por lotes.
+7. **`sortOrder = TITLE ASC`** ignora mayúsculas y acentos; podría usar `COLLATE NOCASE`/locale.
+8. **Toolchain muy nuevo** (Gradle 9.6, AGP 9.4.1, SDK 37): asegúrate de tener Android Studio actualizado o fallará el build por versión.
+9. **Migración de persistencia** (`SharedPreferences` → Room/DataStore) sigue pendiente.
 
 ---
 
@@ -182,27 +206,26 @@ Arquitectura **MVVM** sencilla apoyada en Compose y un servicio de reproducción
 
 **Buenos primeros issues (bajo riesgo):**
 
-1. **Arreglar `PlaylistScreen.kt`** (desbloquea todo).
-2. **Conectar el shuffle** al `ViewModel` (`player.shuffleModeEnabled`).
-3. **Quitar el `INTERNET` duplicado** del manifest.
-4. **Hacer navegables** los resultados de búsqueda de álbumes/artistas.
-5. **Implementar favorito desde la notificación.**
-6. **Crear `proguard-rules.pro`** (o mover reglas a `keepRules/`).
+1. **Menús ⋮** de canciones y listas: darles lógica.
+2. **"Restaurar lista de reproducción":** implementar o retirar el botón.
+3. **Icono `MusicNote`:** mejorar el contraste (hoy casi invisible).
+4. **Historial de búsqueda:** guardarlo ordenado por recencia (usar lista, no `StringSet`).
 
 **Features medianas (alto impacto):**
 
-7. **Pestaña Carpetas** (agrupar por `song.path`).
-8. **Escanear archivos** (re-ejecutar `MediaStoreScanner` + `MediaScannerConnection`).
-9. **Ecualizador** (`android.media.audiofx.Equalizer` enganchado al `ExoPlayer`).
-10. **Temporizador** (corrutina que pausa el reproductor).
-11. **Cortador de audio** (media3 `Transformer`).
-12. **Buscar duplicados** (comparar por duración/tamaño/título).
+5. **Escanear archivos** (re-ejecutar `MediaStoreScanner` + `MediaScannerConnection`).
+6. **Ecualizador** (`android.media.audiofx.Equalizer` enganchado al `ExoPlayer`).
+7. **Temporizador** (corrutina que pausa el reproductor).
+8. **Cortador de audio** (media3 `Transformer`).
+9. **Buscar duplicados** (comparar por duración/tamaño/título).
+
+> Ya resueltos en `fix/bugs-y-conexiones`: compilación, shuffle real, favorito de notificación, navegación de búsqueda, pestaña Carpetas, `INTERNET` duplicado y `proguard-rules.pro`.
 
 **Refactor recomendado (a mediano plazo):**
 
-13. Migrar persistencia a **Room/DataStore**.
-14. Extraer un `repository` y dividir `MusicViewModel` (hoy maneja demasiadas responsabilidades).
-15. Añadir tests y un `README` de arquitectura por módulo.
+10. Migrar persistencia a **Room/DataStore**.
+11. Extraer un `repository` y dividir `MusicViewModel` (hoy maneja demasiadas responsabilidades).
+12. Ampliar la cobertura de pruebas y añadir un README de arquitectura por módulo.
 
 ---
 
@@ -220,6 +243,10 @@ Arquitectura **MVVM** sencilla apoyada en Compose y un servicio de reproducción
 - **MediaStore:** base de datos de medios de Android; de ahí salen las canciones.
 - **Media3 / ExoPlayer:** motor de reproducción de AndroidX.
 - **MediaSessionService:** servicio que permite reproducir en 2º plano con controles.
+- **MediaController:** objeto del ViewModel que envía órdenes al reproductor (play, cola, shuffle, repeat).
 - **contentUri / albumArtUri:** punteros de contenido (`content://…`) al audio y a la carátula.
 - **ID3:** etiquetas de metadatos incrustadas en los archivos de audio.
 - **SAF:** Storage Access Framework; restringe el acceso a archivos en Android moderno.
+- **Edge-to-edge / insets:** dibujar bajo las barras del sistema; los *insets* son las zonas ocupadas por la barra de estado, la de navegación y el *cutout* de la cámara.
+- **URL-encoding:** codificación de texto para que caracteres especiales (`;`, `|`, `%`…) no rompan un formato de datos (lo usa `PlaylistSerializer`).
+- **JUnit:** framework de pruebas unitarias; aquí prueba solo lógica pura (sin Android).

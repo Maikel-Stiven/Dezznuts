@@ -89,6 +89,18 @@ import com.example.creproductor.data.RepeatMode
 import com.example.creproductor.data.Song
 import java.util.concurrent.TimeUnit
 import kotlin.math.absoluteValue
+/**
+ * Reproductor a pantalla completa, superpuesto sobre el resto de la app.
+ *
+ * Reúne el carrusel de carátulas, la barra de progreso con *seek*, los controles
+ * de reproducción, los modos aleatorio/repetición y la cola deslizable.
+ *
+ * @param song canción que está sonando en este momento.
+ * @param songs lista usada por el carrusel (normalmente la cola o la biblioteca).
+ * @param isShuffleEnabled estado del modo aleatorio, controlado por el ViewModel.
+ * @param onToggleShuffle alterna el modo aleatorio en el ViewModel.
+ * @param onMoveQueueItem reordena la cola (índice origen → índice destino).
+ */
 @OptIn(ExperimentalMaterial3Api :: class)
 @Composable
 fun FullScreenPlayer(
@@ -176,6 +188,9 @@ fun FullScreenPlayer(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                // Con targetSdk 37 la app es edge-to-edge: este padding evita que el
+                // header (↓, "Reproduciendo desde", ⋮) quede bajo la barra de estado o
+                // el cutout de la cámara, y que el pie quede bajo la barra de gestos.
                 .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,

@@ -357,6 +357,7 @@ fun BottomPlayerBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                // Evita que el mini-reproductor quede bajo la barra de gestos (edge-to-edge).
                 .navigationBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically

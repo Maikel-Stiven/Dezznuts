@@ -64,72 +64,63 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
 
-    //
+    /** Modo aleatorio (shuffle); se sincroniza con el controlador de Media3. */
     private val _isShuffleEnabled = MutableStateFlow(false)
     val isShuffleEnabled: StateFlow<Boolean> = _isShuffleEnabled.asStateFlow()
-    //
 
-
+    /** Canción en reproducción (o `null` si no hay ninguna). */
     private val _currentSong = MutableStateFlow<Song?>(null)
     val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
 
-    //
+    /** Posición de reproducción en milisegundos (la actualiza el *tracker* cada 500 ms). */
     private val _currentPositionMs = MutableStateFlow(0L)
     val currentPositionMs: StateFlow<Long> = _currentPositionMs.asStateFlow()
-    //
 
-    //
+    /** Filtro activo de la pestaña "Canciones" (todas / favoritas / recientes). */
     private val _currentFilter = MutableStateFlow(SongFilter.ALL)
     val currentFilter: StateFlow<SongFilter> = _currentFilter.asStateFlow()
-    //
 
-    //
-    private  val _searchQuery = MutableStateFlow("")
+    /** Texto de búsqueda actual. */
+    private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
-    //
 
-    //
+    /** Respaldo en memoria de `id → nº de reproducciones` (origen de "Más reproducidas"). */
     private val playCountMap = mutableMapOf<Long, Int>()
+
+    /** Canciones ordenadas por número de reproducciones (descendente). */
     private val _mostPlayedSongs = MutableStateFlow<List<Song>>(emptyList())
     val mostPlayedSongs: StateFlow<List<Song>> = _mostPlayedSongs.asStateFlow()
-    //
 
-    //
+    /** Últimas canciones reproducidas, de la más reciente a la más antigua. */
     private val _recentPlayedSongs = MutableStateFlow<List<Song>>(emptyList())
     val recentPlayedSongs: StateFlow<List<Song>> = _recentPlayedSongs.asStateFlow()
-    //
 
-    //
+    /** Derivado de [uiState]: solo las canciones marcadas como favoritas. */
     val favoriteSongs: StateFlow<List<Song>> = uiState.map { state ->
         if (state is UiState.Success) state.songs.filter { it.isFavorite } else emptyList()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
-    //
 
-    //
+    /** Historial de búsquedas recientes (la más reciente primero). */
     private val _searchHistory = MutableStateFlow<List<String>>(emptyList())
     val searchHistory: StateFlow<List<String>> = _searchHistory.asStateFlow()
-    //
 
-    //
-     private val _currentQueue = MutableStateFlow<List<Song>>(emptyList())
-
+    /** Cola de reproducción actual, en el orden que ve el usuario. */
+    private val _currentQueue = MutableStateFlow<List<Song>>(emptyList())
     val currentQueue: StateFlow<List<Song>> = _currentQueue.asStateFlow()
-    //
 
-
-    //
+    /** Modo de repetición actual (ver [RepeatMode]). */
     private val _repeatMode = MutableStateFlow(RepeatMode.OFF)
     val repeatMode: StateFlow<RepeatMode> = _repeatMode.asStateFlow()
-    //
 
-    //
+    /** Listas de reproducción creadas por el usuario. */
     private val _playlists = MutableStateFlow<List<Playlist>>(emptyList())
     val playlists: StateFlow<List<Playlist>> = _playlists.asStateFlow()
-    //
 
-
-
-    //
+    /**
+     * Canciones visibles en la pestaña "Canciones". Combina tres fuentes:
+     * la biblioteca ([uiState]), el [currentFilter] y el [searchQuery]
+     * (que busca en título, artista o álbum).
+     */
     val filteredSongs: StateFlow<List<Song>> = combine(
         uiState,
         _currentFilter,
@@ -148,7 +139,6 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
             matchesFilter && matchesQuery
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
-    //
 
 
     init {
@@ -363,6 +353,10 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         }
     }
 
+    /**
+     * Alterna el modo aleatorio. Se apoya en `shuffleModeEnabled` del reproductor
+     * (que reordena la cola de verdad) y refleja el resultado en [isShuffleEnabled].
+     */
     fun toggleShuffle(){
         mediaController?.let { controller ->
             val newValue = !controller.shuffleModeEnabled
@@ -412,6 +406,13 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         mediaController?.release()
     }
 
+    /**
+     * Relee los favoritos guardados y actualiza la biblioteca y la canción actual.
+     *
+     * Se invoca desde [favPrefsListener] cuando el botón de favorito de la
+     * **notificación** cambia `fav_ids` fuera del ViewModel, para que la UI no
+     * quede desincronizada.
+     */
     private fun syncFavoritesFromPrefs(){
         val currentState = _uiState.value as? UiState.Success ?: return
         val favIds = getSavedFavoritesIds()

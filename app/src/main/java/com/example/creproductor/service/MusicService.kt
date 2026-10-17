@@ -52,6 +52,8 @@ class MusicService : MediaSessionService(){
             .setCallback(CustomMediaSessionCallback())
             .build()
 
+        // Al cambiar de canción hay que recalcular si el nuevo tema es favorito,
+        // para que el botón de la notificación muestre el estado correcto.
         player.addListener(object : Player.Listener {
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 updateNotificationLayout()
@@ -61,6 +63,13 @@ class MusicService : MediaSessionService(){
         updateNotificationLayout()
     }
 
+    /**
+     * Marca o desmarca como favorita la canción actual y persiste el cambio en
+     * `fav_ids` (mismas prefs que usa el ViewModel). El ViewModel lo detecta con
+     * un `OnSharedPreferenceChangeListener` y refresca la UI.
+     *
+     * @return el nuevo estado de favorito (`true` si quedó marcada).
+     */
     private fun toggleCurrentFavorite(): Boolean {
         val currentId = mediaSession?.player?.currentMediaItem?.mediaId ?: return isFavorite
 
@@ -79,6 +88,10 @@ class MusicService : MediaSessionService(){
         return nowFavorite
     }
 
+    /**
+     * Reconstruye la notificación. Recalcula [isFavorite] a partir de las prefs
+     * (fuente de verdad) y aplica el icono correspondiente al botón "Favorito".
+     */
     private fun updateNotificationLayout() {
 
         val currentId = mediaSession?.player?.currentMediaItem?.mediaId

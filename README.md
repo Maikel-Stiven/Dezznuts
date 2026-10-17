@@ -2,7 +2,7 @@
 
 Reproductor de música **local** para Android, **Open Source** y gratuito. La idea del proyecto es ofrecer de forma libre esas funciones que otros reproductores suelen encerrar tras un pago (etiquetado automático, cortador de audio, ecualizador, temporizador, etc.), "solo por amor al arte".
 
-> ⚠️ **Estado: Alfa temprana (`Alpha 0.0.1`).** El reproductor base ya funciona, pero varias funciones del menú todavía son solo interfaz sin lógica. Antes de compilar lee la sección [Problemas conocidos](#-problemas-conocidos).
+> ⚠️ **Estado: Alfa temprana (`Alpha 0.0.1`).** El reproductor base ya funciona y el proyecto **compila** (con pruebas unitarias y CI). Algunas funciones del menú todavía son solo interfaz sin lógica; revisa la sección [Problemas conocidos](#-problemas-conocidos).
 
 ---
 
@@ -24,6 +24,10 @@ DEZZNUTS es una app Android nativa escrita en **Kotlin + Jetpack Compose** que e
 | **Modos de repetición** | `OFF` → `ALL` → `ONE` → `STOP_AFTER_CURRENT` (detener al terminar la canción). |
 | **Cola de reproducción** | Hoja inferior con la cola; reordenar arrastrando y quitar canciones. |
 | **Mini-reproductor** | Barra inferior fija cuando hay una canción activa. |
+| **Modo aleatorio (Shuffle)** | Reordena la cola de verdad (`shuffleModeEnabled`); el icono refleja el estado. |
+| **Pestaña Carpetas** | Agrupa la biblioteca por carpeta del archivo. |
+| **Búsqueda navegable** | Los resultados de **Álbumes** y **Artistas** abren su pantalla de detalle. |
+| **Favorito desde la notificación** | El botón ❤ de la notificación se sincroniza con los favoritos de la app. |
 | **Favoritos ❤** | Marcar/desmarcar; se guardan entre sesiones. |
 | **Contador de reproducciones** | Registra reproducciones para "Más reproducidas". |
 | **Reproducción reciente** | Historial de las últimas canciones escuchadas. |
@@ -39,13 +43,8 @@ DEZZNUTS es una app Android nativa escrita en **Kotlin + Jetpack Compose** que e
 
 ### 🟡 Parciales (UI presente, lógica incompleta)
 
-- **Botón Aleatorio (Shuffle)** dentro del reproductor: cambia de color pero **no reordena** la cola. (Los botones "ALEATORIO" de las pantallas de detalle *sí* mezclan.)
-- **Pestaña Carpetas**: muestra un texto placeholder.
-- **Búsqueda en Álbumes**: las tarjetas no abren el detalle al pulsarlas.
-- **Búsqueda en Artistas**: los resultados no abren el detalle del artista.
 - **Menú de opciones (⋮)** de canciones y listas: en su mayoría sin lógica.
 - **Restaurar lista de reproducción**: botón sin lógica.
-- **Favorito en la notificación**: el comando existe pero no actualiza estado.
 
 ### 🔴 Pendientes (declaradas en el menú lateral, sin implementar)
 
@@ -71,6 +70,7 @@ DEZZNUTS es una app Android nativa escrita en **Kotlin + Jetpack Compose** que e
 | Build | AGP `9.4.1`, Gradle `9.6.0`, Kotlin DSL |
 | SDK | `compileSdk`/`targetSdk` 37 · `minSdk` 24 (Android 7.0) |
 | Persistencia | `SharedPreferences` (sin base de datos) |
+| Pruebas / CI | JUnit 4 (**24 pruebas unitarias**) + GitHub Actions |
 
 ---
 
@@ -81,36 +81,44 @@ Dezznuts/
 ├── build.gradle.kts            # Build raíz
 ├── settings.gradle.kts         # Módulos y repositorios
 ├── gradle/libs.versions.toml   # Catálogo de dependencias
+├── .github/workflows/android.yml # CI: pruebas unitarias + build del APK
 └── app/
     ├── build.gradle.kts        # Módulo app (dependencias y SDK)
-    └── src/main/
-        ├── AndroidManifest.xml
-        ├── java/com/example/creproductor/
-        │   ├── MainActivity.kt          # Entrada, permisos, scaffolding y mini-player
-        │   ├── data/                    # Modelos y acceso a datos
-        │   │   ├── Song.kt
-        │   │   ├── Playlist.kt
-        │   │   ├── RepeatMode.kt
-        │   │   ├── MediaStoreScanner.kt # Escaneo de audio local
-        │   │   ├── AudioTagWriter.kt    # Escritura de etiquetas ID3
-        │   │   ├── CoverFetcher.kt      # Carátulas/metadata (iTunes)
-        │   │   ├── ArtistImageFetcher.kt# Fotos de artista (Deezer)
-        │   │   └── YoutubeTitleCleaner.kt
-        │   ├── service/
-        │   │   └── MusicService.kt      # Servicio de reproducción + sesión
-        │   ├── gui/                     # Pantallas y ViewModel (Compose)
-        │   │   ├── MusicViewModel.kt    # Estado central de la app
-        │   │   ├── MainScreen.kt        # Pestañas y navegación principal
-        │   │   ├── FullScreenPlayer.kt  # Reproductor a pantalla completa
-        │   │   ├── AppDrawerContent.kt  # Menú lateral
-        │   │   ├── SearchScreen.kt
-        │   │   ├── GridScreens.kt       # Álbumes, artistas, géneros
-        │   │   ├── QuickSelectionScreen.kt / QuickSelectionDetailScreen.kt
-        │   │   ├── AlbumDetailScreen.kt / ArtistInterfaceScreen.kt / GenreDetailScreen.kt
-        │   │   ├── PlaylistScreen.kt / PlaylistDetailScreen.kt
-        │   │   ├── EditTagDialog.kt / CreatePlaylistDialog.kt / AddSongsToPlaylistDialog.kt
-        │   └── ui/theme/               # Colores, tipografía y tema
-        └── res/                        # Recursos (iconos, strings, xml de backup)
+    ├── proguard-rules.pro      # Reglas de R8 (release)
+    └── src/
+        ├── main/
+        │   ├── AndroidManifest.xml
+        │   ├── java/com/example/creproductor/
+        │   │   ├── MainActivity.kt          # Entrada, permisos, scaffolding y mini-player
+        │   │   ├── data/                    # Modelos y acceso a datos
+        │   │   │   ├── Song.kt
+        │   │   │   ├── Playlist.kt
+        │   │   │   ├── RepeatMode.kt
+        │   │   │   ├── PlaylistSerializer.kt  # Guarda/carga listas (campos codificados)
+        │   │   │   ├── SongOrganizer.kt       # Agrupaciones y búsqueda (puras)
+        │   │   │   ├── MediaStoreScanner.kt # Escaneo de audio local
+        │   │   │   ├── AudioTagWriter.kt    # Escritura de etiquetas ID3
+        │   │   │   ├── CoverFetcher.kt      # Carátulas/metadata (iTunes)
+        │   │   │   ├── ArtistImageFetcher.kt# Fotos de artista (Deezer)
+        │   │   │   └── YoutubeTitleCleaner.kt
+        │   │   ├── service/
+        │   │   │   └── MusicService.kt      # Servicio de reproducción + sesión
+        │   │   ├── gui/                     # Pantallas y ViewModel (Compose)
+        │   │   │   ├── MusicViewModel.kt    # Estado central de la app
+        │   │   │   ├── MainScreen.kt        # Pestañas y navegación principal
+        │   │   │   ├── FullScreenPlayer.kt  # Reproductor a pantalla completa
+        │   │   │   ├── AppDrawerContent.kt  # Menú lateral
+        │   │   │   ├── SearchScreen.kt
+        │   │   │   ├── GridScreens.kt       # Álbumes, artistas, géneros, carpetas
+        │   │   │   ├── QuickSelectionScreen.kt / QuickSelectionDetailScreen.kt
+        │   │   │   ├── AlbumDetailScreen.kt / ArtistInterfaceScreen.kt / GenreDetailScreen.kt
+        │   │   │   ├── PlaylistScreen.kt / PlaylistDetailScreen.kt
+        │   │   │   ├── EditTagDialog.kt / CreatePlaylistDialog.kt / AddSongsToPlaylistDialog.kt
+        │   │   │   └── ui/theme/            # Colores, tipografía y tema
+        │   └── res/                    # Recursos (iconos, strings, xml de backup)
+        └── test/java/com/example/creproductor/  # Pruebas unitarias (JUnit)
+            ├── data/PlaylistSerializerTest.kt, SongOrganizerTest.kt, …
+            └── DurationFormatTest.kt
 ```
 
 📄 Para el detalle técnico completo (arquitectura, flujo de datos, bugs y hoja de ruta) consulta **[`RESUMEN_PROYECTO.md`](./RESUMEN_PROYECTO.md)**.
@@ -155,13 +163,12 @@ Cubren la lógica pura del proyecto: serialización de listas de reproducción, 
 
 ## 🐞 Problemas conocidos
 
-- **❗ El proyecto no compila tal cual.** En `app/src/main/java/com/example/creproductor/gui/PlaylistScreen.kt` (línea 198) hay un `Icons.Default.,` inválido (probablemente quería ser `Icons.Default.MoreVert`). Esto rompe la compilación.
-- El **shuffle** del reproductor no reordena la cola (solo cambia el color del icono).
-- La persistencia usa `SharedPreferences` con serialización manual (`;` y `|` como separadores): nombres de lista o artistas que contengan esos caracteres pueden corromper los datos.
+- Los **menús ⋮** de canciones y listas, y el botón **"Restaurar lista"**, siguen sin lógica.
+- La persistencia sigue en `SharedPreferences` (migración a **Room/DataStore** pendiente); la serialización de listas ya es robusta frente a caracteres especiales.
 - El campo **género** solo se lee en Android 11+ (`MediaStore.GENRE`); en versiones anteriores aparece como "Desconocido".
 - La **edición de etiquetas** escribe directamente sobre el `contentUri` en modo `rwt`; en algunos dispositivos/rutas puede fallar por las restricciones de almacenamiento (SAF).
 - El historial de búsqueda usa un `StringSet` (no garantiza el orden).
-- `INTERNET` está declarado dos veces en el `AndroidManifest.xml` (inofensivo, pero se puede limpiar).
+- Las **fotos de artista** se piden por cada fila; en listas grandes conviene cargarlas por lotes.
 
 Detalles y sugerencias de arreglo en [`RESUMEN_PROYECTO.md`](./RESUMEN_PROYECTO.md).
 
@@ -169,13 +176,13 @@ Detalles y sugerencias de arreglo en [`RESUMEN_PROYECTO.md`](./RESUMEN_PROYECTO.
 
 ## 🗺️ Hoja de ruta sugerida
 
-1. **Arreglar la compilación** (`PlaylistScreen.kt`).
-2. Conectar el **shuffle** real y el favorito de la notificación.
-3. Implementar **Escanear archivos** y **Carpetas**.
-4. Implementar **Ecualizador** y **Temporizador**.
-5. Implementar **Cortador de audio** y **Buscar duplicados**.
-6. Migrar persistencia a **Room / DataStore**.
-7. Completar navegación de búsqueda (álbumes/artistas) y menús ⋮.
+> ✅ **Ya hecho:** compilación, shuffle real, favorito de la notificación, pestaña **Carpetas**, navegación de búsqueda y pruebas unitarias + CI.
+
+1. Implementar **Escanear archivos** (re-escaneo manual).
+2. Implementar **Ecualizador** y **Temporizador**.
+3. Implementar **Cortador de audio** y **Buscar duplicados**.
+4. Completar los **menús ⋮** y el botón **"Restaurar lista"**.
+5. Migrar la persistencia a **Room / DataStore**.
 
 ---
 
