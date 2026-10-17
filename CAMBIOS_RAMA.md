@@ -1,6 +1,6 @@
 # Cambios de la rama `fix/bugs-y-conexiones`
 
-Rama alterna (no toca `main`) con **arreglos de bugs y conexiones seguras** detectados durante la revisión del proyecto. La idea es que sirva de propuesta para revisar, no como verdad absoluta: hay cambios que **no pude compilar ni probar en este entorno** (no había Android SDK), así que conviene probarlos en un dispositivo antes de fusionar.
+Rama alterna (no toca `main`) con **arreglos de bugs y conexiones seguras** detectados durante la revisión del proyecto. La idea es que sirva de propuesta para revisar, no como verdad absoluta: aunque **compila y las pruebas pasan**, conviene probar en dispositivo antes de fusionar.
 
 Base: `main` @ `81f2aa4`.
 
@@ -49,6 +49,11 @@ Se extrajo lógica pura (antes encerrada en Composables y en el ViewModel) a hel
 Con `targetSdk 37` la app es *edge-to-edge*, así que el contenido se dibuja bajo la barra de estado/cámara.
 - `gui/FullScreenPlayer.kt`: se agregó `windowInsetsPadding(WindowInsets.safeDrawing)`. El header (flecha, "Reproduciendo desde", ⋮) ya no queda bajo la barra de estado ni el *cutout* de la cámara, y el panel inferior no queda bajo la barra de navegación.
 - `MainActivity.kt` (`BottomPlayerBar`): `navigationBarsPadding()` para que el mini-reproductor no quede tapado por la barra de gestos.
+
+### 10. Arreglo del CI (fallaba en "Configurar Android SDK")
+- `.github/workflows/android.yml`: se actualizó `android-actions/setup-android` de **v3 → v4**. La v3 fallaba porque Google **eliminó el paquete `tools`** del SDK (la v3 intentaba instalarlo); la v4 ya no lo pide.
+- Además se instalan explícitamente la plataforma y las build-tools del proyecto (`platforms;android-37.0`, `build-tools;36.0.0`) para no depender de la descarga automática de Gradle.
+- **Acción pendiente:** al abrir un PR, verificar que el workflow ahora pase en verde.
 
 ---
 
