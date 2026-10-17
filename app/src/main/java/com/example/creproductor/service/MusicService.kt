@@ -72,11 +72,18 @@ class MusicService : MediaSessionService(){
             useOffload = HiFiAudio.isOffloadEnabled(this)
         )
 
-        return ExoPlayer.Builder(this, renderersFactory)
+        val player = ExoPlayer.Builder(this, renderersFactory)
             .setAudioAttributes(audioAttributes, true)
             .setHandleAudioBecomingNoisy(true)
             .setLoadControl(buildLoadControl())
             .build()
+
+        // Traza de latencia del *seek* (ver PlaybackDiagnostics). Se engancha aquí
+        // para que la tengan tanto el reproductor de arranque como el que crea
+        // rebuildPlayer().
+        PlaybackDiagnostics.attach(player)
+
+        return player
     }
 
     /**

@@ -102,6 +102,31 @@ Si el FLAC no incluye un bloque `SEEKTABLE`, el extractor de Media3 hace una bú
 el archivo (`FlacBinarySearchSeeker`) para localizar el fotograma; eso es propio del formato y no se
 puede ajustar desde la app (con `SEEKTABLE` usa `FlacSeekTableSeekMap`, que es inmediato).
 
+### Diagnóstico de latencia del *seek* (`PlaybackDiagnostics`)
+
+Cuando el *seek* "se siente lento" no basta con suponer dónde está el tiempo: puede estar en el I/O,
+en el decodificador, en el búfer del `AudioTrack` o en la interfaz. `PlaybackDiagnostics` engancha un
+`AnalyticsListener` a cada reproductor (también a los que crea `rebuildPlayer()`) y el ViewModel marca
+el instante exacto en que el usuario pide el salto, así que la traza mide el trayecto completo:
+**interfaz → sesión → ExoPlayer → sonido**.
+
+```bash
+adb logcat -s DezzSeek      # y luego mover el tiempo de una canción
+```
+
+| Línea | Qué revela |
+|-------|------------|
+| `seek pedido -> N ms` | Inicio de la medición (ViewModel). |
+| `posición movida a N ms (seek)` | El *seek* llegó al reproductor. Si la posición no coincide con la pedida, el archivo no trae `SEEKTABLE`. |
+| `lectura que tardó N ms` | I/O lento (solo se registra a partir de 40 ms, para no inundar logcat). |
+| `decodificador '...' inicializado en N ms` | Coste de arrancar el `MediaCodec`. |
+| `AudioTrack creado: ... encoding=...` | **Formato real de salida** (PCM 16 bits / float 32 / offload) y tamaño de búfer. |
+| `>>> AUDIO SONANDO` | El instante real en que empieza a oírse. **Es la línea que importa.** |
+| `UNDERRUN` | El `AudioTrack` se quedó sin datos (se oye un salto). |
+
+Solo escribe en logcat: no altera la reproducción. Para silenciarlo, basta con no filtrar por la
+etiqueta `DezzSeek`.
+
 ### Persistencia actual (SharedPreferences)
 
 | Clave | Contenido |
@@ -142,6 +167,7 @@ puede ajustar desde la app (con `SEEKTABLE` usa `FlacSeekTableSeekMap`, que es i
 |---------|-----|--------|
 | `MusicService.kt` | Reproducción en 2º plano y sesión | ✅ |
 | `HiFiRenderersFactory.kt` | Salida float de 32 bits y audio offload | ✅ |
+| `PlaybackDiagnostics.kt` | Traza de latencia del *seek* en logcat (`DezzSeek`) | ✅ |
 
 ### Paquete `gui/` (interfaz Compose)
 

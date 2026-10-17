@@ -32,6 +32,7 @@ import com.example.creproductor.data.PlaylistSerializer
 import com.example.creproductor.data.RepeatMode
 import com.example.creproductor.data.SongOrganizer
 import com.example.creproductor.data.next
+import com.example.creproductor.service.PlaybackDiagnostics
 
 sealed interface UiState {
     object PermissionRequired : UiState
@@ -265,6 +266,8 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         _searchQuery.value = query
     }
     fun seekTo(positionMs: Long){
+        // Marca el inicio de la medición para la traza de PlaybackDiagnostics.
+        PlaybackDiagnostics.markSeekRequest(positionMs)
         _currentPositionMs.value = positionMs
         mediaController?.seekTo(positionMs)
         prefs.edit { putLong("last_position_ms", positionMs) }

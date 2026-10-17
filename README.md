@@ -95,6 +95,37 @@ la cola y la posición (ver `MusicService.rebuildPlayer()`).
 El diálogo muestra además la **frecuencia nativa del dispositivo**, que es el dato clave para
 entender el remuestreo.
 
+### Latencia al mover el tiempo (*seek*)
+
+Al adelantar o atrasar una canción, la reproducción debe reanudarse lo antes posible. ExoPlayer trae
+valores por defecto **pensados para streaming por internet** que, en archivos locales, hacen esperar de
+más; `MusicService.buildLoadControl()` los ajusta:
+
+| Ajuste | Por defecto | DEZZNUTS | Por qué |
+|--------|------------|----------|---------|
+| `backBufferDurationMs` | `0` | `30 s` | Con `0` no hay audio decodificado detrás del cursor: retroceder obliga a releer y recodificar. |
+| `bufferForPlaybackMs` | `2500` | `1000` | Tras un *seek*, ExoPlayer no reanuda hasta tener esa cantidad de audio listo. |
+| `bufferForPlaybackAfterRebufferMs` | `5000` | `2000` | Igual, tras un corte o una pausa larga. |
+
+Un límite que **no** se puede tocar desde el código: si el FLAC no trae el bloque `SEEKTABLE`, Media3
+localiza el fotograma con una búsqueda binaria sobre el archivo (`FlacBinarySearchSeeker`). Se arregla
+**en el archivo**, sin recodificar y sin pérdida:
+
+```bash
+metaflac --list archivo.flac | grep -i seektable   # ¿lo trae?
+metaflac --add-seekpoint=10s archivo.flac          # se lo añade
+```
+
+Y si aun así "se siente lento", no hay que suponer: `PlaybackDiagnostics` imprime una línea de tiempo
+en logcat con lo que tarda cada fase (lectura, decodificador, `AudioTrack` y el instante real en que
+vuelve a sonar).
+
+```bash
+adb logcat -s DezzSeek      # mover el tiempo y leer la traza
+```
+
+Los detalles de qué significa cada línea están en `RESUMEN_PROYECTO.md`.
+
 ---
 
 ## 🧱 Stack tecnológico
@@ -143,7 +174,8 @@ Dezznuts/
         │   │   │   └── YoutubeTitleCleaner.kt
         │   │   ├── service/
         │   │   │   ├── MusicService.kt      # Servicio de reproducción + sesión
-        │   │   │   └── HiFiRenderersFactory.kt # Salida float + audio offload
+        │   │   │   ├── HiFiRenderersFactory.kt # Salida float + audio offload
+        │   │   │   └── PlaybackDiagnostics.kt  # Traza de latencia del seek (logcat)
         │   │   ├── gui/                     # Pantallas y ViewModel (Compose)
         │   │   │   ├── MusicViewModel.kt    # Estado central de la app
         │   │   │   ├── MainScreen.kt        # Pestañas y navegación principal
