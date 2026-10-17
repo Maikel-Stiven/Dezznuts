@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -119,7 +120,13 @@ fun SearchOverlayScreen(
         }.distinctBy { it.artist.lowercase().trim() }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    // La búsqueda se dibuja por encima del Scaffold, así que necesita su propia
+    // zona segura para no quedar bajo la barra de estado (notch / reloj).
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+    ) {
         Surface(
             color = MaterialTheme.colorScheme.surfaceVariant,
             modifier = Modifier.fillMaxWidth()
@@ -334,7 +341,9 @@ fun SearchOverlayScreen(
                         SearchCategoryItem(
                             title = song.artist,
                             subtitle = "$artistAlbumsCount álbumes •  $artistSongsCounts canciones",
-                            imageModel = song.albumArtUri,
+                            // Foto real del artista (Deezer) cacheada desde aquí; si no se
+                            // consigue, se cae a la portada de una de sus canciones.
+                            imageModel = rememberArtistPhoto(song.artist, song.albumArtUri),
                             onClick = {
                                 onArtistClick(
                                     song.artist,

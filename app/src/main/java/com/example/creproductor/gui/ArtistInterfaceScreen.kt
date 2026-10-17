@@ -39,26 +39,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.example.creproductor.data.ArtistImageFetcher
 import com.example.creproductor.data.Song
 import com.example.creproductor.data.SongOrganizer
 import com.example.creproductor.formatDuration
-import kotlinx.coroutines.delay
-import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun ArtistDetailScreen (
@@ -78,18 +70,13 @@ fun ArtistDetailScreen (
         onBackClick()
     }
 
-    val context = LocalContext.current
-
-    var webPhotoUrl by remember(artistName) { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(artistName) {
-        delay(150L.milliseconds)
-        webPhotoUrl = ArtistImageFetcher.fetchArtistImageUrl(context, artistName)
-    }
-
     val avatarUri = remember (artistSongs){
         artistSongs.firstOrNull { it.albumArtUri != null}?.albumArtUri
     }
+
+    // Foto del artista: primero la de internet (Deezer) y, si no hay, la portada de
+    // una de sus canciones. Si ya se cacheó desde la búsqueda, aparece al instante.
+    val displayImage = rememberArtistPhoto(artistName, avatarUri, delayMs = 150L)
 
     val albumsMap = remember (artistSongs){
         SongOrganizer.groupByAlbum(artistSongs) { it.album }
@@ -120,7 +107,10 @@ fun ArtistDetailScreen (
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal =  8.dp, vertical = 4.dp)
+                .padding(horizontal =  8.dp, vertical = 4.dp),
+            // Centra el nombre verticalmente con la flecha de volver (por defecto
+            // quedaba pegado arriba porque el IconButton es más alto).
+            verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick =  onBackClick) {
                 Icon(
@@ -134,7 +124,8 @@ fun ArtistDetailScreen (
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onBackground,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
         }
 
@@ -155,8 +146,6 @@ fun ArtistDetailScreen (
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                     ){
-
-                        val displayImage = webPhotoUrl ?: avatarUri
 
                         if (displayImage != null){
                             AsyncImage(

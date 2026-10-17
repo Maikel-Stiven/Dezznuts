@@ -44,25 +44,18 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.example.creproductor.data.ArtistImageFetcher
 import com.example.creproductor.data.Song
 import com.example.creproductor.data.SongOrganizer
-import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun AlbumsGridScreen(
@@ -267,8 +260,6 @@ fun ArtistsListScreen(
     onArtistClick: (artistName: String, artistSongs: List<Song>) -> Unit = {_, _ ->}
 ){
 
-    val context = LocalContext.current
-
     val artistsMap = remember(songs) {
         SongOrganizer.groupByArtist(songs) { it.artist }
     }
@@ -294,14 +285,9 @@ fun ArtistsListScreen(
                 val artistSongs = artistsMap[artistName] ?: emptyList()
                 val avatarUri = artistSongs.firstOrNull { it.albumArtUri != null }?. albumArtUri
 
-                var webPhotoUrl by remember (artistName) { mutableStateOf<String?>(null) }
-
-                LaunchedEffect(artistName) {
-
-                    kotlinx.coroutines.delay(100L.milliseconds)
-
-                    webPhotoUrl = ArtistImageFetcher.fetchArtistImageUrl(context, artistName)
-                }
+                // Foto real del artista (Deezer). Comparte caché con la búsqueda y con la
+                // ficha del artista, así que aparece al instante si ya se cargó antes.
+                val artistPhoto = rememberArtistPhoto(artistName, avatarUri, delayMs = 100L)
 
                 val albumsCount = artistSongs
                     .map { it.album }
@@ -329,11 +315,9 @@ fun ArtistsListScreen(
                         contentAlignment = Alignment.Center
                     ){
 
-                        val displayImage = webPhotoUrl ?: avatarUri
-
-                        if (displayImage != null) {
+                        if (artistPhoto != null) {
                             AsyncImage(
-                                model = displayImage,
+                                model = artistPhoto,
                                 contentDescription = artistName,
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
