@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.LibraryMusic
@@ -387,6 +388,91 @@ fun ArtistsListScreen(
                              overflow = TextOverflow.Ellipsis
                          )
                      }
+                }
+            }
+        }
+    }
+}
+@Composable
+fun FoldersListScreen(
+    songs: List<Song>,
+    listState: LazyListState = rememberLazyListState(),
+    onFolderClick: (folderName: String, folderSongs: List<Song>) -> Unit = { _, _ -> }
+){
+    val foldersMap = remember(songs) {
+        songs.groupBy { song ->
+            val path = song.path
+            if (path.isBlank()) {
+                "Sin carpeta"
+            } else {
+                path.substringBeforeLast('/', missingDelimiterValue = "Sin carpeta").ifBlank { "/" }
+            }
+        }
+    }
+
+    if (foldersMap.isEmpty()){
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ){
+            Text(
+                text = "No se encontraron carpetas",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    } else {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(vertical = 8.dp)
+        ) {
+            items(foldersMap.keys.toList(), key = { it }) { folderPath ->
+                val folderSongs = foldersMap[folderPath] ?: emptyList()
+                val displayName = folderPath.substringAfterLast('/').ifBlank { folderPath }
+                val countText = if (folderSongs.size == 1) "1 canción" else "${folderSongs.size} canciones"
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onFolderClick(folderPath, folderSongs) }
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ){
+                        Icon(
+                            imageVector = Icons.Default.Folder,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = displayName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = "$countText • $folderPath",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }

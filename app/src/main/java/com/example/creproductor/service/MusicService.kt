@@ -9,6 +9,7 @@ import android.os.Bundle
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -25,6 +26,8 @@ import com.google.common.util.concurrent.ListenableFuture
 class MusicService : MediaSessionService(){
     private var mediaSession: MediaSession? = null
     private var isFavorite = false
+
+    private val prefs by lazy { getSharedPreferences("dezznuts_prefs", MODE_PRIVATE) }
 
     companion object{
         const val ACTION_FAVORITE = "ACTION_FAVORITE"
@@ -49,10 +52,37 @@ class MusicService : MediaSessionService(){
             .setCallback(CustomMediaSessionCallback())
             .build()
 
+        player.addListener(object : Player.Listener {
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                updateNotificationLayout()
+            }
+        })
+
         updateNotificationLayout()
     }
 
-    private fun updateNotificationLayout(){
+    private fun toggleCurrentFavorite(): Boolean {
+        val currentId = mediaSession?.player?.currentMediaItem?.mediaId ?: return isFavorite
+
+        val favIds = prefs.getStringSet("fav_ids", emptySet())?.toMutableSet() ?: mutableSetOf()
+        val nowFavorite = if (favIds.contains(currentId)) {
+            favIds.remove(currentId)
+            false
+        } else {
+            favIds.add(currentId)
+            true
+        }
+
+        prefs.edit().putStringSet("fav_ids", favIds).apply()
+        isFavorite = nowFavorite
+        updateNotificationLayout()
+        return nowFavorite
+    }
+
+    private fun updateNotificationLayout() {
+
+        val currentId = mediaSession?.player?.currentMediaItem?.mediaId
+        isFavorite = currentId != null && prefs.getStringSet("fav_ids", emptySet())?.contains(currentId) == true
 
         val favoriteButton = CommandButton.Builder()
             .setDisplayName("Favorito")
@@ -126,7 +156,7 @@ class MusicService : MediaSessionService(){
         ): ListenableFuture<SessionResult> {
             when (customCommand.customAction){
                 ACTION_FAVORITE -> {
-                    //
+                    toggleCurrentFavorite()
                 }
                 ACTION_CLOSE -> {
                     session.player.stop()

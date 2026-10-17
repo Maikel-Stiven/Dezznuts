@@ -65,6 +65,8 @@ fun MainScreen(
     var selectedArtistSongs by remember { mutableStateOf<List<Song>>(emptyList()) }
     var selectedGenreName by remember { mutableStateOf<String?>(null) }
     var selectedGenreSongs by remember { mutableStateOf<List<Song>>(emptyList()) }
+    var selectedFolderName by remember { mutableStateOf<String?>(null) }
+    var selectedFolderSongs by remember { mutableStateOf<List<Song>>(emptyList()) }
 
     var showCreatedPlaylistDialog by remember { mutableStateOf(false) }
     var showAddSongsDialog by remember { mutableStateOf(false) }
@@ -183,6 +185,29 @@ fun MainScreen(
                 selectedGenreSongs = emptyList()
             }
         )
+    } else if (selectedFolderName != null){
+        QuickSelectDetailScreen(
+            categoryTitle = selectedFolderName!!,
+            categorySongs = selectedFolderSongs,
+            currentSongId = currentSong?.id,
+            isPlaying = isPlaying,
+            onSongClick = {song -> viewModel.playSong(song, customQueue = selectedFolderSongs)},
+            onPlayAllClick = {
+                if (selectedFolderSongs.isNotEmpty()){
+                    viewModel.playSong(selectedFolderSongs.first(), customQueue = selectedFolderSongs)
+                }
+            },
+            onShuffleClick = {
+                if (selectedFolderSongs.isNotEmpty()){
+                    val shuffledList = selectedFolderSongs.shuffled()
+                    viewModel.playSong(shuffledList.first(), customQueue = shuffledList)
+                }
+            },
+            onBackClick = {
+                selectedFolderName = null
+                selectedFolderSongs = emptyList()
+            }
+        )
     } else if (selectedPlaylist != null){
         val activePlaylist = playlist.find { it.id == selectedPlaylist!!.id } ?: selectedPlaylist!!
         val playlistSongs = songs.filter { activePlaylist.songIds.contains(it.id) }
@@ -243,6 +268,18 @@ fun MainScreen(
                     onSongClick = { song ->
                         viewModel.addSearchHistory(searchQuery)
                         onSongClick(song)
+                    },
+                    onAlbumClick = { albumName, albumSongs ->
+                        isSearchActive = false
+                        viewModel.setSearchQuery("")
+                        selectedAlbumName = albumName
+                        selectedAlbumsSongs = albumSongs
+                    },
+                    onArtistClick = { artistName, artistSongs ->
+                        isSearchActive = false
+                        viewModel.setSearchQuery("")
+                        selectedArtistName = artistName
+                        selectedArtistSongs = artistSongs
                     },
                     onCloseSearch = {
                         isSearchActive = false
@@ -357,7 +394,13 @@ fun MainScreen(
                                     onPlaylistClick = {playlist -> selectedPlaylist = playlist}
                                 )
 
-                                AppTab.FOLDERS -> Text("Explorador de carpetas", modifier = Modifier.padding(16.dp))
+                                AppTab.FOLDERS -> FoldersListScreen(
+                                    songs = songs,
+                                    onFolderClick = {folderName, folderSongs ->
+                                        selectedFolderName = folderName
+                                        selectedFolderSongs = folderSongs
+                                    }
+                                )
                             }
                         }
                     }

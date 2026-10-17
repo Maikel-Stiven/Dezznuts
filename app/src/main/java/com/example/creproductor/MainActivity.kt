@@ -76,6 +76,7 @@ class MainActivity : ComponentActivity() {
                     val isPlaying by viewModel.isPlaying.collectAsState()
                     val currentQueue by viewModel.currentQueue.collectAsState()
                     val repeatMode by viewModel.repeatMode.collectAsState()
+                    val isShuffleEnabled by viewModel.isShuffleEnabled.collectAsState()
 
                     var songToEdit by remember { mutableStateOf<Song?>(null) }
                     var isPlayerFullScreenVisible by remember { mutableStateOf(false) }
@@ -199,6 +200,8 @@ class MainActivity : ComponentActivity() {
                                                 isPlaying = isPlaying,
                                                 currentPositionMs = currentPositionMs,
                                                 repeatMode = repeatMode,
+                                                isShuffleEnabled = isShuffleEnabled,
+                                                onToggleShuffle = { viewModel.toggleShuffle() },
                                                 onTogglePlayPause = { viewModel.togglePlayPause() },
                                                 onNextClick = { viewModel.playNext() },
                                                 onPreviousClick = { viewModel.playPrevious() },

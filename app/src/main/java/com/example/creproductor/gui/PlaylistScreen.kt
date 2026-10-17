@@ -195,7 +195,7 @@ fun PlaylistScreen(
 
                             IconButton(onClick = {onPlaylistOptionsClick(playlist)}) {
                                 Icon(
-                                    imageVector = Icons.Default.,
+                                    imageVector = Icons.Default.MoreVert,
                                     contentDescription = "Opciones",
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

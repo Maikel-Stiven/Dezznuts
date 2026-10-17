@@ -94,6 +94,8 @@ fun FullScreenPlayer(
     isPlaying: Boolean,
     currentPositionMs: Long,
     repeatMode: RepeatMode = RepeatMode.OFF,
+    isShuffleEnabled: Boolean = false,
+    onToggleShuffle: () -> Unit = {},
     onTogglePlayPause: () -> Unit,
     onNextClick: () -> Unit,
     onPreviousClick: () -> Unit,
@@ -115,7 +117,6 @@ fun FullScreenPlayer(
     var sliderPositionMs by remember { mutableFloatStateOf(0f) }
     val currentSliderValue = if (isDraggingSlider) sliderPositionMs else currentPositionMs.toFloat()
 
-    var isShuffleActive by remember { mutableStateOf(false) }
     var showQueueBottomSheet by remember { mutableStateOf(false) }
 
 
@@ -289,11 +290,11 @@ fun FullScreenPlayer(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    IconButton(onClick = { isShuffleActive = !isShuffleActive }) {
+                    IconButton(onClick = onToggleShuffle) {
                         Icon(
                             imageVector = Icons.Default.Shuffle,
                             contentDescription = "Aleatorio",
-                            tint = if (isShuffleActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = if (isShuffleEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
@@ -552,11 +553,11 @@ fun FullScreenPlayer(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        IconButton(onClick = {isShuffleActive = !isShuffleActive}) {
+                        IconButton(onClick = onToggleShuffle) {
                             Icon(
                                 imageVector = Icons.Default.Shuffle,
                                 contentDescription = "Aleatorio",
-                                tint = if (isShuffleActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = if (isShuffleEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 

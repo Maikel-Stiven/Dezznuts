@@ -3,6 +3,7 @@ package com.example.creproductor.gui
 import android.app.Application
 import android.content.ComponentName
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -46,6 +47,13 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     private val scanner = MediaStoreScanner(application.applicationContext)
     private val prefs = application.getSharedPreferences("dezznuts_prefs", Context.MODE_PRIVATE)
 
+    // Mantiene la UI sincronizada cuando los favoritos cambian fuera del ViewModel
+    // (por ejemplo, al pulsar el botón de favorito en la notificación).
+    private val favPrefsListener =
+        SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "fav_ids") syncFavoritesFromPrefs()
+        }
+
     private val _uiState = MutableStateFlow<UiState>(UiState.PermissionRequired)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
@@ -53,6 +61,11 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     private var mediaController: MediaController? = null
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
+
+    //
+    private val _isShuffleEnabled = MutableStateFlow(false)
+    val isShuffleEnabled: StateFlow<Boolean> = _isShuffleEnabled.asStateFlow()
+    //
 
 
     private val _currentSong = MutableStateFlow<Song?>(null)
@@ -145,6 +158,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         startPositionTracker()
         loadSearchHistory()
         loadPlaylist()
+        prefs.registerOnSharedPreferenceChangeListener(favPrefsListener)
     }
 
     private fun initMediaController(){
@@ -162,10 +176,15 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                 mediaController = controller
 
                 _isPlaying.value = controller.isPlaying
+                _isShuffleEnabled.value = controller.shuffleModeEnabled
 
                 controller.addListener(object : Player.Listener {
                     override fun onIsPlayingChanged(isPlaying: Boolean) {
                         _isPlaying.value = isPlaying
+                    }
+
+                    override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+                        _isShuffleEnabled.value = shuffleModeEnabled
                     }
 
                     override fun onPlaybackStateChanged(playbackState: Int) {
@@ -345,6 +364,14 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun toggleShuffle(){
+        mediaController?.let { controller ->
+            val newValue = !controller.shuffleModeEnabled
+            controller.shuffleModeEnabled = newValue
+            _isShuffleEnabled.value = newValue
+        }
+    }
+
     fun toggleRepeatMode(){
         val nextMode = _repeatMode.value.next()
         _repeatMode.value =nextMode
@@ -382,7 +409,17 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     }
 
     override fun onCleared() {
+        prefs.unregisterOnSharedPreferenceChangeListener(favPrefsListener)
         mediaController?.release()
+    }
+
+    private fun syncFavoritesFromPrefs(){
+        val currentState = _uiState.value as? UiState.Success ?: return
+        val favIds = getSavedFavoritesIds()
+        val updatedSongs = currentState.songs.map { it.copy(isFavorite = favIds.contains(it.id)) }
+        _uiState.value = UiState.Success(updatedSongs)
+
+        _currentSong.value = _currentSong.value?.let { it.copy(isFavorite = favIds.contains(it.id)) }
     }
 
     fun playNext(){

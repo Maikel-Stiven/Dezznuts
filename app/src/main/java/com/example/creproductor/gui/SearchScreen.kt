@@ -72,7 +72,9 @@ fun SearchOverlayScreen(
     onDeleteHistoryItem: (String) -> Unit,
     allSongs: List<Song>,
     onSongClick: (Song) -> Unit,
-    onCloseSearch: () -> Unit
+    onCloseSearch: () -> Unit,
+    onAlbumClick: (albumName: String, albumSongs: List<Song>) -> Unit = { _, _ -> },
+    onArtistClick: (artistName: String, artistSongs: List<Song>) -> Unit = { _, _ -> }
 ){
 
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -295,7 +297,13 @@ fun SearchOverlayScreen(
                             for (albumSong in rowAlbums){
                                 AlbumGridCard(
                                     song = albumSong,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        onAlbumClick(
+                                            albumSong.album,
+                                            allSongs.filter { it.album == albumSong.album }
+                                        )
+                                    }
                                 )
                             }
                             repeat(3 - rowAlbums.size){
@@ -327,6 +335,12 @@ fun SearchOverlayScreen(
                             title = song.artist,
                             subtitle = "$artistAlbumsCount álbumes •  $artistSongsCounts canciones",
                             imageModel = song.albumArtUri,
+                            onClick = {
+                                onArtistClick(
+                                    song.artist,
+                                    allSongs.filter { it.artist.equals(song.artist, ignoreCase = true) }
+                                )
+                            }
                         )
                     }
                 }
@@ -338,12 +352,13 @@ fun SearchOverlayScreen(
 @Composable
 private fun  AlbumGridCard(
     song: Song,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
 ){
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(2.dp))
-            .clickable{/*lógica del botón*/}
+            .clickable(onClick = onClick)
             .padding(bottom = 8.dp)
     ) {
         Box(
@@ -393,12 +408,13 @@ private fun SearchCategoryItem(
     title: String,
     subtitle: String,
     imageModel: Any?,
-    isCircle: Boolean = true
+    isCircle: Boolean = true,
+    onClick: () -> Unit = {}
 ){
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable{ /*falta la lógica del album*/}
+            .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
