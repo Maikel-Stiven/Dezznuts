@@ -41,6 +41,7 @@ import com.example.creproductor.gui.ClearImageCacheDialog
 import com.example.creproductor.gui.DrawerMenuItem
 import com.example.creproductor.gui.EditTagDialog
 import com.example.creproductor.gui.FullScreenPlayer
+import com.example.creproductor.gui.HiFiAudioDialog
 import com.example.creproductor.gui.MainScreen
 import com.example.creproductor.gui.MusicViewModel
 import com.example.creproductor.gui.UiState
@@ -82,6 +83,7 @@ class MainActivity : ComponentActivity() {
                     var songToEdit by remember { mutableStateOf<Song?>(null) }
                     var isPlayerFullScreenVisible by remember { mutableStateOf(false) }
                     var showClearImageCacheDialog by remember { mutableStateOf(false) }
+                    var showHiFiAudioDialog by remember { mutableStateOf(false) }
 
                     val requiredPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         Manifest.permission.READ_MEDIA_AUDIO
@@ -155,6 +157,7 @@ class MainActivity : ComponentActivity() {
                                                     is DrawerMenuItem.AudioCutter -> {/*Falta lógica del cortador de audio*/}
                                                     is DrawerMenuItem.SleepTimer -> {/*Falta lógica del temporizador*/}
                                                     is DrawerMenuItem.ClearImageCache -> { showClearImageCacheDialog = true }
+                                                    is DrawerMenuItem.HiFiAudio -> { showHiFiAudioDialog = true }
                                                     else -> {/*no sé, aún no pienso en otras funciones que le aporten al usuario*/}
                                                 }
                                             },
@@ -235,6 +238,13 @@ class MainActivity : ComponentActivity() {
 
                         if (showClearImageCacheDialog) {
                             ClearImageCacheDialog(onDismiss = { showClearImageCacheDialog = false })
+                        }
+
+                        if (showHiFiAudioDialog) {
+                            HiFiAudioDialog(
+                                onDismiss = { showHiFiAudioDialog = false },
+                                onSettingsChanged = { viewModel.refreshAudioOutput() }
+                            )
                         }
                     }
                 }

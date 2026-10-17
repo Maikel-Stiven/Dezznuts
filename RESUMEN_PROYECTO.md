@@ -62,6 +62,30 @@ Con `targetSdk 37` la app se dibuja **edge-to-edge**, es decir, por debajo de la
 2. Al pulsar una canción, `playSong()` arma una lista de `MediaItem` (id + `contentUri`) y la pasa al controlador.
 3. El controlador arma la sesión en `MusicService`; la UI observa `isPlaying`, `currentSong` y `currentPositionMs` (un *tracker* consulta la posición cada 500 ms).
 
+### Cadena de audio y alta fidelidad
+
+El reproductor es **Media3 ExoPlayer**. La decodificación (FLAC/ALAC/WAV) la hace el códec del
+sistema y es exacta; la app **no aplica ningún DSP ni efecto** por defecto. El único punto donde la
+app puede ganar fidelidad real es la entrega del PCM al DAC, y se controla desde
+`service/HiFiRenderersFactory.kt`:
+
+- `setEnableAudioFloatOutput(true)` → salida en punto flotante de 32 bits. ExoPlayer solo la usa
+  cuando el archivo es de alta resolución (24/32 bits), así que en 16 bits no cambia nada.
+- `setOffloadMode(OFFLOAD_MODE_ENABLED_GAPLESS_REQUIRED)` → **offload**: el bitstream comprimido va
+  directamente al DSP, sin remuestreo ni mezcla. Se exige que no rompa la reproducción sin cortes
+  (de ahí `GAPLESS_REQUIRED`) y solo se aplica en **API 29+**; si el chip no lo soporta, ExoPlayer
+  cae automáticamente a PCM.
+
+Los ajustes se persisten con `data/HiFiAudio.kt` (mismas prefs `dezznuts_prefs`) y se editan en
+`gui/HiFiAudioDialog.kt`. Al cambiarlos, `MusicService.rebuildPlayer()` recrea el `ExoPlayer` con la
+nueva configuración y lo intercambia con `MediaSession.setPlayer()`: la sesión y los
+`MediaController` siguen conectados, y se conservan cola, índice, posición, repetición y aleatorio.
+
+> **Límite real de Android:** AudioFlinger remuestrea todo a la frecuencia nativa del dispositivo
+> (habitualmente 48000 Hz). Un FLAC de 44100 Hz se remuestrea salvo que haya offload o un DAC USB
+> que negocie la tasa. El diálogo muestra esa frecuencia nativa
+> (`AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE`).
+
 ### Persistencia actual (SharedPreferences)
 
 | Clave | Contenido |
@@ -73,6 +97,8 @@ Con `targetSdk 37` la app se dibuja **edge-to-edge**, es decir, por debajo de la
 | `saved_playlist` | Listas serializadas: `id|nombre|portada|ids…` |
 | `search_history` | Historial de búsqueda (`StringSet`) |
 | `artist_photos_cache` | URLs de fotos de artistas (prefs aparte) |
+| `hifi_float_output` | Salida PCM en 32 bits (float) — por defecto `true` |
+| `hifi_audio_offload` | Audio offload (bit-perfect) — por defecto `false` |
 
 ---
 
@@ -89,6 +115,7 @@ Con `targetSdk 37` la app se dibuja **edge-to-edge**, es decir, por debajo de la
 | `AudioTagWriter.kt` | Escritura de etiquetas ID3 y carátula | ✅ (con salvedades SAF) |
 | `CoverFetcher.kt` | Metadata/carátula oficial (iTunes) | ✅ |
 | `ArtistImageFetcher.kt` | Foto de artista (Deezer) + caché | ✅ |
+| `HiFiAudio.kt` | Preferencias de calidad de audio y datos de la salida del dispositivo | ✅ |
 | `YoutubeTitleCleaner.kt` | Limpia nombres tipo `Artista - Tema (Official Video)` | ✅ |
 | `PlaylistSerializer.kt` | Serializa las listas para `SharedPreferences` (campos codificados) | ✅ |
 | `SongOrganizer.kt` | Agrupaciones (álbum/artista/género/carpeta) y búsqueda, puras y testeables | ✅ |
@@ -98,6 +125,7 @@ Con `targetSdk 37` la app se dibuja **edge-to-edge**, es decir, por debajo de la
 | Archivo | Rol | Estado |
 |---------|-----|--------|
 | `MusicService.kt` | Reproducción en 2º plano y sesión | ✅ |
+| `HiFiRenderersFactory.kt` | Salida float de 32 bits y audio offload | ✅ |
 
 ### Paquete `gui/` (interfaz Compose)
 
@@ -118,6 +146,7 @@ Con `targetSdk 37` la app se dibuja **edge-to-edge**, es decir, por debajo de la
 | `EditTagDialog.kt` | Editar etiquetas + "Auto-web" + galería | ✅ |
 | `CreatePlaylistDialog.kt` | Crear lista | ✅ |
 | `AddSongsToPlaylistDialog.kt` | Añadir canciones a lista | ✅ |
+| `HiFiAudioDialog.kt` | Ajustes de alta fidelidad (float / offload) | ✅ |
 
 ### `ui/theme/`
 

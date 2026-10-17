@@ -4,12 +4,14 @@ import android.app.Application
 import android.content.ComponentName
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.Bundle
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionToken
 import com.example.creproductor.data.AudioTagWriter
 import com.example.creproductor.data.MediaStoreScanner
@@ -204,6 +206,19 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                 })
             },
             ContextCompat.getMainExecutor(context)
+        )
+    }
+
+    /**
+     * Pide al servicio que recree el reproductor para aplicar los ajustes de
+     * audio de alta fidelidad (salida float / offload) sin reiniciar la app ni
+     * perder la cola de reproducción. Va por el mismo canal de comandos de
+     * sesión que ya usan favorito y cerrar.
+     */
+    fun refreshAudioOutput() {
+        mediaController?.sendCustomCommand(
+            SessionCommand(MusicService.ACTION_REFRESH_AUDIO, Bundle.EMPTY),
+            Bundle.EMPTY
         )
     }
 

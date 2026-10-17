@@ -40,6 +40,7 @@ DEZZNUTS es una app Android nativa escrita en **Kotlin + Jetpack Compose** que e
 | **Listas de reproducción** | Crear, añadir/quitar canciones y elegir portada; persistidas localmente. |
 | **Tema oscuro** | Material 3 con paleta oscura personalizada. |
 | **Animación "ecualizador"** | Indicador animado en la pista/cola actualmente en reproducción. |
+| **Audio de alta fidelidad** | Salida PCM en **32 bits (float)** y **audio offload** opcional para acercar la reproducción al bit-perfect. Ver la sección [🎚️ Audio de alta fidelidad](#-audio-de-alta-fidelidad). |
 
 ### 🟡 Parciales (UI presente, lógica incompleta)
 
@@ -55,6 +56,40 @@ DEZZNUTS es una app Android nativa escrita en **Kotlin + Jetpack Compose** que e
 - **Temporizador (Sleep Timer)**
 - **Acerca de**
 - **Enviar comentarios**
+
+---
+
+## 🎚️ Audio de alta fidelidad
+
+DEZZNUTS reproduce **FLAC, ALAC, WAV y cualquier formato sin pérdida tal cual**, sin transcodificar
+ni aplicar DSP: la decodificación la hace el códec del sistema y entrega el PCM exacto del archivo.
+Lo que sí se puede controlar es **cómo se entrega esa señal al DAC**, y ahí están las dos palancas
+de la app (menú lateral → **Audio de alta fidelidad**):
+
+| Ajuste | Qué hace | Por defecto |
+|--------|----------|-------------|
+| **Salida en 32 bits (float)** | Convierte el PCM de alta resolución (24/32 bits) a punto flotante antes del mezclador, evitando truncarlo a 16 bits. En archivos de 16 bits no cambia nada. | ✅ Activado |
+| **Audio offload (bit-perfect)** | Envía el archivo comprimido directamente al DSP, sin remuestreo ni mezcla: conserva la frecuencia y la profundidad originales. Requiere Android 10+ y que el chip lo soporte. | ⬜ Desactivado |
+
+Los cambios se aplican **en caliente**: el servicio reconstruye el reproductor y conserva la cola y
+la posición (ver `MusicService.rebuildPlayer()`).
+
+### Lo que conviene saber (sin humo)
+
+- **Un FLAC no gana fidelidad con "más kbps"**: es sin pérdida, se decodifica bit a bit. Ninguna app
+  puede extraerle más información de la que tiene.
+- **El remuestreo del sistema es el verdadero límite**: AudioFlinger remuestrea todo a la frecuencia
+  nativa de salida (normalmente **48000 Hz**). Un FLAC de CD (44100 Hz) se remuestrea salvo que el
+  **offload** esté activo o se use un DAC USB que negocie la tasa.
+- **Si otra app "suena mejor", casi siempre es DSP** (ecualizador, realce de graves, *stereo
+  widening*…): colorea el sonido, no añade fidelidad. DEZZNUTS no aplica ningún efecto por defecto
+  para no alterar la señal.
+- **El offload va desactivado por defecto** porque depende del dispositivo (existen chips con
+  soporte defectuoso). Si notas cortes o silencios con él activado, desactívalo: la app vuelve
+  sola a PCM.
+
+El diálogo muestra además la **frecuencia nativa del dispositivo**, que es el dato clave para
+entender el remuestreo.
 
 ---
 
@@ -100,9 +135,11 @@ Dezznuts/
         │   │   │   ├── AudioTagWriter.kt    # Escritura de etiquetas ID3
         │   │   │   ├── CoverFetcher.kt      # Carátulas/metadata (iTunes)
         │   │   │   ├── ArtistImageFetcher.kt# Fotos de artista (Deezer)
+        │   │   │   ├── HiFiAudio.kt         # Preferencias y datos de calidad de audio
         │   │   │   └── YoutubeTitleCleaner.kt
         │   │   ├── service/
-        │   │   │   └── MusicService.kt      # Servicio de reproducción + sesión
+        │   │   │   ├── MusicService.kt      # Servicio de reproducción + sesión
+        │   │   │   └── HiFiRenderersFactory.kt # Salida float + audio offload
         │   │   ├── gui/                     # Pantallas y ViewModel (Compose)
         │   │   │   ├── MusicViewModel.kt    # Estado central de la app
         │   │   │   ├── MainScreen.kt        # Pestañas y navegación principal
@@ -114,6 +151,7 @@ Dezznuts/
         │   │   │   ├── AlbumDetailScreen.kt / ArtistInterfaceScreen.kt / GenreDetailScreen.kt
         │   │   │   ├── PlaylistScreen.kt / PlaylistDetailScreen.kt
         │   │   │   ├── EditTagDialog.kt / CreatePlaylistDialog.kt / AddSongsToPlaylistDialog.kt
+        │   │   │   ├── HiFiAudioDialog.kt   # Ajustes de alta fidelidad
         │   │   │   └── ui/theme/            # Colores, tipografía y tema
         │   └── res/                    # Recursos (iconos, strings, xml de backup)
         └── test/java/com/example/creproductor/  # Pruebas unitarias (JUnit)
