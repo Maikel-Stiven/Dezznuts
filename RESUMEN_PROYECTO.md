@@ -197,7 +197,7 @@ Con `targetSdk 37` la app se dibuja **edge-to-edge**, es decir, por debajo de la
 5. **Escritura de etiquetas vía `contentUri` en modo `rwt`:** puede fallar por SAF en almacenamiento scoped.
 6. **Fetch de fotos de artista por cada fila** (`LaunchedEffect` con `delay`): muchas peticiones simultáneas en listas grandes; considerar carga perezosa/por lotes.
 7. **`sortOrder = TITLE ASC`** ignora mayúsculas y acentos; podría usar `COLLATE NOCASE`/locale.
-8. **Toolchain muy nuevo** (Gradle 9.6, AGP 9.4.1, SDK 37): asegúrate de tener Android Studio actualizado o fallará el build por versión.
+8. **Toolchain muy nuevo** (Gradle 9.8.1, AGP 9.4.1, SDK 37): asegúrate de tener Android Studio actualizado o fallará el build por versión.
 9. **Migración de persistencia** (`SharedPreferences` → Room/DataStore) sigue pendiente.
 
 ---

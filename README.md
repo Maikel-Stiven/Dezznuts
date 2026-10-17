@@ -67,7 +67,7 @@ DEZZNUTS es una app Android nativa escrita en **Kotlin + Jetpack Compose** que e
 | Reproductor | AndroidX Media3 (`1.4.1`) — ExoPlayer + MediaSession |
 | Imágenes | Coil `2.7.0` |
 | Etiquetas ID3 | jaudiotagger `3.0.1` |
-| Build | AGP `9.4.1`, Gradle `9.6.0`, Kotlin DSL |
+| Build | AGP `9.4.1`, Gradle `9.8.1`, Kotlin DSL |
 | SDK | `compileSdk`/`targetSdk` 37 · `minSdk` 24 (Android 7.0) |
 | Persistencia | `SharedPreferences` (sin base de datos) |
 | Pruebas / CI | JUnit 4 (**24 pruebas unitarias**) + GitHub Actions |
