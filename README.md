@@ -40,7 +40,7 @@ DEZZNUTS es una app Android nativa escrita en **Kotlin + Jetpack Compose** que e
 | **Listas de reproducción** | Crear, añadir/quitar canciones y elegir portada; persistidas localmente. |
 | **Tema oscuro** | Material 3 con paleta oscura personalizada. |
 | **Animación "ecualizador"** | Indicador animado en la pista/cola actualmente en reproducción. |
-| **Audio de alta fidelidad** | Salida PCM en **32 bits (float)** y **audio offload** opcional para acercar la reproducción al bit-perfect. Ver la sección [🎚️ Audio de alta fidelidad](#-audio-de-alta-fidelidad). |
+| **Audio Hi/Res** | Salida PCM en **32 bits (float)** y **audio offload** opcionales, ambos apagados por defecto, para acercar la reproducción al bit-perfect. Ver la sección [🎚️ Audio Hi/Res](#-audio-hires). |
 
 ### 🟡 Parciales (UI presente, lógica incompleta)
 
@@ -59,20 +59,22 @@ DEZZNUTS es una app Android nativa escrita en **Kotlin + Jetpack Compose** que e
 
 ---
 
-## 🎚️ Audio de alta fidelidad
+## 🎚️ Audio Hi/Res
 
 DEZZNUTS reproduce **FLAC, ALAC, WAV y cualquier formato sin pérdida tal cual**, sin transcodificar
 ni aplicar DSP: la decodificación la hace el códec del sistema y entrega el PCM exacto del archivo.
 Lo que sí se puede controlar es **cómo se entrega esa señal al DAC**, y ahí están las dos palancas
-de la app (menú lateral → **Audio de alta fidelidad**):
+de la app (menú lateral → **Audio Hi/Res**):
 
-| Ajuste | Qué hace | Por defecto |
-|--------|----------|-------------|
-| **Salida en 32 bits (float)** | Convierte el PCM de alta resolución (24/32 bits) a punto flotante antes del mezclador, evitando truncarlo a 16 bits. En archivos de 16 bits no cambia nada. | ✅ Activado |
-| **Audio offload (bit-perfect)** | Envía el archivo comprimido directamente al DSP, sin remuestreo ni mezcla: conserva la frecuencia y la profundidad originales. Requiere Android 10+ y que el chip lo soporte. | ⬜ Desactivado |
+| Ajuste | Qué hace | Riesgo | Por defecto |
+|--------|----------|--------|-------------|
+| **Salida en 32 bits (float)** | Convierte el PCM de alta resolución (24/32 bits) a punto flotante antes del mezclador, evitando truncarlo a 16 bits. En archivos de 16 bits no cambia nada. | Si el dispositivo no soporta la salida float, los archivos de 24/32 bits podrían no sonar. | ⬜ Desactivado |
+| **Audio offload (bit-perfect)** | Envía el archivo comprimido directamente al DSP, sin remuestreo ni mezcla: conserva la frecuencia y la profundidad originales. Requiere Android 10+. | Depende del chip: algunos lo soportan mal (cortes o silencios). Con él activo no se aplican efectos y el float no interviene. | ⬜ Desactivado |
 
-Los cambios se aplican **en caliente**: el servicio reconstruye el reproductor y conserva la cola y
-la posición (ver `MusicService.rebuildPlayer()`).
+**Los dos van apagados por defecto**: cambian la ruta de salida y dependen del dispositivo, así que
+la decisión es del usuario, que los activa desde el propio diálogo (que explica qué hace cada uno y
+su riesgo). Los cambios se aplican **en caliente**: el servicio reconstruye el reproductor y conserva
+la cola y la posición (ver `MusicService.rebuildPlayer()`).
 
 ### Lo que conviene saber (sin humo)
 
@@ -81,12 +83,14 @@ la posición (ver `MusicService.rebuildPlayer()`).
 - **El remuestreo del sistema es el verdadero límite**: AudioFlinger remuestrea todo a la frecuencia
   nativa de salida (normalmente **48000 Hz**). Un FLAC de CD (44100 Hz) se remuestrea salvo que el
   **offload** esté activo o se use un DAC USB que negocie la tasa.
-- **Si otra app "suena mejor", casi siempre es DSP** (ecualizador, realce de graves, *stereo
-  widening*…): colorea el sonido, no añade fidelidad. DEZZNUTS no aplica ningún efecto por defecto
-  para no alterar la señal.
-- **El offload va desactivado por defecto** porque depende del dispositivo (existen chips con
-  soporte defectuoso). Si notas cortes o silencios con él activado, desactívalo: la app vuelve
-  sola a PCM.
+- **El truncado a 16 bits sí degrada de verdad**: sin la opción float, el material de 24/32 bits pasa
+  por `ToInt16PcmAudioProcessor`, que tira los bits bajos **sin dithering** y añade distorsión de
+  cuantización (enmascara detalle fino y planos). Por eso existe el interruptor.
+- **Si otra app "suena mejor", suele ser DSP** (ecualizador, realce de graves, *stereo widening*…):
+  colorea el sonido, no añade fidelidad. DEZZNUTS no aplica ningún efecto por defecto para no alterar
+  la señal.
+- **El offload acapara la ruta**: mientras está activo no se aplican efectos y el float no interviene,
+  porque el audio no pasa por PCM.
 
 El diálogo muestra además la **frecuencia nativa del dispositivo**, que es el dato clave para
 entender el remuestreo.
@@ -151,7 +155,7 @@ Dezznuts/
         │   │   │   ├── AlbumDetailScreen.kt / ArtistInterfaceScreen.kt / GenreDetailScreen.kt
         │   │   │   ├── PlaylistScreen.kt / PlaylistDetailScreen.kt
         │   │   │   ├── EditTagDialog.kt / CreatePlaylistDialog.kt / AddSongsToPlaylistDialog.kt
-        │   │   │   ├── HiFiAudioDialog.kt   # Ajustes de alta fidelidad
+        │   │   │   ├── HiFiAudioDialog.kt   # Ajustes de audio Hi/Res
         │   │   │   └── ui/theme/            # Colores, tipografía y tema
         │   └── res/                    # Recursos (iconos, strings, xml de backup)
         └── test/java/com/example/creproductor/  # Pruebas unitarias (JUnit)

@@ -28,13 +28,16 @@ import androidx.compose.ui.unit.dp
 import com.example.creproductor.data.HiFiAudio
 
 /**
- * Diálogo "Audio de alta fidelidad": explica qué hace la app con el audio y
- * permite activar los dos ajustes de salida que acercan la reproducción al
- * bit-perfect.
+ * Diálogo "Audio Hi/Res": explica qué hace la app con el audio y deja al
+ * usuario decidir si activa los dos ajustes de salida que acercan la
+ * reproducción al bit-perfect.
  *
- * Cada interruptor se persiste al instante con [HiFiAudio] y avisa con
- * [onSettingsChanged] para que el servicio recree el reproductor sin reiniciar
- * la app ni perder la cola.
+ * **Ambos interruptores vienen apagados por defecto** ([HiFiAudio]): la app no
+ * cambia la ruta de audio por su cuenta. Cada opción explica qué hace y su
+ * riesgo, porque los dos dependen del dispositivo.
+ *
+ * Cada interruptor se persiste al instante y avisa con [onSettingsChanged] para
+ * que el servicio recree el reproductor sin reiniciar la app ni perder la cola.
  *
  * @param onDismiss se llama al cerrar el diálogo.
  * @param onSettingsChanged se llama cada vez que cambia un interruptor.
@@ -53,19 +56,23 @@ fun HiFiAudioDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Default.GraphicEq, contentDescription = null) },
-        title = { Text("Audio de alta fidelidad") },
+        title = { Text("Audio Hi/Res") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
                     text = "DEZZNUTS ya decodifica FLAC, ALAC y WAV sin pérdida. " +
-                        "Estas opciones controlan cómo se entrega esa señal al DAC del dispositivo.",
+                        "Estos ajustes deciden cómo se entrega esa señal al DAC del dispositivo. " +
+                        "Ninguno viene activado: pruébalos tú y quédate con el que mejor suene en tu equipo.",
                     style = MaterialTheme.typography.bodyMedium
                 )
 
-                SettingSwitch(
+                AudioOption(
                     title = "Salida en 32 bits (float)",
-                    description = "Evita truncar el PCM de 24/32 bits a 16 bits antes del mezclador. " +
-                        "En archivos de 16 bits no cambia nada.",
+                    description = "Evita que el audio de 24 y 32 bits se trunque a 16 bits antes de " +
+                        "mezclar, conservando el detalle fino. En archivos de 16 bits no cambia nada: " +
+                        "solo actúa en alta resolución.",
+                    risk = "Si tu dispositivo no soporta la salida float, los archivos de 24/32 bits " +
+                        "podrían no sonar. Desactívalo si notas silencio.",
                     checked = floatOutput,
                     onCheckedChange = { enabled ->
                         floatOutput = enabled
@@ -74,10 +81,12 @@ fun HiFiAudioDialog(
                     }
                 )
 
-                SettingSwitch(
+                AudioOption(
                     title = "Audio offload (bit-perfect)",
-                    description = "Envía el archivo comprimido directamente al DSP, sin remuestreo ni mezcla: " +
-                        "conserva la frecuencia y la profundidad originales. Si notas cortes o silencios, desactívalo.",
+                    description = "Envía el archivo comprimido directamente al DSP, sin remuestreo ni " +
+                        "mezcla: conserva la frecuencia y la profundidad originales. Requiere Android 10+.",
+                    risk = "Depende del chip: algunos lo soportan mal y producen cortes o silencios. " +
+                        "Mientras esté activo no se aplican efectos y la salida float no interviene.",
                     checked = offload,
                     onCheckedChange = { enabled ->
                         offload = enabled
@@ -110,11 +119,16 @@ fun HiFiAudioDialog(
     )
 }
 
-/** Interruptor con título y explicación, usado por [HiFiAudioDialog]. */
+/**
+ * Una opción de audio con su interruptor: título, qué hace y su riesgo.
+ * El riesgo se muestra siempre (no solo al activar) para que la decisión sea
+ * informada.
+ */
 @Composable
-private fun SettingSwitch(
+private fun AudioOption(
     title: String,
     description: String,
+    risk: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
@@ -132,6 +146,11 @@ private fun SettingSwitch(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "Riesgo: $risk",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
             )
         }
         Spacer(modifier = Modifier.width(8.dp))

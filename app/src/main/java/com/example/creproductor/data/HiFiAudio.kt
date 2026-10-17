@@ -8,6 +8,9 @@
 //  1) Salida en 32 bits (float): evita truncar el PCM de 24/32 bits a 16 bits.
 //  2) Audio offload: manda el archivo comprimido tal cual al DSP, sin remuestreo
 //     ni mezcla en la app (mantiene frecuencia y profundidad originales).
+//
+// Las DOS vienen apagadas por defecto: son opt-in y las decide el usuario,
+// porque ambas cambian la ruta de salida y dependen del dispositivo.
 
 package com.example.creproductor.data
 
@@ -26,15 +29,17 @@ object HiFiAudio {
     const val KEY_OFFLOAD = "hifi_audio_offload"
 
     /**
-     * La salida float viene activada por defecto: solo actúa sobre material de
-     * alta resolución (24/32 bits) y en 16 bits no cambia absolutamente nada.
+     * La salida float se ofrece APAGADA por defecto: el usuario decide si la
+     * activa después de leer sus riesgos en el diálogo. La app nunca cambia la
+     * ruta de audio por su cuenta.
      */
-    const val DEFAULT_FLOAT_OUTPUT = true
+    const val DEFAULT_FLOAT_OUTPUT = false
 
     /**
-     * El offload viene desactivado por defecto porque depende del dispositivo:
-     * Media3 lo deja off a propósito al existir chips con soporte defectuoso.
-     * Se ofrece como opción para quien quiera el máximo de fidelidad.
+     * El offload también se ofrece APAGADO por defecto: depende del chip y
+     * Media3 lo deja off a propósito al existir dispositivos con soporte
+     * defectuoso. Activar cualquiera de los dos es una decisión consciente
+     * del usuario final.
      */
     const val DEFAULT_OFFLOAD = false
 

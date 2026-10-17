@@ -17,7 +17,7 @@ sealed class DrawerMenuItem(
     val icon : ImageVector
 ){
     object Equalizer : DrawerMenuItem("Ecualizador", Icons.Default.Equalizer)
-    object HiFiAudio : DrawerMenuItem("Audio de alta fidelidad", Icons.Default.GraphicEq)
+    object HiFiAudio : DrawerMenuItem("Audio Hi/Res", Icons.Default.GraphicEq)
     object ScanFiles : DrawerMenuItem("Escanear archivos",  Icons.Default.Radar)
     object SearchDuplicates : DrawerMenuItem("Buscar duplicados o audios de whatsapp", Icons.Default.FindInPage)
     object AudioCutter : DrawerMenuItem("Cortador de audio", Icons.Default.ContentCut)

@@ -62,12 +62,12 @@ Con `targetSdk 37` la app se dibuja **edge-to-edge**, es decir, por debajo de la
 2. Al pulsar una canción, `playSong()` arma una lista de `MediaItem` (id + `contentUri`) y la pasa al controlador.
 3. El controlador arma la sesión en `MusicService`; la UI observa `isPlaying`, `currentSong` y `currentPositionMs` (un *tracker* consulta la posición cada 500 ms).
 
-### Cadena de audio y alta fidelidad
+### Cadena de audio y opciones Hi/Res
 
 El reproductor es **Media3 ExoPlayer**. La decodificación (FLAC/ALAC/WAV) la hace el códec del
 sistema y es exacta; la app **no aplica ningún DSP ni efecto** por defecto. El único punto donde la
 app puede ganar fidelidad real es la entrega del PCM al DAC, y se controla desde
-`service/HiFiRenderersFactory.kt`:
+`service/HiFiRenderersFactory.kt` (menú lateral → **Audio Hi/Res**):
 
 - `setEnableAudioFloatOutput(true)` → salida en punto flotante de 32 bits. ExoPlayer solo la usa
   cuando el archivo es de alta resolución (24/32 bits), así que en 16 bits no cambia nada.
@@ -76,8 +76,9 @@ app puede ganar fidelidad real es la entrega del PCM al DAC, y se controla desde
   (de ahí `GAPLESS_REQUIRED`) y solo se aplica en **API 29+**; si el chip no lo soporta, ExoPlayer
   cae automáticamente a PCM.
 
-Los ajustes se persisten con `data/HiFiAudio.kt` (mismas prefs `dezznuts_prefs`) y se editan en
-`gui/HiFiAudioDialog.kt`. Al cambiarlos, `MusicService.rebuildPlayer()` recrea el `ExoPlayer` con la
+**Los dos ajustes van apagados por defecto** (`HiFiAudio.DEFAULT_* = false`): modifican la ruta de
+salida y dependen del dispositivo, así que los decide el usuario desde el diálogo, que explica qué
+hace cada uno y su riesgo. Al cambiarlos, `MusicService.rebuildPlayer()` recrea el `ExoPlayer` con la
 nueva configuración y lo intercambia con `MediaSession.setPlayer()`: la sesión y los
 `MediaController` siguen conectados, y se conservan cola, índice, posición, repetición y aleatorio.
 
@@ -97,7 +98,7 @@ nueva configuración y lo intercambia con `MediaSession.setPlayer()`: la sesión
 | `saved_playlist` | Listas serializadas: `id|nombre|portada|ids…` |
 | `search_history` | Historial de búsqueda (`StringSet`) |
 | `artist_photos_cache` | URLs de fotos de artistas (prefs aparte) |
-| `hifi_float_output` | Salida PCM en 32 bits (float) — por defecto `true` |
+| `hifi_float_output` | Salida PCM en 32 bits (float) — por defecto `false` |
 | `hifi_audio_offload` | Audio offload (bit-perfect) — por defecto `false` |
 
 ---
@@ -146,7 +147,7 @@ nueva configuración y lo intercambia con `MediaSession.setPlayer()`: la sesión
 | `EditTagDialog.kt` | Editar etiquetas + "Auto-web" + galería | ✅ |
 | `CreatePlaylistDialog.kt` | Crear lista | ✅ |
 | `AddSongsToPlaylistDialog.kt` | Añadir canciones a lista | ✅ |
-| `HiFiAudioDialog.kt` | Ajustes de alta fidelidad (float / offload) | ✅ |
+| `HiFiAudioDialog.kt` | Ajustes de audio Hi/Res (float / offload) | ✅ |
 
 ### `ui/theme/`
 
