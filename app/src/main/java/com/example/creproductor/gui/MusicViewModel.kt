@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.ComponentName
 import android.content.Context
 import android.content.SharedPreferences
+import android.net.Uri
 import android.os.Bundle
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
@@ -33,6 +34,7 @@ import com.example.creproductor.data.RepeatMode
 import com.example.creproductor.data.SongOrganizer
 import com.example.creproductor.data.next
 import com.example.creproductor.service.PlaybackDiagnostics
+import java.io.File
 
 sealed interface UiState {
     object PermissionRequired : UiState
@@ -265,6 +267,45 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     fun setSearchQuery(query: String){
         _searchQuery.value = query
     }
+
+    /**
+     * Construye los items de reproducción de una cola.
+     *
+     * El `mediaId` es el id de la canción porque el servicio lo usa para saber
+     * si el tema actual es favorito (ver `MusicService.toggleCurrentFavorite`).
+     */
+    private fun buildMediaItems(queue: List<Song>): List<MediaItem> =
+        queue.map { song ->
+            MediaItem.Builder()
+                .setMediaId(song.id.toString())
+                .setUri(playbackUri(song))
+                .build()
+        }
+
+    /**
+     * URI con el que se le entrega el archivo a ExoPlayer.
+     *
+     * Se prefiere la **ruta directa** (`file://`) al `content://` de MediaStore
+     * por una razón concreta y medida: cada *seek* que cae fuera del búfer
+     * obliga a ExoPlayer a **reabrir la fuente**, y `content://` suma en cada
+     * apertura una llamada al proveedor de medios (además del paso por la capa
+     * de almacenamiento). Con la ruta directa se ahorra esa llamada, lo que se
+     * nota justo cuando el extractor necesita varios accesos seguidos
+     * (p. ej. un FLAC sin bloque `SEEKTABLE`).
+     *
+     * Si la ruta no existe o no se puede leer (permisos, almacenamiento
+     * extraíble, archivos que solo expone el proveedor), se vuelve al
+     * `content://`, que siempre funciona.
+     */
+    private fun playbackUri(song: Song): Uri {
+        val path = song.path
+        if (path.isNotEmpty()) {
+            val file = File(path)
+            if (file.canRead()) return Uri.fromFile(file)
+        }
+        return song.contentUri
+    }
+
     fun seekTo(positionMs: Long){
         // Marca el inicio de la medición para la traza de PlaybackDiagnostics.
         PlaybackDiagnostics.markSeekRequest(positionMs)
@@ -327,12 +368,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
 
             val targetIndex = queueToUse.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
 
-            val mediaItems = queueToUse.map { songItem ->
-                MediaItem.Builder()
-                    .setMediaId(songItem.id.toString())
-                    .setUri(songItem.contentUri)
-                    .build()
-            }
+            val mediaItems = buildMediaItems(queueToUse)
 
             controller.setMediaItems(mediaItems, targetIndex, 0L)
             controller.prepare()
@@ -350,12 +386,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                     val queueToUse = _currentQueue.value.ifEmpty { (_uiState.value as? UiState.Success)?.songs ?: listOf() }
                     val targetIndex = queueToUse.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
 
-                    val mediaItems = queueToUse.map { songItem ->
-                        MediaItem.Builder()
-                            .setMediaId(songItem.id.toString())
-                            .setUri(songItem.contentUri)
-                            .build()
-                    }
+                    val mediaItems = buildMediaItems(queueToUse)
 
                     val savedPosition = _currentPositionMs.value
                     controller.setMediaItems(mediaItems, targetIndex, savedPosition)

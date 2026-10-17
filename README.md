@@ -107,6 +107,10 @@ más; `MusicService.buildLoadControl()` los ajusta:
 | `bufferForPlaybackMs` | `2500` | `1000` | Tras un *seek*, ExoPlayer no reanuda hasta tener esa cantidad de audio listo. |
 | `bufferForPlaybackAfterRebufferMs` | `5000` | `2000` | Igual, tras un corte o una pausa larga. |
 
+Los archivos se entregan por **ruta directa** (`file://`) cuando se pueden leer, en vez del
+`content://` de MediaStore: cada *seek* fuera del búfer reabre la fuente, y `content://` añade una
+llamada al proveedor de medios en cada apertura.
+
 Un límite que **no** se puede tocar desde el código: si el FLAC no trae el bloque `SEEKTABLE`, Media3
 localiza el fotograma con una búsqueda binaria sobre el archivo (`FlacBinarySearchSeeker`). Se arregla
 **en el archivo**, sin recodificar y sin pérdida:

@@ -102,6 +102,14 @@ Si el FLAC no incluye un bloque `SEEKTABLE`, el extractor de Media3 hace una bú
 el archivo (`FlacBinarySearchSeeker`) para localizar el fotograma; eso es propio del formato y no se
 puede ajustar desde la app (con `SEEKTABLE` usa `FlacSeekTableSeekMap`, que es inmediato).
 
+### Ruta de acceso al archivo (`file://` en vez de `content://`)
+
+`MusicViewModel.playbackUri()` entrega el archivo por **ruta directa** cuando se puede leer (usa
+`Song.path`, que el escáner ya guardaba para agrupar por carpeta) y solo cae al `content://` de
+MediaStore si no. El motivo está medido: cada *seek* fuera del búfer obliga a ExoPlayer a **reabrir la
+fuente**, y `content://` añade en cada apertura una llamada al proveedor de medios además del paso por
+la capa de almacenamiento.
+
 ### Diagnóstico de latencia del *seek* (`PlaybackDiagnostics`)
 
 Cuando el *seek* "se siente lento" no basta con suponer dónde está el tiempo: puede estar en el I/O,

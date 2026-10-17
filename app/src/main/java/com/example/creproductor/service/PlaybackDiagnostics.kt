@@ -101,7 +101,13 @@ object PlaybackDiagnostics {
      * llegar solos.
      */
     fun attach(player: ExoPlayer) {
-        player.addAnalyticsListener(SeekTimelineListener(::stamp))
+        player.addAnalyticsListener(SeekTimelineListener(::stamp, ::inSeekWindow))
+    }
+
+    /** `true` si estamos dentro de la ventana de medición de un *seek*. */
+    private fun inSeekWindow(): Boolean {
+        val base = seekRequestAtMs
+        return base != 0L && (System.currentTimeMillis() - base) in 0..SEEK_WINDOW_MS
     }
 
     /** Marca temporal relativa al último *seek*. */
@@ -132,7 +138,8 @@ object PlaybackDiagnostics {
      * probarse o reutilizarse sin arrastrar el singleton.
      */
     private class SeekTimelineListener(
-        private val stamp: () -> String
+        private val stamp: () -> String,
+        private val inSeekWindow: () -> Boolean
     ) : AnalyticsListener {
 
         private fun log(message: String) {
@@ -259,6 +266,27 @@ object PlaybackDiagnostics {
             error: PlaybackException
         ) {
             log("ERROR del reproductor: ${error.errorCodeName} - ${error.message}")
+        }
+
+        /**
+         * Inicios de lectura durante un *seek*.
+         *
+         * Esta es la línea que delata la **búsqueda binaria** del extractor de
+         * FLAC: si el archivo no trae bloque `SEEKTABLE`, aparecen varias
+         * lecturas en offsets dispersos (adelante, atrás, por el medio…) hasta
+         * localizar el fotograma. Con `SEEKTABLE` hay una sola lectura.
+         */
+        override fun onLoadStarted(
+            eventTime: AnalyticsListener.EventTime,
+            loadEventInfo: LoadEventInfo,
+            mediaLoadData: MediaLoadData
+        ) {
+            if (inSeekWindow()) {
+                log(
+                    "inicio de lectura en el byte ${loadEventInfo.dataSpec.position} " +
+                        "(tarea ${loadEventInfo.loadTaskId})"
+                )
+            }
         }
 
         override fun onLoadCompleted(
