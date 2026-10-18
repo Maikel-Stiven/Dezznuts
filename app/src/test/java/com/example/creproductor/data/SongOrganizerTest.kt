@@ -25,7 +25,10 @@ class SongOrganizerTest {
 
     @Test
     fun `agrupa por album y excluye desconocidos`() {
-        val albums = SongOrganizer.groupByAlbum(songs) { it.album }
+        val albums = SongOrganizer.groupByAlbum(
+            items = songs,
+            albumOf = {it.album}
+        )
 
         assertEquals(setOf("Discovery", "News of the World"), albums.keys)
         assertEquals(2, albums["Discovery"]?.size)
