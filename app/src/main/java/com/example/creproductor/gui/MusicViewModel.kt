@@ -42,6 +42,8 @@ import com.example.creproductor.data.RepeatMode
 import com.example.creproductor.data.SongOrganizer
 import com.example.creproductor.data.next
 import com.example.creproductor.service.PlaybackDiagnostics
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 
 sealed interface UiState {
@@ -234,6 +236,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
 
                             val foundSong = activeQueue.find { it.id.toString() == idStr }
                                 ?: (_uiState.value as? UiState.Success)?.songs?.find { it.id.toString() == idStr }
+
                             if (foundSong !== null){
                                 _currentSong.value = foundSong
                                 registerSongPlay(foundSong)
@@ -265,9 +268,10 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                 mediaController?.let{ controller ->
                     if (controller.isPlaying){
                         _currentPositionMs.value = controller.currentPosition
+                        prefs.edit{putLong("last_position_ms", controller.currentPosition)}
                     }
                 }
-                delay(500L)
+                delay(1000L)
             }
 
         }
@@ -379,7 +383,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                 // trozos haría que la lista encoja y vuelva a crecer.
                 if (!silent && accumulatedSongs.size >= nextPublishAt) {
                     nextPublishAt *= PUBLISH_GROWTH
-                    publishSongs(accumulatedSongs)
+                    publishSongs(accumulatedSongs.toList())
                     if (++publishes == 1) {
                         Log.i("DezzLoad", "[+${SystemClock.elapsedRealtime() - t0} ms] primera lista publicada (${accumulatedSongs.size} canciones)")
                     }
@@ -397,34 +401,45 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     }
 
     private fun publishSongs(songs: List<Song>){
-        val savedFavIds = getSavedFavoritesIds()
-        val updated = songs.map { song ->
-            if (savedFavIds.contains(song.id)) song.copy(isFavorite = true) else song
+        viewModelScope.launch(Dispatchers.Default) {
+            val savedFavIds = getSavedFavoritesIds()
+            val updated = songs.map { song ->
+                if (savedFavIds.contains(song.id)) song.copy(isFavorite = true) else song
+            }
+            withContext(Dispatchers.Main){
+                _uiState.value = UiState.Success(updated)
+                restoreDashboardLists(updated)
+            }
         }
-        _uiState.value = UiState.Success(updated)
-        restoreDashboardLists(updated)
     }
 
     private fun registerSongPlay(song: Song){
-        val currentCount = playCountMap.getOrDefault(song.id, 0) + 1
-        playCountMap[song.id] = currentCount
-        savePlayCounts()
 
-        val allSongs = (_uiState.value as? UiState.Success)?.songs ?: return
+        viewModelScope.launch (Dispatchers.Default){
+            val currentCount = playCountMap.getOrDefault(song.id, 0) + 1
+            playCountMap[song.id] = currentCount
+            savePlayCounts()
 
-        _mostPlayedSongs.value = allSongs
-            .filter { (playCountMap[it.id] ?: 0) > 0 }
-            .sortedByDescending { playCountMap[it.id] ?: 0 }
-            .take(30)
+            val allSongs = (_uiState.value as? UiState.Success)?.songs ?: return@launch
 
-        val updatedRecent = (listOf(song) + _recentPlayedSongs.value)
-            .distinctBy{it.id}
-            .take(30)
+            val mostPlayed = allSongs
+                .filter { (playCountMap[it.id] ?: 0) > 0 }
+                .sortedByDescending { playCountMap[it.id] ?: 0 }
+                .take(30)
 
-        _recentPlayedSongs.value = updatedRecent
-        saveRecentIds(updatedRecent.map {it.id})
+            val currentRecentSnapshot = _recentPlayedSongs.value.toList()
+            val updatedRecent = (listOf(song) + _recentPlayedSongs.value)
+                .distinctBy{it.id}
+                .take(30)
 
-        prefs.edit { putLong("last_song_id", song.id) }
+            withContext(Dispatchers.Main){
+                _mostPlayedSongs.value = mostPlayed
+                _recentPlayedSongs.value = updatedRecent
+            }
+
+            saveRecentIds(updatedRecent.map {it.id})
+            prefs.edit { putLong("last_song_id", song.id) }
+        }
     }
 
     fun playQueue(songs: List<Song>, startIndex: Int = 0){
@@ -438,18 +453,32 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         val queueToUse= if (!customQueue.isNullOrEmpty()) customQueue else (_uiState.value as? UiState.Success)?.songs ?: listOf(song)
 
         _currentQueue.value = queueToUse
-        _currentSong.value = song
+        saveCurrentQueueIds(queueToUse.map { it.id })
         registerSongPlay(song)
 
-        mediaController?.let { controller ->
+        val controller = mediaController ?: return
+        val targetIndex = queueToUse.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
 
-            val targetIndex = queueToUse.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+        if (controller.mediaItemCount == queueToUse.size){
+            controller.seekTo(targetIndex, 0L)
+        }else{
+            viewModelScope.launch(Dispatchers.Default) {
 
-            val mediaItems = buildMediaItems(queueToUse)
+                val targetIndex = queueToUse.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
 
-            controller.setMediaItems(mediaItems, targetIndex, 0L)
-            controller.prepare()
-            controller.play()
+                val mediaItems = queueToUse.map { item ->
+                    MediaItem.Builder()
+                        .setMediaId(item.id.toString())
+                        .setUri(if (item.path.isNotEmpty()) Uri.fromFile(File(item.path)) else item.contentUri)
+                        .build()
+                }
+
+                withContext(Dispatchers.Main){
+                    controller.setMediaItems(mediaItems, targetIndex, 0L)
+                    controller.prepare()
+                    controller.play()
+                }
+            }
         }
     }
 
@@ -461,20 +490,28 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                 if (controller.mediaItemCount == 0 || controller.currentMediaItem == null){
                     val song = _currentSong.value ?: return
                     val queueToUse = _currentQueue.value.ifEmpty { (_uiState.value as? UiState.Success)?.songs ?: listOf() }
-                    val targetIndex = queueToUse.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
 
-                    val mediaItems = buildMediaItems(queueToUse)
+                    viewModelScope.launch(Dispatchers.Default) {
+                        val targetIndex = queueToUse.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+                        val savedPosition = _currentPositionMs.value
+                        val mediaItems = buildMediaItems(queueToUse)
 
-                    val savedPosition = _currentPositionMs.value
-                    controller.setMediaItems(mediaItems, targetIndex, savedPosition)
-                    controller.prepare()
+                        withContext(Dispatchers.Main){
+                            controller.setMediaItems(mediaItems, targetIndex, savedPosition)
+                            controller.prepare()
+                            controller.play()
+                        }
+                    }
                 }else if (controller.playbackState == Player.STATE_ENDED){
                     controller.seekTo(0, 0L)
                     controller.prepare()
+                    controller.play()
                 }else if (controller.playbackState == Player.STATE_IDLE){
                     controller.prepare()
+                    controller.play()
+                }else{
+                    controller.play()
                 }
-                controller.play()
             }
         }
     }
@@ -555,13 +592,6 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         mediaController?.let { controller ->
             if (controller.hasNextMediaItem()){
                 controller.seekToNextMediaItem()
-            }else{
-                val current = _currentSong.value ?: return
-                val list = _currentQueue.value.ifEmpty { (_uiState.value as? UiState.Success)?.songs ?: return }
-                val currentIndex= list.indexOfFirst { it.id == current.id }
-                if (currentIndex != -1 && currentIndex < list.size - 1){
-                    playSong(list[currentIndex + 1], customQueue = list)
-                }
             }
         }
     }
@@ -570,13 +600,6 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         mediaController?.let { controller ->
             if (controller.hasPreviousMediaItem()){
                 controller.seekToPreviousMediaItem()
-            }else{
-                val current = _currentSong.value ?: return
-                val list = _currentQueue.value.ifEmpty { (_uiState.value as? UiState.Success)?.songs ?: return }
-                val currentIndex = list.indexOfFirst { it.id ==  current.id }
-                if (currentIndex > 0){
-                    playSong(list[currentIndex - 1], customQueue = list)
-                }
             }
         }
     }
@@ -606,6 +629,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     fun removeFromQueue(song: Song){
         val updateQueue = _currentQueue.value.filter { it.id  != song.id }
         _currentQueue.value = updateQueue
+        saveCurrentQueueIds(updateQueue.map { it.id })
 
         mediaController?.let { controller ->
             val indexToRemove = (0 until controller.mediaItemCount).firstOrNull {index ->
@@ -624,8 +648,21 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
             val movedItem = currentList.removeAt(fromIndex)
             currentList.add(toIndex, movedItem)
             _currentQueue.value = currentList
+            saveCurrentQueueIds(currentList.map { it.id })
 
             mediaController?.moveMediaItem(fromIndex, toIndex)
+        }
+    }
+
+    private fun getSavedQueueIds(): List<Long> {
+        val str = prefs.getString("last_queue_ids", "") ?: ""
+        if (str.isBlank()) return emptyList()
+        return str.split(",").mapNotNull { it.trim().toLongOrNull() }
+    }
+
+    private fun saveCurrentQueueIds(queueIds: List<Long>) {
+        viewModelScope.launch(Dispatchers.IO){
+            prefs.edit { putString("last_queue_ids", queueIds.joinToString(",")) }
         }
     }
 
@@ -724,13 +761,23 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         val songMap = allSongs.associateBy { it.id }
         _recentPlayedSongs.value = recentIds.mapNotNull { songMap[it] }.take(30)
 
+        if (_currentSong.value == null) {
+            val savedQueueIds = getSavedQueueIds()
+            if (savedQueueIds.isNotEmpty()) {
+                val restoredQueue = savedQueueIds.mapNotNull { songMap[it] }
+                if (restoredQueue.isNotEmpty()){
+                    _currentQueue.value = restoredQueue
+                }
+            }
+        }
         val lastSongId = prefs.getLong("last_song_id", -1L)
         if (lastSongId != -1L && _currentSong.value == null){
             songMap[lastSongId]?.let { lastSong ->
                 _currentSong.value = lastSong
-                _currentPositionMs.value = prefs.getLong("last_position_ms", 0L)
+                _currentPositionMs.value = 0L
             }
         }
     }
+
 }
 

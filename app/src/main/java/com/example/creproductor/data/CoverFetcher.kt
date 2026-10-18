@@ -1,8 +1,10 @@
 package com.example.creproductor.data
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.io.InterruptedIOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
@@ -50,7 +52,11 @@ object CoverFetcher {
                     )
                 }
             }
-        } catch (e: Exception){
+        }catch (e: InterruptedIOException){
+        }catch (e: CancellationException){
+            throw e
+        }
+        catch (e: Exception){
             e.printStackTrace()
         }
         return@withContext null
