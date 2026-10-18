@@ -1,6 +1,7 @@
 package com.example.creproductor.data
 
 import android.content.Context
+import android.media.MediaScannerConnection
 import android.net.Uri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -10,6 +11,8 @@ import org.jaudiotagger.tag.images.ArtworkFactory
 import java.io.File
 import java.io.InputStream
 import java.net.URL
+import kotlin.coroutines.resume
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 
 object AudioTagWriter {
@@ -25,7 +28,9 @@ object AudioTagWriter {
         var tempFile: File? = null
         try {
 
-            tempFile = File.createTempFile("edit_song_", ".tmp", context.cacheDir)
+            // jaudiotagger elige el lector por la extensión: con ".tmp" falla en
+            // cualquier formato (FLAC incluido), así que se conserva la real.
+            tempFile = File.createTempFile("edit_song_", ".${audioExtension(context, song)}", context.cacheDir)
 
             context.contentResolver.openInputStream(song.contentUri)?.use{input ->
                 tempFile.outputStream().use { output ->
@@ -57,6 +62,7 @@ object AudioTagWriter {
                 }
             }?: return@withContext false
 
+            rescan(context, song)
             true
         }catch (e: Exception){
             e.printStackTrace()
@@ -64,6 +70,23 @@ object AudioTagWriter {
         }finally {
             tempFile?.delete()
         }
+    }
+
+    /** MediaStore no relee los tags solo: sin esto `loadSongs()` devuelve los datos viejos. */
+    private suspend fun rescan(context: Context, song: Song) {
+        if (song.path.isEmpty()) return
+        suspendCancellableCoroutine { cont ->
+            MediaScannerConnection.scanFile(context, arrayOf(song.path), null) { _, _ ->
+                if (cont.isActive) cont.resume(Unit)
+            }
+        }
+    }
+
+    private fun audioExtension(context: Context, song: Song): String {
+        val fromPath = File(song.path).extension
+        if (fromPath.isNotEmpty()) return fromPath
+        val mime = context.contentResolver.getType(song.contentUri)
+        return android.webkit.MimeTypeMap.getSingleton().getExtensionFromMimeType(mime) ?: "mp3"
     }
 
     private fun fetchImageBytes(context: Context, urlOrUri: String): ByteArray?{

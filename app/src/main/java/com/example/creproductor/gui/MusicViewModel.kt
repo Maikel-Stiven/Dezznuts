@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
+import android.widget.Toast
 import android.os.Bundle
 import android.util.Log
 import androidx.core.content.ContextCompat
@@ -467,6 +468,8 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
             )
             if (success){
                 loadSongs()
+            } else {
+                Toast.makeText(getApplication(), "No se pudieron guardar los tags", Toast.LENGTH_LONG).show()
             }
         }
     }
