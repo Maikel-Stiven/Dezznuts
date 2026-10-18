@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -254,17 +255,20 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         )
     }
 
+    /**
+     * Sondea la posición cada 500 ms, pero solo mientras suena: en pausa o con la app en segundo
+     * plano el bucle queda suspendido y no despierta la CPU. `collectLatest` cancela el sondeo
+     * en cuanto [_isPlaying] cambia. No se sincroniza al pausar para no pisar la posición
+     * restaurada de la sesión anterior (ver restoreDashboardLists).
+     */
     private fun startPositionTracker(){
         viewModelScope.launch {
-            while (true){
-                mediaController?.let{ controller ->
-                    if (controller.isPlaying){
-                        _currentPositionMs.value = controller.currentPosition
-                    }
+            _isPlaying.collectLatest { playing ->
+                while (playing){
+                    mediaController?.let { _currentPositionMs.value = it.currentPosition }
+                    delay(500L)
                 }
-                delay(500L)
             }
-
         }
     }
 
