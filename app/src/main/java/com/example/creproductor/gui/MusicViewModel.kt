@@ -281,7 +281,8 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     /**
      * Sondea la posición cada 500 ms, pero solo mientras suena **y** la UI es visible: en pausa o
      * con la pantalla apagada / la app en segundo plano el bucle queda suspendido y no despierta
-     * la CPU. `collectLatest` cancela el sondeo en cuanto cambia cualquiera de las dos condiciones. No se sincroniza al pausar para no pisar la posición
+     * la CPU. `collectLatest` cancela el sondeo en cuanto cambia cualquiera de las dos condiciones.
+     * No se sincroniza al pausar para no pisar la posición
      * restaurada de la sesión anterior (ver restoreDashboardLists).
      */
     private fun startPositionTracker(){

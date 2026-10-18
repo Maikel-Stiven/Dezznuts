@@ -1,128 +1,131 @@
+<div align="center">
+
+<img src="docs/assets/dezznuts-icon.gif" alt="DEZZNUTS: bellota con audífonos" width="160" />
+
 # DEZZNUTS 🎧
 
-Reproductor de música **local** para Android, **Open Source** y gratuito. La idea del proyecto es ofrecer de forma libre esas funciones que otros reproductores suelen encerrar tras un pago (etiquetado automático, cortador de audio, ecualizador, temporizador, etc.), "solo por amor al arte".
+**Reproductor de música local, libre y gratuito para Android.**
 
-> ⚠️ **Estado: Alfa temprana (`Alpha 0.0.1`).** El reproductor base ya funciona y el proyecto **compila** (con pruebas unitarias y CI). Algunas funciones del menú todavía son solo interfaz sin lógica; revisa la sección [Problemas conocidos](#-problemas-conocidos).
+[🇪🇸 Español](README.md) · [🇬🇧 English](README.en.md)
+
+![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white)
+![Kotlin](https://img.shields.io/badge/Kotlin-2.2-7F52FF?logo=kotlin&logoColor=white)
+![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?logo=jetpackcompose&logoColor=white)
+![Estado](https://img.shields.io/badge/estado-alfa%200.0.1-orange)
+![PRs](https://img.shields.io/badge/PRs-bienvenidos-brightgreen)
+
+</div>
+
+Reproductor de música **local** para Android, open source y gratuito. La idea es ofrecer libremente
+funciones que otros reproductores suelen cobrar (etiquetado automático, cortador de audio,
+ecualizador, temporizador), "solo por amor al arte".
+
+> ⚠️ **Estado: alfa temprana.** El reproductor base ya funciona y el proyecto compila (con pruebas
+> unitarias y CI). Algunas entradas del menú todavía son solo interfaz; ver
+> [Problemas conocidos](#-problemas-conocidos).
+
+App nativa en **Kotlin + Jetpack Compose** que escanea la música del dispositivo (MediaStore) y la
+reproduce en segundo plano con **Media3 / ExoPlayer**.
+
+## 📸 Capturas
+
+<div align="center">
+<img src="docs/screenshots/01-inicio.png" alt="Selección rápida" width="22%" />
+<img src="docs/screenshots/02-canciones.png" alt="Canciones" width="22%" />
+<img src="docs/screenshots/03-menu.png" alt="Menú lateral" width="22%" />
+<img src="docs/screenshots/04-reproductor.png" alt="Reproductor" width="22%" />
+</div>
 
 ---
-
-## 📦 ¿Qué es?
-
-DEZZNUTS es una app Android nativa escrita en **Kotlin + Jetpack Compose** que escanea la música almacenada en el dispositivo (MediaStore) y la reproduce con **Media3 / ExoPlayer** en segundo plano. Incluye organización por álbumes, artistas y géneros, listas de reproducción, favoritos, búsqueda, edición de etiquetas ID3 y carátulas automáticas (APIs públicas de Deezer e iTunes, sin claves de API).
 
 ---
 
 ## ✨ Funcionalidades
 
-### ✅ Implementadas y funcionando
+**Biblioteca**
 
-| Área | Detalle |
-|------|---------|
-| **Escaneo local** | Lee la música del dispositivo vía `MediaStore`, en bloques de 100 para no bloquear la UI. |
-| **Reproducción en 2º plano** | Servicio `MusicService` (Media3 `MediaSessionService`) con notificación y controles. |
-| **Reproductor a pantalla completa** | Carrusel de carátulas deslizable, barra de progreso con *seek*, anterior/siguiente, play/pausa. |
-| **Modos de repetición** | `OFF` → `ALL` → `ONE` → `STOP_AFTER_CURRENT` (detener al terminar la canción). |
-| **Cola de reproducción** | Hoja inferior con la cola; reordenar arrastrando y quitar canciones. |
-| **Mini-reproductor** | Barra inferior fija cuando hay una canción activa. |
-| **Modo aleatorio (Shuffle)** | Reordena la cola de verdad (`shuffleModeEnabled`); el icono refleja el estado. |
-| **Pestaña Carpetas** | Agrupa la biblioteca por carpeta del archivo. |
-| **Búsqueda navegable** | Los resultados de **Álbumes** y **Artistas** abren su pantalla de detalle. |
-| **Favorito desde la notificación** | El botón ❤ de la notificación se sincroniza con los favoritos de la app. |
-| **Favoritos ❤** | Marcar/desmarcar; se guardan entre sesiones. |
-| **Contador de reproducciones** | Registra reproducciones para "Más reproducidas". |
-| **Reproducción reciente** | Historial de las últimas canciones escuchadas. |
-| **Listas rápidas** | Recién agregadas, reproducción reciente, más reproducidas y favoritos. |
-| **Pestañas de biblioteca** | Canciones, Álbumes, Artistas, Géneros, Listas de reproducción. |
-| **Búsqueda** | Buscador con historial y sub-pestañas (Canciones / Álbumes / Artistas). |
-| **Edición de etiquetas ID3** | Título, artista, álbum y carátula; escritura con **jaudiotagger**. |
-| **"Auto-web" de metadatos** | Busca carátula/metadata oficiales en la **API de iTunes** y limpia títulos tipo YouTube. |
-| **Carátulas de artistas** | Fotos de artista desde la **API de Deezer**, cacheadas localmente. |
-| **Listas de reproducción** | Crear, añadir/quitar canciones y elegir portada; persistidas localmente. |
-| **Tema oscuro** | Material 3 con paleta oscura personalizada. |
-| **Animación "ecualizador"** | Indicador animado en la pista/cola actualmente en reproducción. |
-| **Audio Hi/Res** | Salida PCM en **32 bits (float)** y **audio offload** opcionales, ambos apagados por defecto, para acercar la reproducción al bit-perfect. Ver la sección [🎚️ Audio Hi/Res](#-audio-hires). |
+- Escaneo local vía `MediaStore`, en bloques de 100 para no bloquear la interfaz.
+- Pestañas de Canciones, Álbumes, Artistas, Géneros, Carpetas y Listas de reproducción.
+- Búsqueda con historial y resultados navegables (los álbumes y artistas abren su detalle).
+- Listas rápidas: recién agregadas, reproducción reciente, más reproducidas y favoritos.
+- Favoritos y contador de reproducciones, persistidos y sincronizados con la notificación.
 
-### 🟡 Parciales (UI presente, lógica incompleta)
+**Reproducción**
 
-- **Menú de opciones (⋮)** de canciones y listas: en su mayoría sin lógica.
-- **Restaurar lista de reproducción**: botón sin lógica.
+- Servicio en segundo plano (`MusicService` / `MediaSessionService`) con notificación y controles.
+- Reproductor a pantalla completa: carrusel de carátulas, barra de progreso, play/pausa y anterior/siguiente.
+- Modos de repetición `OFF → ALL → ONE → STOP_AFTER_CURRENT`, aleatorio real y cola reordenable.
+- Mini-reproductor fijo en la parte inferior.
 
-### 🔴 Pendientes (declaradas en el menú lateral, sin implementar)
+**Etiquetado e imágenes**
 
-- **Ecualizador**
-- **Escanear archivos** (re-escaneo manual)
-- **Buscar duplicados / audios de WhatsApp**
-- **Cortador de audio**
-- **Temporizador (Sleep Timer)**
-- **Acerca de**
-- **Enviar comentarios**
+- Edición de etiquetas (título, artista, álbum, carátula) con **jaudiotagger**.
+- Metadatos y carátulas automáticos desde la **API de iTunes**, con limpieza de títulos tipo YouTube.
+- Fotos de artista desde la **API de Deezer**, cacheadas en disco.
+
+**Otros**
+
+- **Audio Hi/Res** (ver abajo).
+- Tema oscuro Material 3.
+
+**Pendiente (declarado en el menú lateral, sin implementar)**
+
+- Ecualizador, cortador de audio, temporizador, escanear archivos, duplicados / audios de WhatsApp,
+  Acerca de, enviar comentarios.
+- Los menús ⋮ de canciones y listas, y el botón "Restaurar lista", siguen sin lógica.
 
 ---
 
 ## 🎚️ Audio Hi/Res
 
-DEZZNUTS reproduce **FLAC, ALAC, WAV y cualquier formato sin pérdida tal cual**, sin transcodificar
-ni aplicar DSP: la decodificación la hace el códec del sistema y entrega el PCM exacto del archivo.
-Lo que sí se puede controlar es **cómo se entrega esa señal al DAC**, y ahí están las dos palancas
-de la app (menú lateral → **Audio Hi/Res**):
+Los FLAC, ALAC, WAV y cualquier formato sin pérdida se reproducen **tal cual**: decodifica el códec
+del sistema, sin transcodificar ni aplicar DSP. Lo que se puede elegir es **cómo llega esa señal al
+DAC**. Menú lateral → **Audio Hi/Res**; los dos ajustes van **apagados por defecto** y se aplican
+**en caliente** (el servicio reconstruye el reproductor conservando la cola y la posición).
 
-| Ajuste | Qué hace | Riesgo | Por defecto |
-|--------|----------|--------|-------------|
-| **Salida en 32 bits (float)** | Convierte el PCM de alta resolución (24/32 bits) a punto flotante antes del mezclador, evitando truncarlo a 16 bits. En archivos de 16 bits no cambia nada. | Si el dispositivo no soporta la salida float, los archivos de 24/32 bits podrían no sonar. | ⬜ Desactivado |
-| **Audio offload (bit-perfect)** | Envía el archivo comprimido directamente al DSP, sin remuestreo ni mezcla: conserva la frecuencia y la profundidad originales. Requiere Android 10+. | Depende del chip: algunos lo soportan mal (cortes o silencios). Con él activo no se aplican efectos y el float no interviene. | ⬜ Desactivado |
+| Ajuste | Qué hace | Riesgo |
+|--------|----------|--------|
+| **Salida en 32 bits (float)** | Pasa el PCM de 24/32 bits a punto flotante antes del mezclador, evitando truncarlo a 16 bits. En material de 16 bits no cambia nada. | Si el dispositivo no soporta la salida float, los archivos de 24/32 bits podrían no sonar. |
+| **Audio offload** | Envía el archivo comprimido directamente al DSP, sin remuestreo ni mezcla: conserva la frecuencia y la profundidad originales. Requiere Android 10+. | Depende del chip: algunos lo soportan mal (cortes o silencios). Con él activo no se aplican efectos y el float no interviene. |
 
-**Los dos van apagados por defecto**: cambian la ruta de salida y dependen del dispositivo, así que
-la decisión es del usuario, que los activa desde el propio diálogo (que explica qué hace cada uno y
-su riesgo). Los cambios se aplican **en caliente**: el servicio reconstruye el reproductor y conserva
-la cola y la posición (ver `MusicService.rebuildPlayer()`).
+Los dos cambian la ruta de salida y dependen del dispositivo, así que la decisión es del usuario: se
+activan desde el propio diálogo, que explica qué hace cada uno y su riesgo.
 
-### Lo que conviene saber (sin humo)
+Datos que conviene tener claros:
 
-- **Un FLAC no gana fidelidad con "más kbps"**: es sin pérdida, se decodifica bit a bit. Ninguna app
-  puede extraerle más información de la que tiene.
-- **El remuestreo del sistema es el verdadero límite**: AudioFlinger remuestrea todo a la frecuencia
-  nativa de salida (normalmente **48000 Hz**). Un FLAC de CD (44100 Hz) se remuestrea salvo que el
-  **offload** esté activo o se use un DAC USB que negocie la tasa.
-- **El truncado a 16 bits sí degrada de verdad**: sin la opción float, el material de 24/32 bits pasa
-  por `ToInt16PcmAudioProcessor`, que tira los bits bajos **sin dithering** y añade distorsión de
-  cuantización (enmascara detalle fino y planos). Por eso existe el interruptor.
-- **Si otra app "suena mejor", suele ser DSP** (ecualizador, realce de graves, *stereo widening*…):
-  colorea el sonido, no añade fidelidad. DEZZNUTS no aplica ningún efecto por defecto para no alterar
-  la señal.
-- **El offload acapara la ruta**: mientras está activo no se aplican efectos y el float no interviene,
-  porque el audio no pasa por PCM.
-
-El diálogo muestra además la **frecuencia nativa del dispositivo**, que es el dato clave para
-entender el remuestreo.
+- **El remuestreo del sistema es el límite real**: AudioFlinger lleva todo a la frecuencia nativa de
+  salida (normalmente **48000 Hz**), así que un FLAC de CD (44100 Hz) se remuestrea salvo con el
+  offload activo o con un DAC USB que negocie la tasa.
+- **El truncado a 16 bits sí degrada**: sin la opción float, el material de 24/32 bits pasa por
+  `ToInt16PcmAudioProcessor`, que descarta los bits bajos sin dithering.
+- **Un FLAC no gana fidelidad con "más kbps"**: es sin pérdida; no hay más información que extraer.
+- El diálogo muestra la **frecuencia nativa del dispositivo**.
 
 ### Latencia al mover el tiempo (*seek*)
 
-Al adelantar o atrasar una canción, la reproducción debe reanudarse lo antes posible. ExoPlayer trae
-valores por defecto **pensados para streaming por internet** que, en archivos locales, hacen esperar de
-más; `MusicService.buildLoadControl()` los ajusta:
+`MusicService.buildLoadControl()` ajusta los valores de ExoPlayer, pensados para streaming, a
+reproducción local:
 
-| Ajuste | Por defecto | DEZZNUTS | Por qué |
-|--------|------------|----------|---------|
-| `backBufferDurationMs` | `0` | `30 s` | Con `0` no hay audio decodificado detrás del cursor: retroceder obliga a releer y recodificar. |
-| `bufferForPlaybackMs` | `2500` | `1000` | Tras un *seek*, ExoPlayer no reanuda hasta tener esa cantidad de audio listo. |
-| `bufferForPlaybackAfterRebufferMs` | `5000` | `2000` | Igual, tras un corte o una pausa larga. |
+| Ajuste | Por defecto | DEZZNUTS |
+|--------|-------------|----------|
+| `backBufferDurationMs` | `0` | `30 s` |
+| `bufferForPlaybackMs` | `2500` | `1000` |
+| `bufferForPlaybackAfterRebufferMs` | `5000` | `2000` |
 
-Los archivos se entregan por **ruta directa** (`file://`) cuando se pueden leer, en vez del
-`content://` de MediaStore: cada *seek* fuera del búfer reabre la fuente, y `content://` añade una
-llamada al proveedor de medios en cada apertura.
+Los archivos se entregan por **ruta directa** (`file://`) cuando son legibles, en lugar del
+`content://` de MediaStore.
 
-Un límite que **no** se puede tocar desde el código, y la causa medida de que el *seek* en FLAC tarde
-más que en MP3: el **índice del propio archivo**. `FlacSeekTableSeekMap` devuelve las entradas del
-bloque `SEEKTABLE` tal cual, y ExoPlayer empieza a leer en la entrada **anterior** al punto pedido,
-descartando todo el audio intermedio. La tabla que escribe `flac` por defecto tiene un punto cada
-**10 s**, así que cada salto lee y tira hasta 10 s de audio (~2,4 MB). MP3 no lo sufre porque su
-índice es mucho más fino.
+El *seek* en FLAC tarda más que en MP3 por el **índice del propio archivo**, algo que la app no puede
+cambiar: `FlacSeekTableSeekMap` devuelve las entradas del bloque `SEEKTABLE` tal cual y ExoPlayer
+empieza a leer en la entrada **anterior** al punto pedido, descartando todo el audio intermedio. La
+tabla que escribe `flac` por defecto tiene un punto cada **10 s**, así que cada salto lee y tira hasta
+10 s de audio (~2,4 MB). MP3 no lo sufre porque su índice es mucho más fino.
 
-Se arregla **en el archivo**, sin recodificar y sin pérdida:
+Se corrige **en el archivo**, sin recodificar y sin pérdida de audio:
 
 ```bash
-metaflac --list "cancion.flac" | grep -i seektable   # ¿lo trae y cada cuánto?
-metaflac --add-seekpoint=1s "cancion.flac"           # tabla densa (1 punto/s)
+metaflac --list "cancion.flac" | grep -i seektable   # ¿trae tabla y cada cuánto?
+metaflac --add-seekpoint=1s "cancion.flac"           # tabla densa (1 punto por segundo)
 
 # Toda la biblioteca de una vez:
 find /ruta/a/musica -name '*.flac' -print0 | xargs -0 metaflac --add-seekpoint=1s
@@ -130,15 +133,11 @@ find /ruta/a/musica -name '*.flac' -print0 | xargs -0 metaflac --add-seekpoint=1
 
 Verificado: el **MD5 del audio no cambia** y el archivo ocupa lo mismo (se consume el `PADDING`).
 
-Y si aun así "se siente lento", no hay que suponer: `PlaybackDiagnostics` imprime una línea de tiempo
-en logcat con lo que tarda cada fase (lectura, decodificador, `AudioTrack` y el instante real en que
-vuelve a sonar).
+Para comprobarlo en el dispositivo, `PlaybackDiagnostics` imprime en logcat lo que tarda cada fase:
 
 ```bash
-adb logcat -s DezzSeek      # mover el tiempo y leer la traza
+adb logcat -s DezzSeek
 ```
-
-Los detalles de qué significa cada línea están en `RESUMEN_PROYECTO.md`.
 
 ---
 
@@ -148,93 +147,46 @@ Los detalles de qué significa cada línea están en `RESUMEN_PROYECTO.md`.
 |------------|-----------------------|
 | Lenguaje | Kotlin `2.2.10` |
 | UI | Jetpack Compose (BOM `2026.02.01`), Material 3 |
-| Reproductor | AndroidX Media3 (`1.4.1`) — ExoPlayer + MediaSession |
+| Reproductor | AndroidX Media3 `1.4.1` (ExoPlayer + MediaSession) |
 | Imágenes | Coil `2.7.0` |
-| Etiquetas ID3 | jaudiotagger `3.0.1` |
+| Etiquetas | jaudiotagger `3.0.1` |
 | Build | AGP `9.4.1`, Gradle `9.8.1`, Kotlin DSL |
-| SDK | `compileSdk`/`targetSdk` 37 · `minSdk` 24 (Android 7.0) |
+| SDK | `compileSdk` / `targetSdk` 37 · `minSdk` 24 (Android 7.0) |
 | Persistencia | `SharedPreferences` (sin base de datos) |
 | Pruebas / CI | JUnit 4 (**24 pruebas unitarias**) + GitHub Actions |
+
+---
+
+## 🔧 Compilar y probar
+
+Requisitos: **Android Studio** (compatible con AGP 9.x) o **JDK 17+**, y el **Android SDK** con la API 37.
+
+```bash
+./gradlew assembleDebug       # APK de depuración en app/build/outputs/apk/debug/
+./gradlew installDebug        # instala en el dispositivo conectado
+./gradlew testDebugUnitTest   # pruebas unitarias
+```
+
+Las pruebas cubren la lógica pura: serialización de listas, limpieza de títulos tipo YouTube,
+reparación de codificación de texto, agrupaciones/búsqueda y formato de duración. El CI
+(`.github/workflows/android.yml`) corre las pruebas y compila el APK en cada push y PR.
+
+> No hay `local.properties` en el repo (está en `.gitignore`); Android Studio lo genera al abrir el proyecto.
 
 ---
 
 ## 🗂️ Estructura del proyecto
 
 ```
-Dezznuts/
-├── build.gradle.kts            # Build raíz
-├── settings.gradle.kts         # Módulos y repositorios
-├── gradle/libs.versions.toml   # Catálogo de dependencias
-├── .github/workflows/android.yml # CI: pruebas unitarias + build del APK
-└── app/
-    ├── build.gradle.kts        # Módulo app (dependencias y SDK)
-    ├── proguard-rules.pro      # Reglas de R8 (release)
-    └── src/
-        ├── main/
-        │   ├── AndroidManifest.xml
-        │   ├── java/com/example/creproductor/
-        │   │   ├── MainActivity.kt          # Entrada, permisos, scaffolding y mini-player
-        │   │   ├── data/                    # Modelos y acceso a datos
-        │   │   │   ├── Song.kt
-        │   │   │   ├── Playlist.kt
-        │   │   │   ├── RepeatMode.kt
-        │   │   │   ├── PlaylistSerializer.kt  # Guarda/carga listas (campos codificados)
-        │   │   │   ├── SongOrganizer.kt       # Agrupaciones y búsqueda (puras)
-        │   │   │   ├── MediaStoreScanner.kt # Escaneo de audio local
-        │   │   │   ├── AudioTagWriter.kt    # Escritura de etiquetas ID3
-        │   │   │   ├── CoverFetcher.kt      # Carátulas/metadata (iTunes)
-        │   │   │   ├── ArtistImageFetcher.kt# Fotos de artista (Deezer)
-        │   │   │   ├── HiFiAudio.kt         # Preferencias y datos de calidad de audio
-        │   │   │   └── YoutubeTitleCleaner.kt
-        │   │   ├── service/
-        │   │   │   ├── MusicService.kt      # Servicio de reproducción + sesión
-        │   │   │   ├── HiFiRenderersFactory.kt # Salida float + audio offload
-        │   │   │   └── PlaybackDiagnostics.kt  # Traza de latencia del seek (logcat)
-        │   │   ├── gui/                     # Pantallas y ViewModel (Compose)
-        │   │   │   ├── MusicViewModel.kt    # Estado central de la app
-        │   │   │   ├── MainScreen.kt        # Pestañas y navegación principal
-        │   │   │   ├── FullScreenPlayer.kt  # Reproductor a pantalla completa
-        │   │   │   ├── AppDrawerContent.kt  # Menú lateral
-        │   │   │   ├── SearchScreen.kt
-        │   │   │   ├── GridScreens.kt       # Álbumes, artistas, géneros, carpetas
-        │   │   │   ├── QuickSelectionScreen.kt / QuickSelectionDetailScreen.kt
-        │   │   │   ├── AlbumDetailScreen.kt / ArtistInterfaceScreen.kt / GenreDetailScreen.kt
-        │   │   │   ├── PlaylistScreen.kt / PlaylistDetailScreen.kt
-        │   │   │   ├── EditTagDialog.kt / CreatePlaylistDialog.kt / AddSongsToPlaylistDialog.kt
-        │   │   │   ├── HiFiAudioDialog.kt   # Ajustes de audio Hi/Res
-        │   │   │   └── ui/theme/            # Colores, tipografía y tema
-        │   └── res/                    # Recursos (iconos, strings, xml de backup)
-        └── test/java/com/example/creproductor/  # Pruebas unitarias (JUnit)
-            ├── data/PlaylistSerializerTest.kt, SongOrganizerTest.kt, …
-            └── DurationFormatTest.kt
+app/src/main/java/com/example/creproductor/
+├── MainActivity.kt        # Entrada, permisos y scaffolding
+├── data/                  # Modelos, escaneo (MediaStore), etiquetas, metadatos y preferencias
+├── service/               # MusicService (reproducción), HiFiRenderersFactory, PlaybackDiagnostics
+└── gui/                   # Pantallas Compose + MusicViewModel + ui/theme
 ```
 
-📄 Para el detalle técnico completo (arquitectura, flujo de datos, bugs y hoja de ruta) consulta **[`RESUMEN_PROYECTO.md`](./RESUMEN_PROYECTO.md)**.
-
----
-
-## 🔧 Requisitos y compilación
-
-1. **Android Studio** (versión reciente, compatible con AGP 9.x) o el JDK 17+.
-2. **Android SDK** con la API 37 instalada.
-3. Clona y abre el proyecto, o compila por consola:
-
-```bash
-./gradlew assembleDebug     # genera el APK de depuración
-./gradlew installDebug      # instala en un dispositivo/emulador conectado
-```
-
-El APK de depuración quedará en `app/build/outputs/apk/debug/`.
-
-### Pruebas
-
-```bash
-./gradlew testDebugUnitTest   # pruebas unitarias (JUnit)
-```
-
-Cubren la lógica pura del proyecto: serialización de listas de reproducción, limpieza de títulos tipo YouTube, reparación de codificación de texto, agrupaciones/búsqueda y formato de duración. Además hay CI (`.github/workflows/android.yml`) que corre las pruebas y compila el APK en cada push/PR.
-
-> No existe `local.properties` en el repo (está en `.gitignore`); Android Studio lo genera al abrir el proyecto.
+📄 El detalle técnico completo (arquitectura, flujo de datos y notas de desarrollo) está en
+**[`RESUMEN_PROYECTO.md`](./RESUMEN_PROYECTO.md)**.
 
 ---
 
@@ -251,20 +203,16 @@ Cubren la lógica pura del proyecto: serialización de listas de reproducción, 
 
 ## 🐞 Problemas conocidos
 
-- Los **menús ⋮** de canciones y listas, y el botón **"Restaurar lista"**, siguen sin lógica.
-- La persistencia sigue en `SharedPreferences` (migración a **Room/DataStore** pendiente); la serialización de listas ya es robusta frente a caracteres especiales.
-- El campo **género** solo se lee en Android 11+ (`MediaStore.GENRE`); en versiones anteriores aparece como "Desconocido".
-- La **edición de etiquetas** escribe directamente sobre el `contentUri` en modo `rwt`; en algunos dispositivos/rutas puede fallar por las restricciones de almacenamiento (SAF).
-- El historial de búsqueda usa un `StringSet` (no garantiza el orden).
-- Las **fotos de artista** se piden por cada fila; en listas grandes conviene cargarlas por lotes.
-
-Detalles y sugerencias de arreglo en [`RESUMEN_PROYECTO.md`](./RESUMEN_PROYECTO.md).
+- Los **menús ⋮** y el botón **"Restaurar lista"** siguen sin lógica.
+- La persistencia usa `SharedPreferences` (migración a Room/DataStore pendiente).
+- El campo **género** solo se lee en Android 11+ (`MediaStore.GENRE`); antes aparece como "Desconocido".
+- La **edición de etiquetas** escribe sobre el `contentUri` en modo `rwt`: en algunas rutas puede
+  fallar por las restricciones de almacenamiento.
+- Las **fotos de artista** se piden por fila; en listas grandes conviene cargarlas por lotes.
 
 ---
 
-## 🗺️ Hoja de ruta sugerida
-
-> ✅ **Ya hecho:** compilación, shuffle real, favorito de la notificación, pestaña **Carpetas**, navegación de búsqueda y pruebas unitarias + CI.
+## 🗺️ Hoja de ruta
 
 1. Implementar **Escanear archivos** (re-escaneo manual).
 2. Implementar **Ecualizador** y **Temporizador**.
@@ -276,20 +224,18 @@ Detalles y sugerencias de arreglo en [`RESUMEN_PROYECTO.md`](./RESUMEN_PROYECTO.
 
 ## 🤝 Cómo contribuir
 
-Al ser un proyecto abierto y "hecho por amor al arte", cualquier aporte suma:
+Lee la [guía de contribución](CONTRIBUTING.md) y el [código de conducta](CODE_OF_CONDUCT.md). En resumen:
 
 1. Haz un *fork* y crea una rama (`feature/mi-mejora`).
 2. Mantén el estilo del código existente (Compose idiomático, nombres en español donde ya se usan).
 3. Abre un *Pull Request* describiendo el cambio.
 
-¿No sabes por dónde empezar? Revisa la sección de **buenos primeros issues** en `RESUMEN_PROYECTO.md`.
-
 ---
 
 ## 📜 Licencia
 
-**Por definir.** Se recomienda una licencia libre y compatible con el espíritu del proyecto (por ejemplo, **GPL-3.0**), para asegurar que DEZZNUTS y sus derivados permanezcan abiertos.
+Distribuido bajo la licencia **GPL-3.0**; consulta [`LICENSE`](LICENSE).
 
 ## 👤 Créditos
 
-Desarrollado inicialmente por el autor del repositorio. Documentación generada como guía de colaboración.
+Desarrollado inicialmente por el autor del repositorio.
