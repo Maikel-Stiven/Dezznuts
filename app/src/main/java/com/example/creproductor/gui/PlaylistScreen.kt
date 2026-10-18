@@ -32,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -126,8 +127,12 @@ fun PlaylistScreen(
                     contentPadding = PaddingValues(bottom = 80.dp)
                 ) {
                     items(playlist, key = {it.id}) {playlist ->
-                        val playlistSongs = allSongs.filter { playlist.songIds.contains(it.id) }
-                        val firstCover = playlistSongs.firstOrNull {it.albumArtUri != null}?.albumArtUri
+                        // Solo hace falta la primera portada: se busca con un Set (O(1) por canción) y se
+                        // corta en cuanto aparece, en vez de filtrar toda la biblioteca en cada recomposición.
+                        val firstCover = remember(playlist.songIds, allSongs) {
+                            val ids = playlist.songIds.toHashSet()
+                            allSongs.firstOrNull { it.id in ids && it.albumArtUri != null }?.albumArtUri
+                        }
                         val displayCover = playlist.coverUri ?: firstCover
 
                         val countLabel = if (playlist.songIds.isEmpty()){
