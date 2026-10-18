@@ -1,4 +1,20 @@
+<div align="center">
+
+<img src="docs/assets/dezznuts-icon.gif" alt="DEZZNUTS: bellota con audífonos" width="160" />
+
 # DEZZNUTS 🎧
+
+**Reproductor de música local, libre y gratuito para Android.**
+
+[🇪🇸 Español](README.md) · [🇬🇧 English](README.en.md)
+
+![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white)
+![Kotlin](https://img.shields.io/badge/Kotlin-2.2-7F52FF?logo=kotlin&logoColor=white)
+![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?logo=jetpackcompose&logoColor=white)
+![Estado](https://img.shields.io/badge/estado-alfa%200.0.1-orange)
+![PRs](https://img.shields.io/badge/PRs-bienvenidos-brightgreen)
+
+</div>
 
 Reproductor de música **local** para Android, open source y gratuito. La idea es ofrecer libremente
 funciones que otros reproductores suelen cobrar (etiquetado automático, cortador de audio,
@@ -10,6 +26,17 @@ ecualizador, temporizador), "solo por amor al arte".
 
 App nativa en **Kotlin + Jetpack Compose** que escanea la música del dispositivo (MediaStore) y la
 reproduce en segundo plano con **Media3 / ExoPlayer**.
+
+## 📸 Capturas
+
+<div align="center">
+<img src="docs/screenshots/01-inicio.png" alt="Selección rápida" width="22%" />
+<img src="docs/screenshots/02-canciones.png" alt="Canciones" width="22%" />
+<img src="docs/screenshots/03-menu.png" alt="Menú lateral" width="22%" />
+<img src="docs/screenshots/04-reproductor.png" alt="Reproductor" width="22%" />
+</div>
+
+---
 
 ---
 
@@ -197,6 +224,8 @@ app/src/main/java/com/example/creproductor/
 
 ## 🤝 Cómo contribuir
 
+Lee la [guía de contribución](CONTRIBUTING.md) y el [código de conducta](CODE_OF_CONDUCT.md). En resumen:
+
 1. Haz un *fork* y crea una rama (`feature/mi-mejora`).
 2. Mantén el estilo del código existente (Compose idiomático, nombres en español donde ya se usan).
 3. Abre un *Pull Request* describiendo el cambio.
@@ -205,8 +234,7 @@ app/src/main/java/com/example/creproductor/
 
 ## 📜 Licencia
 
-**Por definir.** Se recomienda una licencia libre y compatible con el espíritu del proyecto (por
-ejemplo **GPL-3.0**), para que DEZZNUTS y sus derivados permanezcan abiertos.
+Distribuido bajo la licencia **GPL-3.0**; consulta [`LICENSE`](LICENSE).
 
 ## 👤 Créditos
 
