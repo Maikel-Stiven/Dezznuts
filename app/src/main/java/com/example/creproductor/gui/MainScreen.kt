@@ -23,7 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -72,18 +72,18 @@ fun MainScreen(
     var showAddSongsDialog by remember { mutableStateOf(false) }
     var selectedPlaylist by remember { mutableStateOf<Playlist?>(null) }
 
-    val playlist by viewModel.playlists.collectAsState()
-    val favoriteSongs by viewModel.favoriteSongs.collectAsState()
-    val recentSongs by viewModel.recentPlayedSongs.collectAsState()
+    val playlist by viewModel.playlists.collectAsStateWithLifecycle()
+    val favoriteSongs by viewModel.favoriteSongs.collectAsStateWithLifecycle()
+    val recentSongs by viewModel.recentPlayedSongs.collectAsStateWithLifecycle()
 
-    val uiState by viewModel.uiState.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
-    val filteredSongs by viewModel.filteredSongs.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val filteredSongs by viewModel.filteredSongs.collectAsStateWithLifecycle()
     val songs = (uiState as? UiState.Success)?.songs ?: emptyList()
-    val  searchHistory by viewModel.searchHistory.collectAsState()
+    val  searchHistory by viewModel.searchHistory.collectAsStateWithLifecycle()
 
-    val currentSong by viewModel.currentSong.collectAsState()
-    val isPlaying by viewModel.isPlaying.collectAsState()
+    val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
+    val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
 
 
     val artisListState = rememberLazyListState()

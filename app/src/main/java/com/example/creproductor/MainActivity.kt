@@ -1,5 +1,6 @@
 package com.example.creproductor
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.Manifest
 import android.os.Build
 import android.os.Bundle
@@ -86,12 +87,12 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val uiState by viewModel.uiState.collectAsState()
-                    val currentSong by viewModel.currentSong.collectAsState()
-                    val isPlaying by viewModel.isPlaying.collectAsState()
-                    val currentQueue by viewModel.currentQueue.collectAsState()
-                    val repeatMode by viewModel.repeatMode.collectAsState()
-                    val isShuffleEnabled by viewModel.isShuffleEnabled.collectAsState()
+                    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+                    val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
+                    val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
+                    val currentQueue by viewModel.currentQueue.collectAsStateWithLifecycle()
+                    val repeatMode by viewModel.repeatMode.collectAsStateWithLifecycle()
+                    val isShuffleEnabled by viewModel.isShuffleEnabled.collectAsStateWithLifecycle()
 
                     var songToEdit by remember { mutableStateOf<Song?>(null) }
                     var isPlayerFullScreenVisible by remember { mutableStateOf(false) }
@@ -212,7 +213,7 @@ class MainActivity : ComponentActivity() {
                                             val activeSongsQueue = currentQueue.ifEmpty { state.songs }
                                             // Solo aquí se lee la posición: leerla en la raíz recomponía
                                             // toda la pantalla cada 500 ms aunque el reproductor estuviera cerrado.
-                                            val currentPositionMs by viewModel.currentPositionMs.collectAsState()
+                                            val currentPositionMs by viewModel.currentPositionMs.collectAsStateWithLifecycle()
 
                                             FullScreenPlayer(
                                                 song = currentSong!!,

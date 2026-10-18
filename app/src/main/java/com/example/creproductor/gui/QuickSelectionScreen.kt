@@ -27,7 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -54,10 +54,10 @@ fun QuickSelectionScreen(
     onSeeAllCategoryClick: (type: QuickSelectType, songs: List<Song>) -> Unit = {_, _ -> }
 ){
 
-    val favoriteSongs by viewModel.favoriteSongs.collectAsState()
-    val mostPlayedSongs by viewModel.mostPlayedSongs.collectAsState()
-    val recentSongs by viewModel.recentPlayedSongs.collectAsState()
-    val allSongs by viewModel.filteredSongs.collectAsState()
+    val favoriteSongs by viewModel.favoriteSongs.collectAsStateWithLifecycle()
+    val mostPlayedSongs by viewModel.mostPlayedSongs.collectAsStateWithLifecycle()
+    val recentSongs by viewModel.recentPlayedSongs.collectAsStateWithLifecycle()
+    val allSongs by viewModel.filteredSongs.collectAsStateWithLifecycle()
 
     val recentlyAddedFull = remember(allSongs) {
         allSongs.sortedByDescending { it.id }.take(30)
