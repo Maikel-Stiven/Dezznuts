@@ -74,6 +74,9 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
 
 
     private var mediaController: MediaController? = null
+    /** `true` mientras la actividad está en primer plano (la fija MainActivity en onStart/onStop). */
+    private val _uiVisible = MutableStateFlow(true)
+
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
 
@@ -262,15 +265,30 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     }
 
     /**
-     * Sondea la posición cada 500 ms, pero solo mientras suena: en pausa o con la app en segundo
-     * plano el bucle queda suspendido y no despierta la CPU. `collectLatest` cancela el sondeo
-     * en cuanto [_isPlaying] cambia. No se sincroniza al pausar para no pisar la posición
+     * Avisa de que la UI se muestra u oculta. Al ocultarse se guarda la posición actual (así
+     * se restaura bien al reabrir) y el sondeo de [startPositionTracker] se suspende.
+     */
+    fun setUiVisible(visible: Boolean) {
+        if (!visible) {
+            mediaController?.let {
+                _currentPositionMs.value = it.currentPosition
+                prefs.edit { putLong("last_position_ms", it.currentPosition) }
+            }
+        }
+        _uiVisible.value = visible
+    }
+
+    /**
+     * Sondea la posición cada 500 ms, pero solo mientras suena **y** la UI es visible: en pausa o
+     * con la pantalla apagada / la app en segundo plano el bucle queda suspendido y no despierta
+     * la CPU. `collectLatest` cancela el sondeo en cuanto cambia cualquiera de las dos condiciones. No se sincroniza al pausar para no pisar la posición
      * restaurada de la sesión anterior (ver restoreDashboardLists).
      */
     private fun startPositionTracker(){
         viewModelScope.launch {
-            _isPlaying.collectLatest { playing ->
-                while (playing){
+            combine(_isPlaying, _uiVisible) { playing, visible -> playing && visible }
+                .collectLatest { active ->
+                while (active){
                     mediaController?.let { _currentPositionMs.value = it.currentPosition }
                     delay(500L)
                 }
@@ -284,7 +302,8 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     }
 
     fun addSearchHistory(query: String){
-        val cleanQuery = query.trim()
+        // "|" es el separador del historial guardado: se sustituye para no partir la búsqueda en dos.
+        val cleanQuery = query.replace('|', ' ').trim()
         if (cleanQuery.isBlank()) return
         val currentList = _searchHistory.value.toMutableList()
         currentList.remove(cleanQuery)
@@ -512,7 +531,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                 coverUrlOrUri = coverUriOrUrl
             )
             if (success){
-                loadSongs()
+                loadSongs(silent = true)
             } else {
                 Toast.makeText(getApplication(), "No se pudieron guardar los tags", Toast.LENGTH_LONG).show()
             }

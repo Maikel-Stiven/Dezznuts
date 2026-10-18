@@ -26,6 +26,7 @@ object AudioTagWriter {
         coverUrlOrUri: String? = null
     ): Boolean = withContext(Dispatchers.IO){
         var tempFile: File? = null
+        var backupFile: File? = null
         try {
 
             // jaudiotagger elige el lector por la extensión: con ".tmp" falla en
@@ -37,6 +38,11 @@ object AudioTagWriter {
                     input.copyTo(output)
                 }
             } ?: return@withContext false
+
+            // Copia del original: la escritura final trunca el archivo (`rwt`) antes de copiar,
+            // así que si falla a medias se restaura desde aquí en vez de dejar la canción rota.
+            backupFile = File.createTempFile("backup_song_", ".${tempFile.extension}", context.cacheDir)
+            tempFile.copyTo(backupFile, overwrite = true)
 
             val audioFile = AudioFileIO.read(tempFile)
             val tag = audioFile.tagOrCreateAndSetDefault
@@ -56,11 +62,16 @@ object AudioTagWriter {
             }
             audioFile.commit()
 
-            context.contentResolver.openOutputStream(song.contentUri, "rwt")?.use { output ->
-                tempFile.inputStream().use { input ->
-                    input.copyTo(output)
-                }
-            }?: return@withContext false
+            try {
+                context.contentResolver.openOutputStream(song.contentUri, "rwt")?.use { output ->
+                    tempFile.inputStream().use { input ->
+                        input.copyTo(output)
+                    }
+                } ?: return@withContext false
+            } catch (e: Exception) {
+                restoreOriginal(context, song, backupFile)
+                throw e
+            }
 
             rescan(context, song)
             true
@@ -69,6 +80,18 @@ object AudioTagWriter {
             false
         }finally {
             tempFile?.delete()
+            backupFile?.delete()
+        }
+    }
+
+    /** Devuelve al archivo su contenido original tras una escritura fallida. */
+    private fun restoreOriginal(context: Context, song: Song, backup: File) {
+        try {
+            context.contentResolver.openOutputStream(song.contentUri, "rwt")?.use { output ->
+                backup.inputStream().use { it.copyTo(output) }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 

@@ -16,6 +16,12 @@ object ArtistImageFetcher {
 
     private const val PREFS_NAME = "artist_photos_cache"
 
+    /** Carpeta (dentro de `cacheDir`) donde Coil guarda las imágenes; la comparten el cargador y el diálogo de borrado. */
+    const val IMAGE_CACHE_DIR = "artist_images_cache"
+
+    /** Artistas sin foto en esta sesión: evita repetir la consulta de red en cada fila/scroll. */
+    private val noPhoto = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+
     private fun isOnline (context: Context): Boolean {
         val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
         val network = connectivityManager.activeNetwork ?: return false
@@ -54,16 +60,17 @@ object ArtistImageFetcher {
             return@withContext prefs.getString(cleanArtist, null)
         }
 
-        if (!isOnline(context)){
+        if (cleanArtist in noPhoto || !isOnline(context)){
             return@withContext null
         }
 
+        var connection: HttpURLConnection? = null
         try {
             val encodedQuery = URLEncoder.encode(cleanArtist, "UTF-8")
             val urlString = "https://api.deezer.com/search/artist?q=$encodedQuery"
 
             val url = URL(urlString)
-            val connection = url.openConnection() as HttpURLConnection
+            connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
             connection.connectTimeout = 4000
             connection.readTimeout = 4000
@@ -83,23 +90,27 @@ object ArtistImageFetcher {
                     }
                 }
             }
+            noPhoto.add(cleanArtist)
         }catch (e: Exception){
             e.printStackTrace()
+        }finally {
+            connection?.disconnect()
         }
         return@withContext null
     }
 
     fun artistImageCacheSize(context: Context): Long {
-        val cacheDir = File(context.cacheDir, "artist_image_cache")
+        val cacheDir = File(context.cacheDir, IMAGE_CACHE_DIR)
         if (!cacheDir.exists()) return 0L
         return cacheDir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
     }
 
     fun clearArtistImageCache(context: Context){
+        noPhoto.clear()
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit{clear()}
 
-        val cacheDir = File(context.cacheDir, "artist_image_cache")
+        val cacheDir = File(context.cacheDir, IMAGE_CACHE_DIR)
         if (cacheDir.exists()){
             cacheDir.deleteRecursively()
         }

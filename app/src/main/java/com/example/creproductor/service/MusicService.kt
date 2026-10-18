@@ -5,6 +5,7 @@
 package com.example.creproductor.service
 
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.os.Bundle
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
@@ -81,7 +82,10 @@ class MusicService : MediaSessionService(){
         // Traza de latencia del *seek* (ver PlaybackDiagnostics). Se engancha aquí
         // para que la tengan tanto el reproductor de arranque como el que crea
         // rebuildPlayer().
-        PlaybackDiagnostics.attach(player)
+        // Solo en builds depurables: en release la traza es trabajo y logs sin lector.
+        if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
+            PlaybackDiagnostics.attach(player)
+        }
 
         return player
     }

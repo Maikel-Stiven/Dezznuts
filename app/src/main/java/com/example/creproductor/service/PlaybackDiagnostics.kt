@@ -81,6 +81,10 @@ object PlaybackDiagnostics {
     @Volatile
     private var seekRequestAtMs = 0L
 
+    /** `false` en release: nadie engancha la traza y los marcadores no hacen nada. */
+    @Volatile
+    private var attached = false
+
     /**
      * Marca el instante en que el usuario pidió un salto.
      *
@@ -90,6 +94,7 @@ object PlaybackDiagnostics {
      * @param positionMs posición solicitada, en milisegundos.
      */
     fun markSeekRequest(positionMs: Long) {
+        if (!attached) return
         seekRequestAtMs = System.currentTimeMillis()
         Log.i(TAG, "[+0 ms] seek pedido -> $positionMs ms")
     }
@@ -102,6 +107,7 @@ object PlaybackDiagnostics {
      * llegar solos.
      */
     fun attach(player: ExoPlayer) {
+        attached = true
         player.addAnalyticsListener(SeekTimelineListener(::stamp, ::inSeekWindow))
     }
 

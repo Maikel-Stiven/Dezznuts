@@ -33,6 +33,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.creproductor.data.ArtistImageFetcher
 import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.disk.DiskCache
@@ -56,13 +57,23 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: MusicViewModel by viewModels()
 
+    override fun onStart() {
+        super.onStart()
+        viewModel.setUiVisible(true)
+    }
+
+    override fun onStop() {
+        viewModel.setUiVisible(false)
+        super.onStop()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val imageLoader = ImageLoader.Builder(this)
             .diskCache {
                 DiskCache.Builder()
-                    .directory(cacheDir.resolve("artist_images_cache"))
+                    .directory(cacheDir.resolve(ArtistImageFetcher.IMAGE_CACHE_DIR))
                     .maxSizeBytes(30 * 1024 * 1024)
                     .build()
             }
@@ -137,8 +148,6 @@ class MainActivity : ComponentActivity() {
                                 val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
                                 val scope = rememberCoroutineScope()
 
-                                val currentPositionMs by viewModel.currentPositionMs.collectAsState()
-
                                 BackHandler(enabled = isPlayerFullScreenVisible) {
                                     isPlayerFullScreenVisible = false
                                 }
@@ -201,6 +210,9 @@ class MainActivity : ComponentActivity() {
 
                                         if (isPlayerFullScreenVisible && currentSong != null) {
                                             val activeSongsQueue = currentQueue.ifEmpty { state.songs }
+                                            // Solo aquí se lee la posición: leerla en la raíz recomponía
+                                            // toda la pantalla cada 500 ms aunque el reproductor estuviera cerrado.
+                                            val currentPositionMs by viewModel.currentPositionMs.collectAsState()
 
                                             FullScreenPlayer(
                                                 song = currentSong!!,
