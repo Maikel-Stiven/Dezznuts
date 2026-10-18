@@ -2,7 +2,6 @@ package com.example.creproductor.data
 
 import android.content.ContentUris
 import android.content.Context
-import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
@@ -79,10 +78,12 @@ class MediaStoreScanner (private  val context: Context) {
                     id
                 )
 
-                val albumArtUri = ContentUris.withAppendedId(
-                    Uri.parse("content://media/external/audio/albumart"),
-                    albumId
-                )
+                val albumArtUri = if (albumId >= 0){
+                    ContentUris.withAppendedId(
+                        MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,
+                        albumId
+                    )
+                }else null
 
                 buffer.add(
                     Song(
