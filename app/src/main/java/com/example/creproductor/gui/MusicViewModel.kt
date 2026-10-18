@@ -10,6 +10,7 @@ import android.database.ContentObserver
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.provider.MediaStore
 import android.util.Log
 import androidx.core.content.ContextCompat
@@ -55,6 +56,10 @@ enum class SongFilter{
     FAVORITES,
     RECENT
 }
+
+/** Tamaño de la primera publicación de la biblioteca y factor de crecimiento de las siguientes. */
+private const val FIRST_PUBLISH_SIZE = 100
+private const val PUBLISH_GROWTH = 4
 
 class MusicViewModel (application: Application) : AndroidViewModel(application) {
 
@@ -358,21 +363,36 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     fun loadSongs(silent: Boolean = false){
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
+            // Traza de carga: `adb logcat -s DezzLoad` (ver también DezzSeek).
+            val t0 = SystemClock.elapsedRealtime()
+            var publishes = 0
             if (!silent) _uiState.value = UiState.Loading
             val accumulatedSongs = mutableListOf<Song>()
 
+            // Cada publicación repinta toda la interfaz y rehace los agrupados, así
+            // que se publica en tramos que crecen x4 (100, 400, 1600…): se ve algo
+            // enseguida y el total de repintados es logarítmico, no n/100.
+            var nextPublishAt = FIRST_PUBLISH_SIZE
             scanner.scanAudioFiles(chunkSize = 100).collect { chunk ->
                 accumulatedSongs.addAll(chunk)
                 // En una recarga silenciosa se publica al final: publicar por
                 // trozos haría que la lista encoja y vuelva a crecer.
-                if (!silent) publishSongs(accumulatedSongs)
+                if (!silent && accumulatedSongs.size >= nextPublishAt) {
+                    nextPublishAt *= PUBLISH_GROWTH
+                    publishSongs(accumulatedSongs)
+                    if (++publishes == 1) {
+                        Log.i("DezzLoad", "[+${SystemClock.elapsedRealtime() - t0} ms] primera lista publicada (${accumulatedSongs.size} canciones)")
+                    }
+                }
             }
 
             if (accumulatedSongs.isEmpty()){
                 _uiState.value = UiState.Empty
-            } else if (silent) {
+            } else if (silent || (_uiState.value as? UiState.Success)?.songs?.size != accumulatedSongs.size) {
                 publishSongs(accumulatedSongs)
+                publishes++
             }
+            Log.i("DezzLoad", "[+${SystemClock.elapsedRealtime() - t0} ms] carga terminada: ${accumulatedSongs.size} canciones, $publishes publicaciones, silent=$silent")
         }
     }
 
