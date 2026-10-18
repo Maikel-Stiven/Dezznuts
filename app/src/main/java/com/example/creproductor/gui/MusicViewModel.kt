@@ -6,7 +6,11 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
 import android.widget.Toast
+import android.database.ContentObserver
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.provider.MediaStore
 import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
@@ -20,6 +24,7 @@ import com.example.creproductor.data.AudioTagWriter
 import com.example.creproductor.data.MediaStoreScanner
 import com.example.creproductor.data.Song
 import com.example.creproductor.service.MusicService
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -148,6 +153,25 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
 
 
+    private var loadJob: Job? = null
+    private var observerJob: Job? = null
+
+    /**
+     * MediaStore avisa varias veces seguidas por cada archivo nuevo, así que se
+     * espera a que se calme y se recarga una sola vez, en silencio (sin pasar
+     * por `Loading`, para no tapar la lista ni interrumpir lo que suena).
+     */
+    private val mediaStoreObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+        override fun onChange(selfChange: Boolean) {
+            if (_uiState.value is UiState.PermissionRequired) return
+            observerJob?.cancel()
+            observerJob = viewModelScope.launch {
+                delay(1500)
+                loadSongs(silent = true)
+            }
+        }
+    }
+
     init {
         loadSavedPlaycounts()
         initMediaController()
@@ -155,6 +179,9 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         loadSearchHistory()
         loadPlaylist()
         prefs.registerOnSharedPreferenceChangeListener(favPrefsListener)
+        application.contentResolver.registerContentObserver(
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, true, mediaStoreObserver
+        )
     }
 
     private fun initMediaController(){
@@ -328,26 +355,34 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         mediaController?.seekTo(positionMs)
         prefs.edit { putLong("last_position_ms", positionMs) }
     }
-    fun loadSongs(){
-        viewModelScope.launch {
-           _uiState.value = UiState.Loading
+    fun loadSongs(silent: Boolean = false){
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            if (!silent) _uiState.value = UiState.Loading
             val accumulatedSongs = mutableListOf<Song>()
 
             scanner.scanAudioFiles(chunkSize = 100).collect { chunk ->
                 accumulatedSongs.addAll(chunk)
-               val savedFavIds = getSavedFavoritesIds()
-                val updatedChunk = accumulatedSongs.map { song ->
-                    if (savedFavIds.contains(song.id)) song.copy(isFavorite = true) else song
-                }
-
-                _uiState.value = UiState.Success(updatedChunk)
-                restoreDashboardLists(updatedChunk)
+                // En una recarga silenciosa se publica al final: publicar por
+                // trozos haría que la lista encoja y vuelva a crecer.
+                if (!silent) publishSongs(accumulatedSongs)
             }
 
             if (accumulatedSongs.isEmpty()){
                 _uiState.value = UiState.Empty
+            } else if (silent) {
+                publishSongs(accumulatedSongs)
             }
         }
+    }
+
+    private fun publishSongs(songs: List<Song>){
+        val savedFavIds = getSavedFavoritesIds()
+        val updated = songs.map { song ->
+            if (savedFavIds.contains(song.id)) song.copy(isFavorite = true) else song
+        }
+        _uiState.value = UiState.Success(updated)
+        restoreDashboardLists(updated)
     }
 
     private fun registerSongPlay(song: Song){
@@ -476,6 +511,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
 
     override fun onCleared() {
         prefs.unregisterOnSharedPreferenceChangeListener(favPrefsListener)
+        getApplication<Application>().contentResolver.unregisterContentObserver(mediaStoreObserver)
         mediaController?.release()
     }
 
