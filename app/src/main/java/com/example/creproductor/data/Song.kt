@@ -5,6 +5,9 @@
 package com.example.creproductor.data
 
 import android.net.Uri
+import java.nio.ByteBuffer
+import java.nio.charset.CharacterCodingException
+import java.nio.charset.CodingErrorAction
 import java.nio.charset.StandardCharsets
 
 data class Song (
@@ -26,15 +29,18 @@ data class Song (
 
 
 fun String.fixEncoding(): String{
+    if (!(contains("â") || contains("Ã"))) return this
+    // Decodificación estricta: si los bytes no forman UTF-8 válido, el texto ya
+    // estaba bien ("NÃO", "pâte") y se deja como está en vez de corromperlo.
     return try {
-        if (this.contains("â") || this.contains("Ã")){
-            String(this.toByteArray(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8)
-                .replace("â€™", "")
-                .replace("â€“", "")
-        }else{
-            this
-        }
-    }catch (_: Exception){
+        StandardCharsets.UTF_8.newDecoder()
+            .onMalformedInput(CodingErrorAction.REPORT)
+            .onUnmappableCharacter(CodingErrorAction.REPORT)
+            .decode(ByteBuffer.wrap(toByteArray(StandardCharsets.ISO_8859_1)))
+            .toString()
+            .replace("â€™", "")
+            .replace("â€“", "")
+    }catch (_: CharacterCodingException){
         this
     }
 }

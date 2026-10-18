@@ -21,4 +21,10 @@ class SongEncodingTest {
         assertEquals("<unknown>", "<unknown>".fixEncoding())
         assertEquals("", "".fixEncoding())
     }
+
+    @Test
+    fun `no corrompe texto valido con A tilde o a circunfleja`() {
+        assertEquals("NÃO", "NÃO".fixEncoding())
+        assertEquals("pâte", "pâte".fixEncoding())
+    }
 }

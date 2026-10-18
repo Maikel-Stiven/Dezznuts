@@ -92,7 +92,10 @@ object AudioTagWriter {
     private fun fetchImageBytes(context: Context, urlOrUri: String): ByteArray?{
         return try {
             val inputStream: InputStream? = if (urlOrUri.startsWith("http")){
-                URL(urlOrUri).openStream()
+                URL(urlOrUri).openConnection().apply {
+                    connectTimeout = 5000
+                    readTimeout = 10000
+                }.getInputStream()
             }else{
                 context.contentResolver.openInputStream(Uri.parse(urlOrUri))
             }

@@ -218,11 +218,14 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                     }
 
                     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                      if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO && _repeatMode.value == RepeatMode.STOP_AFTER_CURRENT) {
-                          controller.pause()
-                          controller.seekTo(0, 0L)
-                          return
-                      }
+                        val stopHere = reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO &&
+                            _repeatMode.value == RepeatMode.STOP_AFTER_CURRENT
+                        if (stopHere) {
+                            // Queda en la canción siguiente, parada al inicio (seekTo(0L)
+                            // actúa sobre el item actual; seekTo(0, 0L) saltaba al primero de la cola).
+                            controller.pause()
+                            controller.seekTo(0L)
+                        }
                         mediaItem?.mediaId?.let { idStr ->
 
                             val allSongs = (_uiState.value as?  UiState.Success)?.songs ?: emptyList()
@@ -232,7 +235,10 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                                 ?: (_uiState.value as? UiState.Success)?.songs?.find { it.id.toString() == idStr }
                             if (foundSong !== null){
                                 _currentSong.value = foundSong
-                                registerSongPlay(foundSong)
+                                // playSong() ya contó esta reproducción: PLAYLIST_CHANGED la duplicaría.
+                                if (!stopHere && reason != Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) {
+                                    registerSongPlay(foundSong)
+                                }
                             }
                         }
                     }
