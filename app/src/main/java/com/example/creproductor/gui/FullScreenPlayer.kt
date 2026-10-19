@@ -452,10 +452,10 @@ fun FullScreenPlayer(
                                 ) {
                                     QualityBadge(song.quality)
                                     Text(
-                                        text = audioInfo,
+                                        text = audioInfo.replace(" → ", "\n"),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.primary,
-                                        maxLines = 1,
+                                        maxLines = 2,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                 }

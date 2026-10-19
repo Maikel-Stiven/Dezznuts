@@ -30,7 +30,7 @@ class AudioQualityTest {
 class AudioRouteTest {
     @Test fun rutaRealDistingueOffloadRemuestreoYDirecto() {
         assertEquals("Offload", AudioQuality.route(true, 0, 44100, 48000))
-        assertEquals("PCM 44.1 kHz → remuestreado a 48 kHz", AudioQuality.route(false, 16, 44100, 48000))
+        assertEquals("PCM 16 bit 44.1 kHz → remuestreado a 48 kHz", AudioQuality.route(false, 16, 44100, 48000))
         assertEquals("PCM 24 bit 96 kHz directo", AudioQuality.route(false, 24, 96000, 96000))
         assertEquals(24, AudioQuality.bitsOfPcmEncoding(21))
     }

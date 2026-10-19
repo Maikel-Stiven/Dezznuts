@@ -159,7 +159,7 @@ class MainActivity : ComponentActivity() {
                                         AppDrawerContent(
                                             onMenuItem= { menuItem ->
                                                 when(menuItem) {
-                                                    is DrawerMenuItem.Equalizer -> { /*Falta lógica del ecualizador*/}
+                                                    is DrawerMenuItem.Equalizer -> { showEqualizerDialog = true }
                                                     is DrawerMenuItem.ScanFiles -> { /*Falta lógica del escaner de archivos*/}
                                                     is DrawerMenuItem.AudioCutter -> {/*Falta lógica del cortador de audio*/}
                                                     is DrawerMenuItem.SleepTimer -> {/*Falta lógica del temporizador*/}
@@ -179,7 +179,7 @@ class MainActivity : ComponentActivity() {
                                             Box(modifier = Modifier.weight(1f)) {
                                                 MainScreen(
                                                     viewModel = viewModel,
-                                                    onOpenEqualizer = { /* TODO */ },
+                                                    onOpenEqualizer = { showEqualizerDialog = true },
                                                     onOpenScanner = { /* TODO */ },
                                                     onOpenDrawer = {
                                                         scope.launch { drawerState.open() }
@@ -351,14 +351,18 @@ fun SongItem(
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = song.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = song.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    QualityBadge(song.quality, modifier = Modifier.padding(start = 6.dp))
+                }
                 Spacer(modifier = Modifier.height(4.dp))
 
                 val artistName = if (song.artist.isBlank() || song.artist == "<unknown>") {
@@ -375,8 +379,6 @@ fun SongItem(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-
-            QualityBadge(song.quality, modifier = Modifier.padding(end = 6.dp))
 
             if (isSelected){
                 PlayingEqualizerIcon(

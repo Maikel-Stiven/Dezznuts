@@ -68,10 +68,13 @@ object AudioQuality {
      * - si la frecuencia del track difiere de la nativa del dispositivo, el mezclador remuestrea;
      * - si coinciden, el PCM llega sin conversión de frecuencia.
      */
-    fun route(offload: Boolean, pcmBits: Int, trackRate: Int, deviceRate: Int?): String = when {
-        offload -> "Offload"
-        deviceRate != null && trackRate > 0 && trackRate != deviceRate ->
-            "PCM ${khz(trackRate)} → remuestreado a ${khz(deviceRate)}"
-        else -> (if (pcmBits > 16) "PCM $pcmBits bit" else "PCM") + (if (trackRate > 0) " ${khz(trackRate)} directo" else "")
+    fun route(offload: Boolean, pcmBits: Int, trackRate: Int, deviceRate: Int?): String {
+        if (offload) return "Offload"
+        val pcm = if (pcmBits > 0) "PCM $pcmBits bit" else "PCM"
+        val rate = if (trackRate > 0) " ${khz(trackRate)}" else ""
+        return when {
+            deviceRate != null && trackRate > 0 && trackRate != deviceRate -> "$pcm$rate → remuestreado a ${khz(deviceRate)}"
+            else -> "$pcm$rate directo"
+        }
     }
 }

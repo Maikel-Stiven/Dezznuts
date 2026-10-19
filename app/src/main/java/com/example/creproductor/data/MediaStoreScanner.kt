@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 
+private const val TECH_COLUMNS_SDK = 36
+
 class MediaStoreScanner (private  val context: Context) {
     fun scanAudioFiles(chunkSize: Int = 100): Flow<List<Song>> = flow {
         val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
@@ -31,9 +33,13 @@ class MediaStoreScanner (private  val context: Context) {
         ).apply {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
                 add(MediaStore.Audio.Media.GENRE)
+                add(MediaStore.Audio.Media.BITRATE)
+            }
+            // SAMPLERATE y BITS_PER_SAMPLE no existen antes de Android 16: pedirlas antes hace que la consulta lance
+            // IllegalArgumentException ("Invalid column") y la app se cierre al arrancar.
+            if (Build.VERSION.SDK_INT >= TECH_COLUMNS_SDK){
                 add(MediaStore.Audio.Media.SAMPLERATE)
                 add(MediaStore.Audio.Media.BITS_PER_SAMPLE)
-                add(MediaStore.Audio.Media.BITRATE)
             }
         }.toTypedArray()
 
@@ -60,9 +66,9 @@ class MediaStoreScanner (private  val context: Context) {
             val genreCol = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
                 cursor.getColumnIndex(MediaStore.Audio.Media.GENRE)
             }else -1
-            // Datos técnicos: solo existen desde Android 11.
-            val rateCol = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) cursor.getColumnIndex(MediaStore.Audio.Media.SAMPLERATE) else -1
-            val bitsCol = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) cursor.getColumnIndex(MediaStore.Audio.Media.BITS_PER_SAMPLE) else -1
+            // Frecuencia y profundidad: columnas de MediaStore desde Android 16; el bitrate, desde Android 11.
+            val rateCol = if (Build.VERSION.SDK_INT >= TECH_COLUMNS_SDK) cursor.getColumnIndex(MediaStore.Audio.Media.SAMPLERATE) else -1
+            val bitsCol = if (Build.VERSION.SDK_INT >= TECH_COLUMNS_SDK) cursor.getColumnIndex(MediaStore.Audio.Media.BITS_PER_SAMPLE) else -1
             val bitrateCol = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) cursor.getColumnIndex(MediaStore.Audio.Media.BITRATE) else -1
 
             val buffer = mutableListOf<Song>()
@@ -85,7 +91,7 @@ class MediaStoreScanner (private  val context: Context) {
                 val mime = cursor.getString(mimeCol) ?: ""
                 var sampleRate = if (rateCol != -1) cursor.getInt(rateCol) else 0
                 var bits = if (bitsCol != -1) cursor.getInt(bitsCol) else 0
-                // Android < 11: MediaStore no informa de esto; para FLAC/WAV se lee la cabecera del archivo.
+                // Android < 16: MediaStore no informa de esto; para FLAC/WAV se lee la cabecera del archivo.
                 if (rateCol == -1 && path.isNotEmpty() && (path.endsWith(".flac", true) || path.endsWith(".wav", true))) {
                     AudioHeader.read(path)?.let { sampleRate = it.sampleRate; bits = it.bitsPerSample }
                 }

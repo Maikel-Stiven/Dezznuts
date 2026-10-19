@@ -12,6 +12,7 @@ import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.media.audiofx.Equalizer
 import android.os.Bundle
+import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -233,7 +234,11 @@ class MusicService : MediaSessionService(){
         val player = mediaSession?.player ?: return
         val rg = if (HiFiAudio.isReplayGainEnabled(this)) ReplayGain.volumeFor(trackGainDb) else 1f
         val preampDb = if (prefs.getBoolean(HiFiAudio.KEY_EQ_ENABLED, false)) -maxBoostDb() else 0f
-        player.volume = (rg * Math.pow(10.0, preampDb / 20.0).toFloat()).coerceIn(0f, 1f)
+        val volume = (rg * Math.pow(10.0, preampDb / 20.0).toFloat()).coerceIn(0f, 1f)
+        player.volume = volume
+        if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
+            Log.i("DezzAudio", "volumen=$volume (ReplayGain=${trackGainDb ?: "sin etiqueta"} dB, preamp EQ=$preampDb dB)")
+        }
     }
 
     private fun eqLevelsMb(): List<Int> =
