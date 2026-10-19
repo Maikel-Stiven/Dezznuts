@@ -112,6 +112,7 @@ fun FullScreenPlayer(
     currentPositionMs: () -> Long,
     repeatMode: RepeatMode = RepeatMode.OFF,
     isShuffleEnabled: Boolean = false,
+    audioInfo: String = "",
     onToggleShuffle: () -> Unit = {},
     onTogglePlayPause: () -> Unit,
     onNextClick: () -> Unit,
@@ -131,6 +132,7 @@ fun FullScreenPlayer(
     }
 
     var showQueueBottomSheet by remember { mutableStateOf(false) }
+    var showTrackInfo by remember { mutableStateOf(false) }
 
     var lastClickTime by remember { mutableStateOf(0L) }
     fun safeClick(action: () -> Unit){
@@ -236,10 +238,10 @@ fun FullScreenPlayer(
                     )
                 }
 
-                IconButton(onClick = { /* Menú de opciones*/ }) {
+                IconButton(onClick = { showTrackInfo = true }) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Opciones",
+                        contentDescription = "Información técnica",
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -442,6 +444,23 @@ fun FullScreenPlayer(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 overflow = TextOverflow.Ellipsis
                             )
+                            if (audioInfo.isNotBlank()) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                    modifier = Modifier.padding(top = 4.dp)
+                                ) {
+                                    QualityBadge(song.quality)
+                                    Text(
+                                        text = audioInfo.replace(" → ", "\n"),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
                         }
 
                         IconButton(onClick = {
@@ -465,6 +484,7 @@ fun FullScreenPlayer(
             }
         }
     }
+    if (showTrackInfo) TrackInfoDialog(song, audioInfo) { showTrackInfo = false }
     if (showQueueBottomSheet){
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         val queueLazyListState = rememberLazyListState()

@@ -43,6 +43,30 @@ object HiFiAudio {
      */
     const val DEFAULT_OFFLOAD = false
 
+    /** ReplayGain: normaliza el volumen entre pistas (solo atenúa). Apagado por defecto. */
+    const val KEY_REPLAYGAIN = "hifi_replaygain"
+
+    /** Dirigir la salida a un DAC USB cuando esté conectado. Apagado por defecto. */
+    const val KEY_PREFER_USB = "hifi_prefer_usb"
+
+    /** Ecualizador paramétrico: activo y bandas (ver [EqBands.encode]). */
+    const val KEY_EQ_ENABLED = "eq_enabled"
+    const val KEY_EQ_BANDS = "eq_bands_v2"
+
+    /** Perfiles por salida: activos, clase de salida a la que pertenecen los ajustes actuales y un perfil por clase. */
+    const val KEY_PROFILES = "hifi_profiles"
+    const val KEY_PROFILE_ACTIVE = "hifi_profile_active"
+    const val KEY_PROFILE_PREFIX = "hifi_profile_"
+
+    /** ReplayGain con subida de volumen (hasta lo que permita el pico de la pista). Apagado por defecto. */
+    const val KEY_RG_BOOST = "hifi_rg_boost"
+
+    /** Ruta de salida real que publica el servicio al abrir el AudioTrack (ver MusicService). */
+    const val KEY_REAL_ROUTE = "audio_real_route"
+
+    /** ReplayGain por "track" (por defecto) o "album". */
+    const val KEY_RG_MODE = "hifi_rg_mode"
+
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -86,5 +110,51 @@ object HiFiAudio {
         val manager = context.applicationContext
             .getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return null
         return manager.getProperty(key)?.toIntOrNull()
+    }
+
+    fun isReplayGainEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_REPLAYGAIN, false)
+    fun setReplayGainEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_REPLAYGAIN, enabled).apply()
+    }
+
+    fun isPreferUsbEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_PREFER_USB, false)
+    fun setPreferUsbEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_PREFER_USB, enabled).apply()
+    }
+
+    /**
+     * Salidas de audio conectadas, en texto: `Nombre · tipo · tasas`. Sirve para ver si el DAC USB
+     * está conectado y qué frecuencias admite (lista vacía = el sistema no las declara).
+     */
+    fun outputDevices(context: Context): List<String> {
+        val manager = context.applicationContext.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+            ?: return emptyList()
+        return manager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).mapNotNull { d ->
+            val type = when (d.type) {
+                android.media.AudioDeviceInfo.TYPE_USB_DEVICE, android.media.AudioDeviceInfo.TYPE_USB_HEADSET -> "USB"
+                android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES, android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET -> "Cable"
+                android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP -> "Bluetooth"
+                android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> "Altavoz"
+                else -> return@mapNotNull null
+            }
+            val rates = d.sampleRates.takeIf { it.isNotEmpty() }?.joinToString("/") { "${it / 1000.0}".removeSuffix(".0") } ?: "—"
+            "${d.productName} · $type · $rates kHz"
+        }
+    }
+
+    /** `true` = ganancia de álbum (respeta la dinámica entre pistas de un disco); `false` = por pista. */
+    fun isReplayGainAlbumMode(context: Context): Boolean = prefs(context).getString(KEY_RG_MODE, "track") == "album"
+    fun setReplayGainAlbumMode(context: Context, album: Boolean) {
+        prefs(context).edit().putString(KEY_RG_MODE, if (album) "album" else "track").apply()
+    }
+
+    fun isReplayGainBoostEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_RG_BOOST, false)
+    fun setReplayGainBoostEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_RG_BOOST, enabled).apply()
+    }
+
+    fun isProfilesEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_PROFILES, false)
+    fun setProfilesEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_PROFILES, enabled).apply()
     }
 }

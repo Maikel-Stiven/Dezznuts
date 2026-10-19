@@ -3,6 +3,8 @@ package com.example.creproductor
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.Manifest
 import android.os.Build
+import android.provider.MediaStore
+import androidx.activity.result.IntentSenderRequest
 import android.os.Bundle
 import androidx.activity.compose.BackHandler
 import androidx.activity.ComponentActivity
@@ -44,7 +46,10 @@ import com.example.creproductor.gui.ClearImageCacheDialog
 import com.example.creproductor.gui.DrawerMenuItem
 import com.example.creproductor.gui.EditTagDialog
 import com.example.creproductor.gui.FullScreenPlayer
+import com.example.creproductor.gui.DuplicatesDialog
+import com.example.creproductor.gui.EqualizerDialog
 import com.example.creproductor.gui.HiFiAudioDialog
+import com.example.creproductor.gui.QualityBadge
 import com.example.creproductor.gui.MainScreen
 import com.example.creproductor.gui.MusicViewModel
 import com.example.creproductor.gui.UiState
@@ -83,11 +88,18 @@ class MainActivity : ComponentActivity() {
                     val currentQueue by viewModel.currentQueue.collectAsStateWithLifecycle()
                     val repeatMode by viewModel.repeatMode.collectAsStateWithLifecycle()
                     val isShuffleEnabled by viewModel.isShuffleEnabled.collectAsStateWithLifecycle()
+                    val audioInfo by viewModel.audioInfo.collectAsStateWithLifecycle()
 
                     var songToEdit by remember { mutableStateOf<Song?>(null) }
                     var isPlayerFullScreenVisible by remember { mutableStateOf(false) }
                     var showClearImageCacheDialog by remember { mutableStateOf(false) }
                     var showHiFiAudioDialog by remember { mutableStateOf(false) }
+                    var showEqualizerDialog by remember { mutableStateOf(false) }
+                    var showDuplicatesDialog by remember { mutableStateOf(false) }
+                    // Confirmación del sistema para borrar archivos (Android 11+); al terminar se recarga la biblioteca.
+                    val deleteLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
+                        viewModel.loadSongs(silent = true)
+                    }
                     var isFirstPage by remember { mutableStateOf(true) }
 
                     val requiredPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -155,7 +167,8 @@ class MainActivity : ComponentActivity() {
                                         AppDrawerContent(
                                             onMenuItem= { menuItem ->
                                                 when(menuItem) {
-                                                    is DrawerMenuItem.Equalizer -> { /*Falta lógica del ecualizador*/}
+                                                    is DrawerMenuItem.Equalizer -> { showEqualizerDialog = true }
+                                                    is DrawerMenuItem.SearchDuplicates -> { showDuplicatesDialog = true }
                                                     is DrawerMenuItem.ScanFiles -> { /*Falta lógica del escaner de archivos*/}
                                                     is DrawerMenuItem.AudioCutter -> {/*Falta lógica del cortador de audio*/}
                                                     is DrawerMenuItem.SleepTimer -> {/*Falta lógica del temporizador*/}
@@ -175,7 +188,7 @@ class MainActivity : ComponentActivity() {
                                             Box(modifier = Modifier.weight(1f)) {
                                                 MainScreen(
                                                     viewModel = viewModel,
-                                                    onOpenEqualizer = { /* TODO */ },
+                                                    onOpenEqualizer = { showEqualizerDialog = true },
                                                     onOpenScanner = { /* TODO */ },
                                                     onOpenDrawer = {
                                                         scope.launch { drawerState.open() }
@@ -215,6 +228,7 @@ class MainActivity : ComponentActivity() {
                                                 currentPositionMs = { currentPositionMs },
                                                 repeatMode = repeatMode,
                                                 isShuffleEnabled = isShuffleEnabled,
+                                                audioInfo = audioInfo,
                                                 onToggleShuffle = { viewModel.toggleShuffle() },
                                                 onTogglePlayPause = { viewModel.togglePlayPause() },
                                                 onNextClick = { viewModel.playNext() },
@@ -251,8 +265,26 @@ class MainActivity : ComponentActivity() {
                         if (showHiFiAudioDialog) {
                             HiFiAudioDialog(
                                 onDismiss = { showHiFiAudioDialog = false },
-                                onSettingsChanged = { viewModel.refreshAudioOutput() }
+                                onSettingsChanged = { viewModel.refreshAudioOutput() },
+                                onOpenEqualizer = { showEqualizerDialog = true }
                             )
+                        }
+
+                        if (showDuplicatesDialog) {
+                            DuplicatesDialog(
+                                songs = (uiState as? UiState.Success)?.songs.orEmpty(),
+                                onDelete = { toDelete ->
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                        val request = MediaStore.createDeleteRequest(contentResolver, toDelete.map { it.contentUri })
+                                        deleteLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
+                                    }
+                                },
+                                onDismiss = { showDuplicatesDialog = false }
+                            )
+                        }
+
+                        if (showEqualizerDialog) {
+                            EqualizerDialog(onDismiss = { showEqualizerDialog = false })
                         }
                     }
                 }
@@ -341,14 +373,18 @@ fun SongItem(
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = song.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = song.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    QualityBadge(song.quality, modifier = Modifier.padding(start = 6.dp))
+                }
                 Spacer(modifier = Modifier.height(4.dp))
 
                 val artistName = if (song.artist.isBlank() || song.artist == "<unknown>") {

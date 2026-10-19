@@ -6,22 +6,39 @@ package com.example.creproductor.service
 
 import android.content.Intent
 import android.content.pm.ApplicationInfo
+import android.content.SharedPreferences
+import android.media.AudioDeviceCallback
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import android.os.Bundle
+import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Metadata
 import androidx.media3.common.Player
+import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.extractor.metadata.id3.TextInformationFrame
+import androidx.media3.extractor.metadata.vorbis.VorbisComment
 import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import com.example.creproductor.R
+import com.example.creproductor.data.AudioQuality
+import com.example.creproductor.data.EqBands
 import com.example.creproductor.data.HiFiAudio
+import com.example.creproductor.data.OutputClass
+import com.example.creproductor.data.OutputProfiles
+import com.example.creproductor.data.ProfileSettings
+import com.example.creproductor.data.ReplayGain
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 
@@ -31,6 +48,77 @@ class MusicService : MediaSessionService(){
     private var isFavorite = false
 
     private val prefs by lazy { getSharedPreferences("dezznuts_prefs", MODE_PRIVATE) }
+
+    /** ReplayGain de la pista actual (ganancia en dB y pico lineal); `null` si el archivo no lo trae. */
+    private var trackGainDb: Float? = null
+    private var trackPeak: Float? = null
+
+    /** Ecualizador paramétrico + subida de ReplayGain del reproductor actual (ver [ParametricEqProcessor]). */
+    private var eqProcessor = ParametricEqProcessor(enabledAtBuild = false)
+    private var processorActive = false
+
+    private val audioManager by lazy { getSystemService(AUDIO_SERVICE) as AudioManager }
+
+    /** Aplica en vivo los ajustes de ReplayGain / ecualizador / DAC USB en cuanto cambian sus prefs. */
+    private val hifiPrefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        when (key) {
+            HiFiAudio.KEY_REPLAYGAIN, HiFiAudio.KEY_RG_MODE -> {
+                readReplayGain()
+                applyVolume()
+            }
+            HiFiAudio.KEY_RG_BOOST, HiFiAudio.KEY_EQ_ENABLED -> {
+                // El procesador solo existe en la cadena si algo lo necesita; cambiar eso exige recrear el player.
+                if (needsProcessor() != processorActive) rebuildPlayer() else applyVolume()
+            }
+            HiFiAudio.KEY_EQ_BANDS -> applyVolume()
+            HiFiAudio.KEY_PREFER_USB -> applyPreferredDevice()
+            HiFiAudio.KEY_PROFILES -> {
+                // Al activarlos, los ajustes de ahora pasan a ser los de la salida actual.
+                if (HiFiAudio.isProfilesEnabled(this)) prefs.edit().putString(HiFiAudio.KEY_PROFILE_ACTIVE, currentOutputClass().name).apply()
+            }
+        }
+    }
+
+    private fun currentOutputClass(): OutputClass =
+        OutputProfiles.classify(audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).map { it.type })
+
+    private fun liveSettings() = ProfileSettings(
+        replayGain = HiFiAudio.isReplayGainEnabled(this),
+        replayGainAlbum = HiFiAudio.isReplayGainAlbumMode(this),
+        replayGainBoost = HiFiAudio.isReplayGainBoostEnabled(this),
+        eqEnabled = prefs.getBoolean(HiFiAudio.KEY_EQ_ENABLED, false),
+        eqBands = prefs.getString(HiFiAudio.KEY_EQ_BANDS, null) ?: EqBands.encode(EqBands.DEFAULT)
+    )
+
+    /**
+     * Si cambió el tipo de salida: guarda los ajustes actuales en el perfil de la salida anterior y carga el de
+     * la nueva (si todavía no tiene perfil, se conservan los actuales). Los cambios se aplican solos porque
+     * pasan por las mismas preferencias que escucha [hifiPrefsListener].
+     */
+    private fun switchProfileIfNeeded() {
+        if (!HiFiAudio.isProfilesEnabled(this)) return
+        val now = currentOutputClass()
+        val before = prefs.getString(HiFiAudio.KEY_PROFILE_ACTIVE, null)?.let { runCatching { OutputClass.valueOf(it) }.getOrNull() }
+        if (before == now) return
+        val edit = prefs.edit()
+        if (before != null) edit.putString(HiFiAudio.KEY_PROFILE_PREFIX + before.name, liveSettings().encode())
+        ProfileSettings.decode(prefs.getString(HiFiAudio.KEY_PROFILE_PREFIX + now.name, null))?.let {
+            edit.putBoolean(HiFiAudio.KEY_REPLAYGAIN, it.replayGain)
+                .putString(HiFiAudio.KEY_RG_MODE, if (it.replayGainAlbum) "album" else "track")
+                .putBoolean(HiFiAudio.KEY_RG_BOOST, it.replayGainBoost)
+                .putString(HiFiAudio.KEY_EQ_BANDS, it.eqBands)
+                .putBoolean(HiFiAudio.KEY_EQ_ENABLED, it.eqEnabled)
+        }
+        edit.putString(HiFiAudio.KEY_PROFILE_ACTIVE, now.name).apply()
+    }
+
+    private fun needsProcessor() =
+        prefs.getBoolean(HiFiAudio.KEY_EQ_ENABLED, false) || HiFiAudio.isReplayGainBoostEnabled(this)
+
+    private val deviceCallback = object : AudioDeviceCallback() {
+        override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) { applyPreferredDevice(); switchProfileIfNeeded() }
+        override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) { applyPreferredDevice(); switchProfileIfNeeded() }
+    }
 
     companion object{
         const val ACTION_FAVORITE = "ACTION_FAVORITE"
@@ -51,6 +139,12 @@ class MusicService : MediaSessionService(){
             .build()
 
         updateNotificationLayout()
+
+        prefs.registerOnSharedPreferenceChangeListener(hifiPrefsListener)
+        audioManager.registerAudioDeviceCallback(deviceCallback, null)
+        applyPreferredDevice()
+        switchProfileIfNeeded()
+        applyVolume()
     }
 
     /**
@@ -67,10 +161,14 @@ class MusicService : MediaSessionService(){
             .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
             .build()
 
+        processorActive = needsProcessor()
+        eqProcessor = ParametricEqProcessor(enabledAtBuild = processorActive)
+
         val renderersFactory = HiFiRenderersFactory(
             context = this,
             useFloatOutput = HiFiAudio.isFloatOutputEnabled(this),
-            useOffload = HiFiAudio.isOffloadEnabled(this)
+            useOffload = HiFiAudio.isOffloadEnabled(this),
+            eqProcessor = eqProcessor
         )
 
         val player = ExoPlayer.Builder(this, renderersFactory)
@@ -124,11 +222,95 @@ class MusicService : MediaSessionService(){
      * para que el botón de la notificación muestre el estado correcto.
      */
     private fun attachPlayerListener(player: ExoPlayer) {
+        // Lo que el AudioTrack abrió de verdad: offload, frecuencia y profundidad reales.
+        player.addAnalyticsListener(object : AnalyticsListener {
+            override fun onAudioTrackInitialized(
+                eventTime: AnalyticsListener.EventTime,
+                audioTrackConfig: AudioSink.AudioTrackConfig
+            ) {
+                val route = AudioQuality.route(
+                    offload = audioTrackConfig.offload,
+                    pcmBits = AudioQuality.bitsOfPcmEncoding(audioTrackConfig.encoding),
+                    trackRate = audioTrackConfig.sampleRate,
+                    deviceRate = HiFiAudio.deviceSampleRate(this@MusicService)
+                )
+                prefs.edit().putString(HiFiAudio.KEY_REAL_ROUTE, route).apply()
+            }
+        })
         player.addListener(object : Player.Listener {
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 updateNotificationLayout()
             }
+
+            override fun onTracksChanged(tracks: Tracks) {
+                readReplayGain(tracks)
+                applyVolume()
+            }
+
         })
+    }
+
+    /** Lee ganancia y pico solo si ReplayGain está activo (apagado no se recorren los metadatos). */
+    private fun readReplayGain(tracks: Tracks? = mediaSession?.player?.currentTracks) {
+        trackGainDb = null
+        trackPeak = null
+        if (tracks == null || !HiFiAudio.isReplayGainEnabled(this)) return
+        val tags = readReplayGainTags(tracks)
+        val album = HiFiAudio.isReplayGainAlbumMode(this)
+        // Cada modo cae al otro si falta su etiqueta.
+        val gain = if (album) tags["REPLAYGAIN_ALBUM_GAIN"] ?: tags["REPLAYGAIN_TRACK_GAIN"] else tags["REPLAYGAIN_TRACK_GAIN"] ?: tags["REPLAYGAIN_ALBUM_GAIN"]
+        val peak = if (album) tags["REPLAYGAIN_ALBUM_PEAK"] ?: tags["REPLAYGAIN_TRACK_PEAK"] else tags["REPLAYGAIN_TRACK_PEAK"] ?: tags["REPLAYGAIN_ALBUM_PEAK"]
+        trackGainDb = ReplayGain.parseDb(gain)
+        trackPeak = ReplayGain.parsePeak(peak)
+    }
+
+    /** Etiquetas `REPLAYGAIN_*` (en mayúsculas) de las etiquetas Vorbis (FLAC/OGG) o ID3 (MP3) de la pista. */
+    private fun readReplayGainTags(tracks: Tracks): Map<String, String> {
+        val tags = mutableMapOf<String, String>()
+        tracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO && it.isSelected }.forEach { group ->
+            for (i in 0 until group.length) {
+                val metadata: Metadata = group.getTrackFormat(i).metadata ?: continue
+                for (e in 0 until metadata.length()) {
+                    when (val entry = metadata[e]) {
+                        is VorbisComment -> tags[entry.key.uppercase()] = entry.value
+                        is TextInformationFrame -> entry.description?.let {
+                            entry.values.firstOrNull()?.let { v -> tags[it.uppercase()] = v }
+                        }
+                    }
+                }
+            }
+        }
+        return tags
+    }
+
+    /**
+     * ReplayGain → `Player.volume` (atenúa, funciona siempre) y, si está permitido subir, la subida en dB
+     * limitada por el pico va al procesador. El EQ paramétrico recibe sus bandas en el mismo paso.
+     */
+    private fun applyVolume() {
+        val player = mediaSession?.player ?: return
+        val rgOn = HiFiAudio.isReplayGainEnabled(this)
+        val plan = if (rgOn) ReplayGain.plan(trackGainDb, trackPeak, HiFiAudio.isReplayGainBoostEnabled(this)) else ReplayGain.Plan(1f, 0f)
+        player.volume = plan.volume
+        eqProcessor.update(
+            EqBands.decode(prefs.getString(HiFiAudio.KEY_EQ_BANDS, null)),
+            prefs.getBoolean(HiFiAudio.KEY_EQ_ENABLED, false),
+            plan.boostDb
+        )
+        if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
+            Log.i("DezzAudio", "volumen=${plan.volume} subida=${plan.boostDb} dB (ReplayGain=${trackGainDb ?: "sin etiqueta"} dB, pico=${trackPeak ?: "?"}) procesador=$processorActive")
+        }
+    }
+
+    /** Con "preferir DAC USB" activo, dirige la salida al DAC USB conectado; si no, vuelve al automático. */
+    private fun applyPreferredDevice() {
+        val player = mediaSession?.player as? ExoPlayer ?: return
+        val usb = if (HiFiAudio.isPreferUsbEnabled(this)) {
+            audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).firstOrNull {
+                it.type == AudioDeviceInfo.TYPE_USB_DEVICE || it.type == AudioDeviceInfo.TYPE_USB_HEADSET
+            }
+        } else null
+        player.setPreferredAudioDevice(usb)
     }
 
     /**
@@ -166,6 +348,8 @@ class MusicService : MediaSessionService(){
         newPlayer.prepare()
 
         session.setPlayer(newPlayer)
+        applyPreferredDevice()
+        applyVolume()
 
         newPlayer.playWhenReady = wasPlaying
         oldPlayer.release()
@@ -237,6 +421,8 @@ class MusicService : MediaSessionService(){
     }
 
     override fun  onDestroy(){
+    prefs.unregisterOnSharedPreferenceChangeListener(hifiPrefsListener)
+    audioManager.unregisterAudioDeviceCallback(deviceCallback)
     mediaSession?.run {
         player.release()
         release()

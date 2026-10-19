@@ -1,0 +1,80 @@
+// Clasificación y etiqueta de calidad de audio (lossless / Hi-Res) de una canción.
+//
+// Es lógica pura (sin Android) para poder probarla con tests unitarios.
+
+package com.example.creproductor.data
+
+enum class QualityTier { LOSSY, LOSSLESS, HIRES }
+
+object AudioQuality {
+
+    private val LOSSLESS_EXT = setOf("flac", "wav", "aif", "aiff", "ape", "wv", "alac")
+    private val LOSSLESS_MIME = setOf("audio/flac", "audio/x-flac", "audio/wav", "audio/x-wav", "audio/alac", "audio/aiff", "audio/x-aiff")
+
+    /**
+     * Hi-Res = sin pérdida **y** más que un CD (más de 16 bits o más de 48 kHz).
+     * Si el dispositivo no informa de la profundidad (Android < 11) solo cuenta la frecuencia.
+     * Limitación: un `.m4a` no se puede distinguir de AAC sin abrirlo, así que se trata como con pérdida.
+     */
+    fun tier(mime: String?, path: String, bitsPerSample: Int, sampleRate: Int): QualityTier {
+        val lossless = mime?.lowercase() in LOSSLESS_MIME ||
+            path.substringAfterLast('.', "").lowercase() in LOSSLESS_EXT
+        return when {
+            !lossless -> QualityTier.LOSSY
+            bitsPerSample > 16 || sampleRate > 48_000 -> QualityTier.HIRES
+            else -> QualityTier.LOSSLESS
+        }
+    }
+
+    /** Nombre corto del códec a partir del MIME de Media3 / MediaStore. */
+    fun codecName(mime: String?): String = when (val m = mime?.lowercase()) {
+        null, "" -> ""
+        "audio/flac", "audio/x-flac" -> "FLAC"
+        "audio/mpeg", "audio/mp3" -> "MP3"
+        "audio/mp4a-latm", "audio/aac", "audio/mp4" -> "AAC"
+        "audio/alac" -> "ALAC"
+        "audio/wav", "audio/x-wav", "audio/raw" -> "WAV"
+        "audio/vorbis", "audio/ogg" -> "Vorbis"
+        "audio/opus" -> "Opus"
+        else -> m.substringAfter('/').removePrefix("x-").uppercase()
+    }
+
+    /** Ej.: `FLAC · 24 bit · 96 kHz · 2304 kbps`. Omite lo que no se conoce. */
+    fun label(mime: String?, sampleRate: Int, bitsPerSample: Int, bitrate: Int): String =
+        listOfNotNull(
+            codecName(mime).ifEmpty { null },
+            bitsPerSample.takeIf { it > 0 }?.let { "$it bit" },
+            sampleRate.takeIf { it > 0 }?.let { khz(it) },
+            bitrate.takeIf { it > 0 }?.let { "${it / 1000} kbps" }
+        ).joinToString(" · ")
+
+    fun khz(hz: Int): String {
+        val k = hz / 1000.0
+        return (if (hz % 1000 == 0) "%d".format(hz / 1000) else "%.1f".format(java.util.Locale.US, k)) + " kHz"
+    }
+
+    /** Profundidad en bits de una codificación PCM de Media3 (`C.ENCODING_PCM_*`); 0 si no es PCM conocido. */
+    fun bitsOfPcmEncoding(encoding: Int): Int = when (encoding) {
+        3 -> 8          // C.ENCODING_PCM_8BIT
+        2 -> 16         // C.ENCODING_PCM_16BIT
+        21 -> 24        // C.ENCODING_PCM_24BIT
+        22, 4 -> 32     // C.ENCODING_PCM_32BIT / C.ENCODING_PCM_FLOAT
+        else -> 0
+    }
+
+    /**
+     * Ruta de salida **real** (la que abrió el `AudioTrack`), no la solicitada:
+     * - offload: el DSP recibe el flujo comprimido, sin remuestreo en la app;
+     * - si la frecuencia del track difiere de la nativa del dispositivo, el mezclador remuestrea;
+     * - si coinciden, el PCM llega sin conversión de frecuencia.
+     */
+    fun route(offload: Boolean, pcmBits: Int, trackRate: Int, deviceRate: Int?): String {
+        if (offload) return "Offload"
+        val pcm = if (pcmBits > 0) "PCM $pcmBits bit" else "PCM"
+        val rate = if (trackRate > 0) " ${khz(trackRate)}" else ""
+        return when {
+            deviceRate != null && trackRate > 0 && trackRate != deviceRate -> "$pcm$rate → remuestreado a ${khz(deviceRate)}"
+            else -> "$pcm$rate directo"
+        }
+    }
+}

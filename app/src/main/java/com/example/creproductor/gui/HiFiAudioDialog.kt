@@ -1,6 +1,8 @@
 package com.example.creproductor.gui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -40,25 +42,36 @@ import com.example.creproductor.data.HiFiAudio
  * que el servicio recree el reproductor sin reiniciar la app ni perder la cola.
  *
  * @param onDismiss se llama al cerrar el diálogo.
- * @param onSettingsChanged se llama cada vez que cambia un interruptor.
+ * @param onSettingsChanged se llama cuando cambia salida float u offload (obliga a recrear el reproductor).
+ * @param onOpenEqualizer abre la pantalla del ecualizador. ReplayGain y DAC USB se aplican en vivo desde las prefs.
  */
 @Composable
 fun HiFiAudioDialog(
     onDismiss: () -> Unit,
-    onSettingsChanged: () -> Unit
+    onSettingsChanged: () -> Unit,
+    onOpenEqualizer: () -> Unit = {}
 ) {
     val context = LocalContext.current
 
     var floatOutput by remember { mutableStateOf(HiFiAudio.isFloatOutputEnabled(context)) }
     var offload by remember { mutableStateOf(HiFiAudio.isOffloadEnabled(context)) }
     val sampleRate = remember { HiFiAudio.deviceSampleRate(context) }
+    var replayGain by remember { mutableStateOf(HiFiAudio.isReplayGainEnabled(context)) }
+    var rgAlbum by remember { mutableStateOf(HiFiAudio.isReplayGainAlbumMode(context)) }
+    var rgBoost by remember { mutableStateOf(HiFiAudio.isReplayGainBoostEnabled(context)) }
+    var profiles by remember { mutableStateOf(HiFiAudio.isProfilesEnabled(context)) }
+    var preferUsb by remember { mutableStateOf(HiFiAudio.isPreferUsbEnabled(context)) }
+    val outputs = remember { HiFiAudio.outputDevices(context) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Default.GraphicEq, contentDescription = null) },
         title = { Text("Audio Hi/Res") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 Text(
                     text = "DEZZNUTS ya decodifica FLAC, ALAC y WAV sin pérdida. " +
                         "Estos ajustes deciden cómo se entrega esa señal al DAC del dispositivo. " +
@@ -95,7 +108,73 @@ fun HiFiAudioDialog(
                     }
                 )
 
+                AudioOption(
+                    title = "ReplayGain",
+                    description = "Iguala el volumen entre pistas leyendo la etiqueta del archivo (FLAC, " +
+                        "OGG, MP3). Solo atenúa: nunca amplifica, así que no recorta ni comprime la dinámica.",
+                    risk = "Si el archivo no trae la etiqueta, suena igual que antes.",
+                    checked = replayGain,
+                    onCheckedChange = { enabled ->
+                        replayGain = enabled
+                        HiFiAudio.setReplayGainEnabled(context, enabled)
+                    }
+                )
+
+                if (replayGain) {
+                    AudioOption(
+                        title = "Permitir subir el volumen",
+                        description = "Si la pista es más baja que la referencia, la sube solo hasta lo que su " +
+                            "pico permite sin recortar (necesita la etiqueta de pico). Sin efecto con offload.",
+                        risk = "Activa el procesador de audio en 32 bits float; con offload no se aplica.",
+                        checked = rgBoost,
+                        onCheckedChange = { enabled ->
+                            rgBoost = enabled
+                            HiFiAudio.setReplayGainBoostEnabled(context, enabled)
+                        }
+                    )
+                    TextButton(onClick = {
+                        rgAlbum = !rgAlbum
+                        HiFiAudio.setReplayGainAlbumMode(context, rgAlbum)
+                    }) { Text(if (rgAlbum) "Modo: álbum (conserva la dinámica del disco)" else "Modo: pista (iguala cada canción)") }
+                }
+
+                AudioOption(
+                    title = "Preferir DAC USB",
+                    description = "Dirige la salida al DAC USB cuando está conectado, evitando que el " +
+                        "mezclador del sistema lo ignore o remuestree.",
+                    risk = "Si tu DAC no negocia bien, desactívalo para volver a la salida automática.",
+                    checked = preferUsb,
+                    onCheckedChange = { enabled ->
+                        preferUsb = enabled
+                        HiFiAudio.setPreferUsbEnabled(context, enabled)
+                    }
+                )
+
+                AudioOption(
+                    title = "Perfiles por salida",
+                    description = "Recuerda ReplayGain y ecualizador por separado para altavoz, cable, Bluetooth " +
+                        "y DAC USB, y los cambia solos al conectar o desconectar.",
+                    risk = "Al cambiar de salida se sustituyen tus ajustes actuales por los guardados de esa salida.",
+                    checked = profiles,
+                    onCheckedChange = { enabled ->
+                        profiles = enabled
+                        HiFiAudio.setProfilesEnabled(context, enabled)
+                    }
+                )
+
+                TextButton(onClick = onOpenEqualizer) { Text("Ecualizador…") }
+
                 HorizontalDivider()
+
+                Text(
+                    text = "Salidas conectadas: " + if (outputs.isEmpty()) "ninguna" else "",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                outputs.forEach {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
 
                 Text(
                     text = "Salida nativa del dispositivo: " +

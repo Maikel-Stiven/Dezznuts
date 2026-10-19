@@ -13,8 +13,8 @@ android {
         applicationId = "com.example.creproductor"
         minSdk = 24
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -50,7 +50,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
 
     //Librerias para el reproductor
-    val media3Version = "1.4.1"
+    val media3Version = "1.9.1"
     implementation("androidx.media3:media3-exoplayer:$media3Version")
     implementation("androidx.media3:media3-session:$media3Version")
     implementation("androidx.compose.material:material-icons-extended-android:1.7.8")
