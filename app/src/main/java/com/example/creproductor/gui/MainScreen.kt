@@ -218,7 +218,10 @@ fun MainScreen(
         )
     } else if (selectedPlaylist != null){
         val activePlaylist = playlist.find { it.id == selectedPlaylist!!.id } ?: selectedPlaylist!!
-        val playlistSongs = songs.filter { activePlaylist.songIds.contains(it.id) }
+        val playlistSongs = remember(songs, activePlaylist.songIds) {
+            val ids = activePlaylist.songIds.toHashSet()
+            songs.filter { it.id in ids }
+        }
 
         PlaylistScreenDetail(
             playlist = activePlaylist,

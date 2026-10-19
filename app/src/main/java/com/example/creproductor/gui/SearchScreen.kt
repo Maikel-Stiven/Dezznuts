@@ -354,13 +354,13 @@ fun SearchOverlayScreen(
                         )
                     }
                     items(matchingArtists, key = {"artist_${it.artist.lowercase().trim()}"}) { song ->
-                        val artistAlbumsCount = allSongs
-                            .filter { it.artist.contains(song.artist, ignoreCase = true) }
-                            .map { it.album.lowercase().trim() }
-                            .filter { it.isNotBlank() && it != "<unknown>" }
-                            .distinct()
-                            .size
-                        val artistSongsCounts = allSongs.count { it.artist.contains(song.artist, ignoreCase = true)}
+                        val (artistAlbumsCount, artistSongsCounts) = remember(allSongs, song.artist) {
+                            val artistSongs = allSongs.filter { it.artist.contains(song.artist, ignoreCase = true) }
+                            artistSongs.map { it.album.lowercase().trim() }
+                                .filter { it.isNotBlank() && it != "<unknown>" }
+                                .distinct()
+                                .size to artistSongs.size
+                        }
 
                         SearchCategoryItem(
                             title = song.artist,

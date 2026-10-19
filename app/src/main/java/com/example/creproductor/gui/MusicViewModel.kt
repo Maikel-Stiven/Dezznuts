@@ -355,7 +355,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     }
 
     /** `id → URI` ya resuelto: evita un `canRead()` (acceso a disco) por canción en cada cambio de cola. */
-    private val playbackUriCache = HashMap<Long, Uri>()
+    private val playbackUriCache = java.util.concurrent.ConcurrentHashMap<Long, Uri>() // se usa desde Default y se limpia desde Main
 
     fun seekTo(positionMs: Long){
         // Marca el inicio de la medición para la traza de PlaybackDiagnostics.
@@ -464,15 +464,8 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
             controller.seekTo(targetIndex, 0L)
         }else{
             viewModelScope.launch(Dispatchers.Default) {
-
-                val targetIndex = queueToUse.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
-
-                val mediaItems = queueToUse.map { item ->
-                    MediaItem.Builder()
-                        .setMediaId(item.id.toString())
-                        .setUri(if (item.path.isNotEmpty()) Uri.fromFile(File(item.path)) else item.contentUri)
-                        .build()
-                }
+                // Misma ruta que togglePlayPause: caché de URI y respaldo a content:// si la ruta no es legible.
+                val mediaItems = buildMediaItems(queueToUse)
 
                 withContext(Dispatchers.Main){
                     controller.setMediaItems(mediaItems, targetIndex, 0L)

@@ -33,6 +33,13 @@ La posición de reproducción es el único dato que cambia continuamente (cada 5
 - **Ahora:** el resultado se guarda en `playbackUriCache` (`id → Uri`) y se limpia cada vez que se publica la biblioteca (`publishSongs`), por si las rutas cambian.
 - Archivo: `gui/MusicViewModel.kt`.
 
+### 4. Ajustes tras fusionar con `main`
+- **Caché de URI segura entre hilos:** `playbackUriCache` pasó a `ConcurrentHashMap`, porque `main` construye la cola en `Dispatchers.Default` y la caché se limpia desde el hilo principal.
+- **`playSong` usa `buildMediaItems`:** antes armaba los `MediaItem` con `Uri.fromFile` sin comprobar `canRead()`; ahora comparte la caché y el respaldo a `content://`.
+- **`MainScreen`:** el detalle de lista de reproducción se filtra con un `HashSet` dentro de `remember`, no en cada recomposición.
+- **`SearchScreen`:** los conteos de álbumes/canciones por artista se calculan una vez por (biblioteca, artista) con `remember`, no en cada recomposición de la fila.
+- **`GridScreens`:** la lista de claves (`keys.toList()`) se recuerda con `remember` y los álbumes ahora tienen `key`.
+
 ## Optimizaciones previas ya presentes en la rama
 
 | Qué | Efecto |
