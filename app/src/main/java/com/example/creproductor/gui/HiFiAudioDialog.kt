@@ -1,5 +1,6 @@
 package com.example.creproductor.gui
 
+import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -61,6 +62,7 @@ fun HiFiAudioDialog(
     var rgAlbum by remember { mutableStateOf(HiFiAudio.isReplayGainAlbumMode(context)) }
     var rgBoost by remember { mutableStateOf(HiFiAudio.isReplayGainBoostEnabled(context)) }
     var fadeMs by remember { mutableStateOf(HiFiAudio.fadeMs(context)) }
+    var bitPerfect by remember { mutableStateOf(HiFiAudio.isBitPerfectEnabled(context)) }
     var profiles by remember { mutableStateOf(HiFiAudio.isProfilesEnabled(context)) }
     var preferUsb by remember { mutableStateOf(HiFiAudio.isPreferUsbEnabled(context)) }
     val outputs = remember { HiFiAudio.outputDevices(context) }
@@ -178,6 +180,22 @@ fun HiFiAudioDialog(
                     }
                 )
 
+                val canBitPerfect = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+                AudioOption(
+                    title = "Bit-perfect con DAC USB",
+                    description = "Pide al DAC USB el formato exacto de cada pista para que el sistema no remuestree ni " +
+                        "mezcle (Android 14+). Solo entra si el DAC ofrece ese formato; si no, todo suena como siempre." +
+                        if (canBitPerfect) "" else " Requiere Android 14.",
+                    risk = "Se desactiva solo con ecualizador, subida de ReplayGain u offload (modifican la señal). " +
+                        "Si tu DAC se porta mal, apágalo.",
+                    checked = bitPerfect && canBitPerfect,
+                    enabled = canBitPerfect,
+                    onCheckedChange = { enabled ->
+                        bitPerfect = enabled
+                        HiFiAudio.setBitPerfectEnabled(context, enabled)
+                    }
+                )
+
                 TextButton(onClick = onOpenEqualizer) { Text("Ecualizador…") }
 
                 HorizontalDivider()
@@ -225,6 +243,7 @@ private fun AudioOption(
     description: String,
     risk: String,
     checked: Boolean,
+    enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
@@ -249,6 +268,6 @@ private fun AudioOption(
             )
         }
         Spacer(modifier = Modifier.width(8.dp))
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
     }
 }

@@ -9,7 +9,10 @@ import android.content.pm.ApplicationInfo
 import android.content.SharedPreferences
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
+import android.media.AudioFormat
 import android.media.AudioManager
+import android.media.AudioMixerAttributes
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -37,6 +40,8 @@ import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import com.example.creproductor.R
 import com.example.creproductor.data.AudioQuality
+import com.example.creproductor.data.BitPerfect
+import com.example.creproductor.data.MixerFormat
 import com.example.creproductor.data.EqBands
 import com.example.creproductor.data.Fade
 import com.example.creproductor.data.HiFiAudio
@@ -62,6 +67,20 @@ class MusicService : MediaSessionService(){
     private var eqProcessor = ParametricEqProcessor(enabledAtBuild = false)
     private var processorActive = false
     private var lastRoute: String? = null
+
+    // Bit-perfect (ver BitPerfect): formato de mezcla activo y DAC al que se aplicó (null = modo normal), y el formato
+    // de la pista que suena. Solo se recalculan al cambiar de pista, de dispositivo o de ajustes: sin sondeos.
+    private var bitPerfectFormat: MixerFormat? = null
+    private var bitPerfectDevice: AudioDeviceInfo? = null
+    private var srcRate = 0
+    private var srcChannels = 2
+    private var srcBits = 0
+    private val mediaAttrs by lazy {
+        android.media.AudioAttributes.Builder()
+            .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
+            .build()
+    }
 
     /** Reproductor real; la sesión usa un [FadingPlayer] que lo envuelve para fundir al pausar. */
     private var exoPlayer: ExoPlayer? = null
@@ -91,6 +110,7 @@ class MusicService : MediaSessionService(){
             HiFiAudio.KEY_EQ_BANDS -> applyVolume()
             HiFiAudio.KEY_FADE_MS -> updateFade()
             HiFiAudio.KEY_PREFER_USB -> applyPreferredDevice()
+            HiFiAudio.KEY_BITPERFECT -> applyBitPerfect()
             HiFiAudio.KEY_PROFILES -> {
                 // Al activarlos, los ajustes de ahora pasan a ser los de la salida actual.
                 if (HiFiAudio.isProfilesEnabled(this)) prefs.edit().putString(HiFiAudio.KEY_PROFILE_ACTIVE, currentOutputClass().name).apply()
@@ -135,8 +155,8 @@ class MusicService : MediaSessionService(){
         prefs.getBoolean(HiFiAudio.KEY_EQ_ENABLED, false) || HiFiAudio.isReplayGainBoostEnabled(this)
 
     private val deviceCallback = object : AudioDeviceCallback() {
-        override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) { applyPreferredDevice(); switchProfileIfNeeded() }
-        override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) { applyPreferredDevice(); switchProfileIfNeeded() }
+        override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) { applyPreferredDevice(); applyBitPerfect(); switchProfileIfNeeded() }
+        override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) { applyPreferredDevice(); applyBitPerfect(); switchProfileIfNeeded() }
     }
 
     companion object{
@@ -163,6 +183,7 @@ class MusicService : MediaSessionService(){
         prefs.registerOnSharedPreferenceChangeListener(hifiPrefsListener)
         audioManager.registerAudioDeviceCallback(deviceCallback, null)
         applyPreferredDevice()
+        applyBitPerfect()
         switchProfileIfNeeded()
         applyVolume()
     }
@@ -252,7 +273,13 @@ class MusicService : MediaSessionService(){
                     offload = audioTrackConfig.offload,
                     pcmBits = AudioQuality.bitsOfPcmEncoding(audioTrackConfig.encoding),
                     trackRate = audioTrackConfig.sampleRate,
-                    deviceRate = HiFiAudio.deviceSampleRate(this@MusicService)
+                    deviceRate = HiFiAudio.deviceSampleRate(this@MusicService),
+                    // Solo si el AudioTrack abierto coincide con el formato de mezcla bit-perfect elegido.
+                    bitPerfect = bitPerfectFormat?.let {
+                        it.sampleRate == audioTrackConfig.sampleRate &&
+                            it.bits == AudioQuality.bitsOfPcmEncoding(audioTrackConfig.encoding) &&
+                            it.isFloat == (audioTrackConfig.encoding == C.ENCODING_PCM_FLOAT)
+                    } == true
                 )
                 // Se crea un AudioTrack por pista: solo se escribe (y se avisa a la interfaz) si la ruta cambió.
                 if (route != lastRoute) {
@@ -277,6 +304,8 @@ class MusicService : MediaSessionService(){
             ) = updateFade()
 
             override fun onTracksChanged(tracks: Tracks) {
+                rememberSourceFormat(tracks)
+                applyBitPerfect()
                 readReplayGain(tracks)
                 applyVolume()
             }
@@ -400,15 +429,70 @@ class MusicService : MediaSessionService(){
         }
     }
 
+    /** DAC USB conectado (o `null`). */
+    private fun usbDevice(): AudioDeviceInfo? =
+        audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).firstOrNull {
+            it.type == AudioDeviceInfo.TYPE_USB_DEVICE || it.type == AudioDeviceInfo.TYPE_USB_HEADSET
+        }
+
     /** Con "preferir DAC USB" activo, dirige la salida al DAC USB conectado; si no, vuelve al automático. */
     private fun applyPreferredDevice() {
         val player = exoPlayer ?: return
-        val usb = if (HiFiAudio.isPreferUsbEnabled(this)) {
-            audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).firstOrNull {
-                it.type == AudioDeviceInfo.TYPE_USB_DEVICE || it.type == AudioDeviceInfo.TYPE_USB_HEADSET
+        player.setPreferredAudioDevice(if (HiFiAudio.isPreferUsbEnabled(this)) usbDevice() else null)
+    }
+
+    /** Frecuencia, canales y profundidad de la pista que suena (la profundidad solo si el formato la informa). */
+    private fun rememberSourceFormat(tracks: Tracks) {
+        val format = tracks.groups.firstOrNull { it.type == C.TRACK_TYPE_AUDIO && it.isSelected }
+            ?.let { g -> (0 until g.length).firstOrNull { g.isTrackSelected(it) }?.let { g.getTrackFormat(it) } } ?: return
+        srcRate = format.sampleRate.takeIf { it > 0 } ?: 0
+        srcChannels = format.channelCount.takeIf { it > 0 } ?: 2
+        srcBits = AudioQuality.bitsOfPcmEncoding(format.pcmEncoding)
+    }
+
+    /**
+     * Pide al mezclador del DAC USB el formato bit-perfect que coincide con la pista (ver [BitPerfect]) o, si no
+     * procede (función apagada, sin DAC, EQ/offload activos, el DAC no ofrece ese formato), vuelve al modo normal.
+     * Solo llama al sistema cuando el resultado cambia.
+     */
+    private fun applyBitPerfect() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
+        val usb = usbDevice()
+        var target: MixerFormat? = null
+        var chosen: AudioMixerAttributes? = null
+        try {
+            if (usb != null && srcRate > 0 && BitPerfect.allowed(Build.VERSION.SDK_INT, HiFiAudio.isBitPerfectEnabled(this),
+                    true, processorActive, HiFiAudio.isOffloadEnabled(this))) {
+                val supported = audioManager.getSupportedMixerAttributes(usb)
+                    .filter { it.mixerBehavior == AudioMixerAttributes.MIXER_BEHAVIOR_BIT_PERFECT }
+                val formats = supported.map {
+                    MixerFormat(it.format.sampleRate, AudioQuality.bitsOfPcmEncoding(it.format.encoding),
+                        it.format.encoding == AudioFormat.ENCODING_PCM_FLOAT, it.format.channelCount)
+                }
+                val want = BitPerfect.trackFormat(srcRate, srcChannels, srcBits, HiFiAudio.isFloatOutputEnabled(this))
+                BitPerfect.choose(formats, want)?.let { target = want; chosen = supported[it] }
             }
-        } else null
-        player.setPreferredAudioDevice(usb)
+            if (target == bitPerfectFormat && usb?.id == bitPerfectDevice?.id) return
+            clearBitPerfect()
+            if (usb != null && chosen != null && audioManager.setPreferredMixerAttributes(mediaAttrs, usb, chosen!!)) {
+                bitPerfectFormat = target
+                bitPerfectDevice = usb
+            }
+        } catch (_: Exception) {
+            // El DAC rechazó el formato o desapareció a mitad: se queda el modo normal.
+            bitPerfectFormat = null
+            bitPerfectDevice = null
+        }
+    }
+
+    /** Devuelve el DAC al modo normal si había un formato bit-perfect aplicado. */
+    private fun clearBitPerfect() {
+        val device = bitPerfectDevice ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            try { audioManager.clearPreferredMixerAttributes(mediaAttrs, device) } catch (_: Exception) { }
+        }
+        bitPerfectFormat = null
+        bitPerfectDevice = null
     }
 
     /**
@@ -449,6 +533,7 @@ class MusicService : MediaSessionService(){
 
         session.setPlayer(FadingPlayer(newPlayer))
         applyPreferredDevice()
+        applyBitPerfect()
         applyVolume()
 
         newPlayer.playWhenReady = wasPlaying
@@ -522,6 +607,7 @@ class MusicService : MediaSessionService(){
 
     override fun  onDestroy(){
     handler.removeCallbacksAndMessages(null)
+    clearBitPerfect()
     prefs.unregisterOnSharedPreferenceChangeListener(hifiPrefsListener)
     audioManager.unregisterAudioDeviceCallback(deviceCallback)
     mediaSession?.run {
