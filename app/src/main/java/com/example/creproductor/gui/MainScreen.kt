@@ -60,6 +60,7 @@ fun MainScreen(
     viewModel: MusicViewModel,
     onOpenEqualizer: () -> Unit,
     onOpenScanner: () -> Unit,
+    onEditSong: (Song) -> Unit = {},
     onOpenDrawer: () -> Unit = {},
     onPageChanged: (Int) -> Unit = {}
 ){
@@ -113,6 +114,7 @@ fun MainScreen(
             categorySongs = selectedQuickSelectSongs,
             currentSongId = currentSong?.id,
             isPlaying = isPlaying,
+            onEditSongClick = onEditSong,
             onSongClick = { song, queue -> viewModel.playSong(song, customQueue = queue) },
             onPlayAllClick = {
                 if (selectedQuickSelectSongs.isNotEmpty()){
@@ -133,6 +135,7 @@ fun MainScreen(
             albumSongs = selectedAlbumsSongs,
             currentSongId = currentSong?.id,
             isPlaying = isPlaying,
+            onEditSongClick = onEditSong,
             onSongClick = {song, queue -> viewModel.playSong(song, customQueue = queue)},
             onPlayAllClick = {
                 if (selectedAlbumsSongs.isNotEmpty()){
@@ -153,6 +156,7 @@ fun MainScreen(
             artistSongs = selectedArtistSongs,
             currentSongId = currentSong?.id,
             isPlaying = isPlaying,
+            onEditSongClick = onEditSong,
             onSongClick = {song -> viewModel.playSong(song, customQueue = selectedArtistSongs)},
                 onAlbumClick = {albumName, albumSongs ->
                 selectedAlbumName = albumName
@@ -180,6 +184,7 @@ fun MainScreen(
             genreSongs =  selectedGenreSongs,
             currentSongId = currentSong?.id,
             isPlaying = isPlaying,
+            onEditSongClick = onEditSong,
             onSongClick = {song ->
                 viewModel.playSong(song, customQueue = selectedGenreSongs)
             },
@@ -205,6 +210,7 @@ fun MainScreen(
             categorySongs = selectedFolderSongs,
             currentSongId = currentSong?.id,
             isPlaying = isPlaying,
+            onEditSongClick = onEditSong,
             onSongClick = {song, queue -> viewModel.playSong(song, customQueue = queue)},
             onPlayAllClick = {
                 if (selectedFolderSongs.isNotEmpty()){
@@ -272,6 +278,7 @@ fun MainScreen(
         Box(modifier = Modifier.fillMaxSize()){
             if (isSearchActive){
                 SearchOverlayScreen(
+                    onEditSong = onEditSong,
                     searchQuery = searchQuery,
                     onQueryChange = {viewModel.setSearchQuery(it)},
                     searchHistory = searchHistory,
@@ -406,7 +413,7 @@ fun MainScreen(
                                          onSongClick = {song ->
                                              viewModel.playSong(song, customQueue = filteredSongs)
                                          },
-                                         onEditSong = {}
+                                         onEditSong = onEditSong
                                      )
                                  }
                                  AppTab.ALBUMS -> AlbumsGridScreen(

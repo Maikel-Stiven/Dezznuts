@@ -25,6 +25,8 @@ import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionToken
 import com.example.creproductor.data.AudioQuality
 import com.example.creproductor.data.AudioTagWriter
+import com.example.creproductor.data.TagSuggestion
+import com.example.creproductor.data.TagSuggestions
 import com.example.creproductor.data.HiFiAudio
 import com.example.creproductor.data.QualityTier
 import com.example.creproductor.data.MediaStoreScanner
@@ -632,6 +634,25 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         }
     }
 
+    /**
+     * Corrige varias canciones a la vez con las sugerencias (artista y título del nombre del archivo). Una a una y en
+     * segundo plano: cada escritura copia el archivo, así que no se paraleliza. Informa del resultado al final.
+     */
+    fun applyTagSuggestions(items: List<Pair<Song, TagSuggestion>>) {
+        if (items.isEmpty()) return
+        Toast.makeText(getApplication(), "Corrigiendo ${items.size} canciones…", Toast.LENGTH_SHORT).show()
+        viewModelScope.launch {
+            var ok = 0
+            for ((song, suggestion) in items) {
+                // El álbum desconocido se deja como está (vacío = no tocar).
+                val album = if (TagSuggestions.isUnknown(song.album)) "" else song.album
+                if (AudioTagWriter.writeMetaData(getApplication(), song, suggestion.title, suggestion.artist, album, null)) ok++
+            }
+            loadSongs(silent = true)
+            Toast.makeText(getApplication(), "Se corrigieron $ok de ${items.size}", Toast.LENGTH_LONG).show()
+        }
+    }
+
     fun updatedSongTags(
         song: Song,
         newTitle: String,
@@ -649,7 +670,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                 coverUrlOrUri = coverUriOrUrl
             )
             if (success){
-                loadSongs()
+                loadSongs(silent = true)
             } else {
                 Toast.makeText(getApplication(), "No se pudieron guardar los tags", Toast.LENGTH_LONG).show()
             }
