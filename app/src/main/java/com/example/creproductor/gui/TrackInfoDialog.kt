@@ -21,7 +21,7 @@ import com.example.creproductor.data.Song
 
 /** Ficha técnica de la canción: archivo, calidad y salida real. Se abre desde el menú (⋮) del reproductor. */
 @Composable
-fun TrackInfoDialog(song: Song, audioInfo: String, onDismiss: () -> Unit) {
+fun TrackInfoDialog(song: Song, audioInfo: String, onEdit: () -> Unit = {}, onDismiss: () -> Unit) {
     val tier = when (song.quality) {
         QualityTier.HIRES -> "Hi-Res"
         QualityTier.LOSSLESS -> "Lossless"
@@ -51,6 +51,7 @@ fun TrackInfoDialog(song: Song, audioInfo: String, onDismiss: () -> Unit) {
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } }
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } },
+        dismissButton = { TextButton(onClick = { onDismiss(); onEdit() }) { Text("Editar etiquetas") } }
     )
 }

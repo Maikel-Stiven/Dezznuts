@@ -20,6 +20,7 @@ sealed class DrawerMenuItem(
     object HiFiAudio : DrawerMenuItem("Audio Hi/Res", Icons.Default.GraphicEq)
     object ScanFiles : DrawerMenuItem("Escanear archivos",  Icons.Default.Radar)
     object SearchDuplicates : DrawerMenuItem("Buscar duplicados o audios de whatsapp", Icons.Default.FindInPage)
+    object FixUnknownArtists : DrawerMenuItem("Corregir artistas desconocidos", Icons.Default.AutoFixHigh)
     object AudioCutter : DrawerMenuItem("Cortador de audio", Icons.Default.ContentCut)
     object SleepTimer: DrawerMenuItem("Temporizador", Icons.Default.Timer)
     object ClearImageCache : DrawerMenuItem("Borrar caché de imágenes", Icons.Default.DeleteSweep)
@@ -63,6 +64,7 @@ fun AppDrawerContent(
                     DrawerMenuItem.HiFiAudio,
                     DrawerMenuItem.ScanFiles,
                     DrawerMenuItem.SearchDuplicates,
+                    DrawerMenuItem.FixUnknownArtists,
                     DrawerMenuItem.AudioCutter,
                     DrawerMenuItem.SleepTimer,
                     DrawerMenuItem.ClearImageCache,

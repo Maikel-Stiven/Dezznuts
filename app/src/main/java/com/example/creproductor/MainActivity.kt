@@ -3,6 +3,7 @@ package com.example.creproductor
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.Manifest
 import android.os.Build
+import android.widget.Toast
 import android.provider.MediaStore
 import androidx.activity.result.IntentSenderRequest
 import android.os.Bundle
@@ -48,6 +49,7 @@ import com.example.creproductor.gui.EditTagDialog
 import com.example.creproductor.gui.FullScreenPlayer
 import com.example.creproductor.gui.DuplicatesDialog
 import com.example.creproductor.gui.EqualizerDialog
+import com.example.creproductor.gui.FixUnknownArtistsDialog
 import com.example.creproductor.gui.HiFiAudioDialog
 import com.example.creproductor.gui.QualityBadge
 import com.example.creproductor.gui.MainScreen
@@ -96,6 +98,26 @@ class MainActivity : ComponentActivity() {
                     var showHiFiAudioDialog by remember { mutableStateOf(false) }
                     var showEqualizerDialog by remember { mutableStateOf(false) }
                     var showDuplicatesDialog by remember { mutableStateOf(false) }
+                    var showFixArtistsDialog by remember { mutableStateOf(false) }
+                    // Escribir etiquetas en archivos de audio exige el permiso del sistema (Android 11+): se pide para
+                    // las canciones afectadas y, si el usuario acepta, se ejecuta la acción pendiente.
+                    var pendingWrite by remember { mutableStateOf<(() -> Unit)?>(null) }
+                    val writeLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+                        if (result.resultCode == RESULT_OK) pendingWrite?.invoke()
+                        pendingWrite = null
+                    }
+                    fun requestWrite(songs: List<Song>, action: () -> Unit) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            pendingWrite = action
+                            val request = MediaStore.createWriteRequest(contentResolver, songs.map { it.contentUri })
+                            writeLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
+                        } else action()
+                    }
+                    // Las pistas de una hoja CUE comparten archivo: editar una cambiaría todo el álbum.
+                    val editSong: (Song) -> Unit = { song ->
+                        if (song.cueStartMs >= 0) Toast.makeText(this@MainActivity, "Las pistas de una hoja CUE no se editan una a una", Toast.LENGTH_LONG).show()
+                        else songToEdit = song
+                    }
                     // Confirmación del sistema para borrar archivos (Android 11+); al terminar se recarga la biblioteca.
                     val deleteLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
                         viewModel.loadSongs(silent = true)
@@ -169,6 +191,7 @@ class MainActivity : ComponentActivity() {
                                                 when(menuItem) {
                                                     is DrawerMenuItem.Equalizer -> { showEqualizerDialog = true }
                                                     is DrawerMenuItem.SearchDuplicates -> { showDuplicatesDialog = true }
+                                                    is DrawerMenuItem.FixUnknownArtists -> { showFixArtistsDialog = true }
                                                     is DrawerMenuItem.ScanFiles -> { /*Falta lógica del escaner de archivos*/}
                                                     is DrawerMenuItem.AudioCutter -> {/*Falta lógica del cortador de audio*/}
                                                     is DrawerMenuItem.SleepTimer -> {/*Falta lógica del temporizador*/}
@@ -190,6 +213,7 @@ class MainActivity : ComponentActivity() {
                                                     viewModel = viewModel,
                                                     onOpenEqualizer = { showEqualizerDialog = true },
                                                     onOpenScanner = { /* TODO */ },
+                                                    onEditSong = editSong,
                                                     onOpenDrawer = {
                                                         scope.launch { drawerState.open() }
                                                     },
@@ -229,6 +253,7 @@ class MainActivity : ComponentActivity() {
                                                 repeatMode = repeatMode,
                                                 isShuffleEnabled = isShuffleEnabled,
                                                 audioInfo = audioInfo,
+                                                onEditSong = editSong,
                                                 onToggleShuffle = { viewModel.toggleShuffle() },
                                                 onTogglePlayPause = { viewModel.togglePlayPause() },
                                                 onNextClick = { viewModel.playNext() },
@@ -252,8 +277,8 @@ class MainActivity : ComponentActivity() {
                                 song = song,
                                 onDismiss = { songToEdit = null },
                                 onSave = { title, artist, album, coverUriOrUrl ->
-                                    viewModel.updatedSongTags(song, title, artist, album, coverUriOrUrl)
                                     songToEdit = null
+                                    requestWrite(listOf(song)) { viewModel.updatedSongTags(song, title, artist, album, coverUriOrUrl) }
                                 }
                             )
                         }
@@ -280,6 +305,17 @@ class MainActivity : ComponentActivity() {
                                     }
                                 },
                                 onDismiss = { showDuplicatesDialog = false }
+                            )
+                        }
+
+                        if (showFixArtistsDialog) {
+                            FixUnknownArtistsDialog(
+                                songs = (uiState as? UiState.Success)?.songs.orEmpty(),
+                                onApply = { items ->
+                                    showFixArtistsDialog = false
+                                    requestWrite(items.map { it.first }) { viewModel.applyTagSuggestions(items) }
+                                },
+                                onDismiss = { showFixArtistsDialog = false }
                             )
                         }
 

@@ -68,6 +68,7 @@ enum class SearchSubTab(val title: String){
 }
 @Composable
 fun SearchOverlayScreen(
+    onEditSong: (Song) -> Unit = {},
     searchQuery: String,
     onQueryChange: (String) -> Unit,
     searchHistory: List<String>,
@@ -279,7 +280,7 @@ fun SearchOverlayScreen(
                                 keyboardController?.hide()
                                 onSongClick(song, matchingSongs)
                             },
-                            onEditClick = {}
+                            onEditClick = { onEditSong(song) }
                         )
                     }
                     if (matchingSongs.size > visibleSongs.size){

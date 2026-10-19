@@ -113,6 +113,7 @@ fun FullScreenPlayer(
     repeatMode: RepeatMode = RepeatMode.OFF,
     isShuffleEnabled: Boolean = false,
     audioInfo: String = "",
+    onEditSong: (Song) -> Unit = {},
     onToggleShuffle: () -> Unit = {},
     onTogglePlayPause: () -> Unit,
     onNextClick: () -> Unit,
@@ -484,7 +485,7 @@ fun FullScreenPlayer(
             }
         }
     }
-    if (showTrackInfo) TrackInfoDialog(song, audioInfo) { showTrackInfo = false }
+    if (showTrackInfo) TrackInfoDialog(song, audioInfo, onEdit = { onEditSong(song) }) { showTrackInfo = false }
     if (showQueueBottomSheet){
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         val queueLazyListState = rememberLazyListState()
