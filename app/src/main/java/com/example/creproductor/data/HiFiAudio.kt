@@ -49,10 +49,12 @@ object HiFiAudio {
     /** Dirigir la salida a un DAC USB cuando esté conectado. Apagado por defecto. */
     const val KEY_PREFER_USB = "hifi_prefer_usb"
 
-    /** Ecualizador: activo, niveles por banda (mB, separados por coma) y datos de bandas publicados por el servicio. */
+    /** Ecualizador paramétrico: activo y bandas (ver [EqBands.encode]). */
     const val KEY_EQ_ENABLED = "eq_enabled"
-    const val KEY_EQ_LEVELS = "eq_levels"
-    const val KEY_EQ_INFO = "eq_info"
+    const val KEY_EQ_BANDS = "eq_bands_v2"
+
+    /** ReplayGain con subida de volumen (hasta lo que permita el pico de la pista). Apagado por defecto. */
+    const val KEY_RG_BOOST = "hifi_rg_boost"
 
     /** Ruta de salida real que publica el servicio al abrir el AudioTrack (ver MusicService). */
     const val KEY_REAL_ROUTE = "audio_real_route"
@@ -139,5 +141,10 @@ object HiFiAudio {
     fun isReplayGainAlbumMode(context: Context): Boolean = prefs(context).getString(KEY_RG_MODE, "track") == "album"
     fun setReplayGainAlbumMode(context: Context, album: Boolean) {
         prefs(context).edit().putString(KEY_RG_MODE, if (album) "album" else "track").apply()
+    }
+
+    fun isReplayGainBoostEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_RG_BOOST, false)
+    fun setReplayGainBoostEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_RG_BOOST, enabled).apply()
     }
 }

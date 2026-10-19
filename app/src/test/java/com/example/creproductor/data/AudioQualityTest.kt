@@ -25,6 +25,21 @@ class AudioQualityTest {
         assertEquals(1f, ReplayGain.volumeFor(+4f), 0f)
         assertEquals(0.5012f, ReplayGain.volumeFor(-6f), 0.001f)
     }
+
+    @Test fun replayGainSubeSoloHastaElPico() {
+        // sin permiso de subir: +4 dB no cambia nada
+        assertEquals(ReplayGain.Plan(1f, 0f), ReplayGain.plan(4f, 0.5f, allowBoost = false))
+        // pico 0.5 → margen de +6,02 dB; pedir +4 dB se concede entero
+        assertEquals(4f, ReplayGain.plan(4f, 0.5f, true).boostDb, 0.001f)
+        // pedir +10 dB se limita al margen (6,02 dB)
+        assertEquals(6.02f, ReplayGain.plan(10f, 0.5f, true).boostDb, 0.01f)
+        // sin pico conocido no se sube
+        assertEquals(0f, ReplayGain.plan(5f, null, true).boostDb, 0f)
+        // ganancia negativa: atenúa como siempre
+        assertEquals(0.5012f, ReplayGain.plan(-6f, 0.9f, true).volume, 0.001f)
+        assertEquals(0.988f, ReplayGain.parsePeak("0.988")!!, 0.0001f)
+        assertNull(ReplayGain.parsePeak("x"))
+    }
 }
 
 class AudioRouteTest {

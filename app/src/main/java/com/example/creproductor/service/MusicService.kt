@@ -10,7 +10,6 @@ import android.content.SharedPreferences
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
-import android.media.audiofx.Equalizer
 import android.os.Bundle
 import android.util.Log
 import androidx.annotation.OptIn
@@ -34,6 +33,7 @@ import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import com.example.creproductor.R
 import com.example.creproductor.data.AudioQuality
+import com.example.creproductor.data.EqBands
 import com.example.creproductor.data.HiFiAudio
 import com.example.creproductor.data.ReplayGain
 import com.google.common.util.concurrent.Futures
@@ -46,9 +46,13 @@ class MusicService : MediaSessionService(){
 
     private val prefs by lazy { getSharedPreferences("dezznuts_prefs", MODE_PRIVATE) }
 
-    /** ReplayGain (en dB) de la pista actual; `null` si el archivo no lo trae. */
+    /** ReplayGain de la pista actual (ganancia en dB y pico lineal); `null` si el archivo no lo trae. */
     private var trackGainDb: Float? = null
-    private var equalizer: Equalizer? = null
+    private var trackPeak: Float? = null
+
+    /** Ecualizador paramétrico + subida de ReplayGain del reproductor actual (ver [ParametricEqProcessor]). */
+    private var eqProcessor = ParametricEqProcessor(enabledAtBuild = false)
+    private var processorActive = false
 
     private val audioManager by lazy { getSystemService(AUDIO_SERVICE) as AudioManager }
 
@@ -56,17 +60,20 @@ class MusicService : MediaSessionService(){
     private val hifiPrefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         when (key) {
             HiFiAudio.KEY_REPLAYGAIN, HiFiAudio.KEY_RG_MODE -> {
-                trackGainDb = currentReplayGainDb()
+                readReplayGain()
                 applyVolume()
             }
-            HiFiAudio.KEY_EQ_ENABLED -> {
-                // El ecualizador solo existe mientras está activo: apagado no gasta DSP ni CPU.
-                attachEqualizer((mediaSession?.player as? ExoPlayer)?.audioSessionId ?: C.AUDIO_SESSION_ID_UNSET)
+            HiFiAudio.KEY_RG_BOOST, HiFiAudio.KEY_EQ_ENABLED -> {
+                // El procesador solo existe en la cadena si algo lo necesita; cambiar eso exige recrear el player.
+                if (needsProcessor() != processorActive) rebuildPlayer() else applyVolume()
             }
-            HiFiAudio.KEY_EQ_LEVELS -> { applyEqualizer(); applyVolume() }
+            HiFiAudio.KEY_EQ_BANDS -> applyVolume()
             HiFiAudio.KEY_PREFER_USB -> applyPreferredDevice()
         }
     }
+
+    private fun needsProcessor() =
+        prefs.getBoolean(HiFiAudio.KEY_EQ_ENABLED, false) || HiFiAudio.isReplayGainBoostEnabled(this)
 
     private val deviceCallback = object : AudioDeviceCallback() {
         override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) = applyPreferredDevice()
@@ -96,6 +103,7 @@ class MusicService : MediaSessionService(){
         prefs.registerOnSharedPreferenceChangeListener(hifiPrefsListener)
         audioManager.registerAudioDeviceCallback(deviceCallback, null)
         applyPreferredDevice()
+        applyVolume()
     }
 
     /**
@@ -112,10 +120,14 @@ class MusicService : MediaSessionService(){
             .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
             .build()
 
+        processorActive = needsProcessor()
+        eqProcessor = ParametricEqProcessor(enabledAtBuild = processorActive)
+
         val renderersFactory = HiFiRenderersFactory(
             context = this,
             useFloatOutput = HiFiAudio.isFloatOutputEnabled(this),
-            useOffload = HiFiAudio.isOffloadEnabled(this)
+            useOffload = HiFiAudio.isOffloadEnabled(this),
+            eqProcessor = eqProcessor
         )
 
         val player = ExoPlayer.Builder(this, renderersFactory)
@@ -190,104 +202,63 @@ class MusicService : MediaSessionService(){
             }
 
             override fun onTracksChanged(tracks: Tracks) {
-                trackGainDb = currentReplayGainDb(tracks)
+                readReplayGain(tracks)
                 applyVolume()
             }
 
-            override fun onAudioSessionIdChanged(audioSessionId: Int) {
-                attachEqualizer(audioSessionId)
-            }
         })
     }
 
-    /** Lee la etiqueta solo si ReplayGain está activo (apagado no se recorren los metadatos). */
-    private fun currentReplayGainDb(tracks: Tracks? = mediaSession?.player?.currentTracks): Float? =
-        if (tracks != null && HiFiAudio.isReplayGainEnabled(this)) readReplayGainDb(tracks) else null
+    /** Lee ganancia y pico solo si ReplayGain está activo (apagado no se recorren los metadatos). */
+    private fun readReplayGain(tracks: Tracks? = mediaSession?.player?.currentTracks) {
+        trackGainDb = null
+        trackPeak = null
+        if (tracks == null || !HiFiAudio.isReplayGainEnabled(this)) return
+        val tags = readReplayGainTags(tracks)
+        val album = HiFiAudio.isReplayGainAlbumMode(this)
+        // Cada modo cae al otro si falta su etiqueta.
+        val gain = if (album) tags["REPLAYGAIN_ALBUM_GAIN"] ?: tags["REPLAYGAIN_TRACK_GAIN"] else tags["REPLAYGAIN_TRACK_GAIN"] ?: tags["REPLAYGAIN_ALBUM_GAIN"]
+        val peak = if (album) tags["REPLAYGAIN_ALBUM_PEAK"] ?: tags["REPLAYGAIN_TRACK_PEAK"] else tags["REPLAYGAIN_TRACK_PEAK"] ?: tags["REPLAYGAIN_ALBUM_PEAK"]
+        trackGainDb = ReplayGain.parseDb(gain)
+        trackPeak = ReplayGain.parsePeak(peak)
+    }
 
-    /** Ganancia ReplayGain (pista, o álbum si no hay) de las etiquetas Vorbis (FLAC/OGG) o ID3 (MP3). */
-    private fun readReplayGainDb(tracks: Tracks): Float? {
-        val gains = mutableMapOf<String, String>()
+    /** Etiquetas `REPLAYGAIN_*` (en mayúsculas) de las etiquetas Vorbis (FLAC/OGG) o ID3 (MP3) de la pista. */
+    private fun readReplayGainTags(tracks: Tracks): Map<String, String> {
+        val tags = mutableMapOf<String, String>()
         tracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO && it.isSelected }.forEach { group ->
             for (i in 0 until group.length) {
                 val metadata: Metadata = group.getTrackFormat(i).metadata ?: continue
                 for (e in 0 until metadata.length()) {
                     when (val entry = metadata[e]) {
-                        is VorbisComment -> gains[entry.key.uppercase()] = entry.value
+                        is VorbisComment -> tags[entry.key.uppercase()] = entry.value
                         is TextInformationFrame -> entry.description?.let {
-                            entry.values.firstOrNull()?.let { v -> gains[it.uppercase()] = v }
+                            entry.values.firstOrNull()?.let { v -> tags[it.uppercase()] = v }
                         }
                     }
                 }
             }
         }
-        val track = gains["REPLAYGAIN_TRACK_GAIN"]
-        val album = gains["REPLAYGAIN_ALBUM_GAIN"]
-        // Cada modo cae al otro si falta su etiqueta.
-        return ReplayGain.parseDb(if (HiFiAudio.isReplayGainAlbumMode(this)) album ?: track else track ?: album)
+        return tags
     }
 
     /**
-     * Volumen final = ReplayGain (si está activo) × pre-amplificación automática del ecualizador.
-     * El preamp baja el volumen lo que suben las bandas más altas, para que el EQ no sature.
+     * ReplayGain → `Player.volume` (atenúa, funciona siempre) y, si está permitido subir, la subida en dB
+     * limitada por el pico va al procesador. El EQ paramétrico recibe sus bandas en el mismo paso.
      */
     private fun applyVolume() {
         val player = mediaSession?.player ?: return
-        val rg = if (HiFiAudio.isReplayGainEnabled(this)) ReplayGain.volumeFor(trackGainDb) else 1f
-        val preampDb = if (prefs.getBoolean(HiFiAudio.KEY_EQ_ENABLED, false)) -maxBoostDb() else 0f
-        val volume = (rg * Math.pow(10.0, preampDb / 20.0).toFloat()).coerceIn(0f, 1f)
-        player.volume = volume
+        val rgOn = HiFiAudio.isReplayGainEnabled(this)
+        val plan = if (rgOn) ReplayGain.plan(trackGainDb, trackPeak, HiFiAudio.isReplayGainBoostEnabled(this)) else ReplayGain.Plan(1f, 0f)
+        player.volume = plan.volume
+        eqProcessor.update(
+            EqBands.decode(prefs.getString(HiFiAudio.KEY_EQ_BANDS, null)),
+            prefs.getBoolean(HiFiAudio.KEY_EQ_ENABLED, false),
+            plan.boostDb
+        )
         if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
-            Log.i("DezzAudio", "volumen=$volume (ReplayGain=${trackGainDb ?: "sin etiqueta"} dB, preamp EQ=$preampDb dB)")
+            Log.i("DezzAudio", "volumen=${plan.volume} subida=${plan.boostDb} dB (ReplayGain=${trackGainDb ?: "sin etiqueta"} dB, pico=${trackPeak ?: "?"}) procesador=$processorActive")
         }
-    }
-
-    private fun eqLevelsMb(): List<Int> =
-        (prefs.getString(HiFiAudio.KEY_EQ_LEVELS, "") ?: "").split(",").mapNotNull { it.trim().toIntOrNull() }
-
-    private fun maxBoostDb(): Float = (eqLevelsMb().maxOrNull() ?: 0).coerceAtLeast(0) / 100f
-
-    /**
-     * Crea el ecualizador del sistema sobre la sesión de audio y publica sus bandas
-     * (`nº|mín|máx|frecuencias`) en las prefs para que la pantalla del EQ las dibuje.
-     * Con audio offload el DSP salta el ecualizador, por eso no tendrá efecto en ese modo.
-     */
-    private fun attachEqualizer(audioSessionId: Int) {
-        equalizer?.release()
-        equalizer = null
-        if (audioSessionId == C.AUDIO_SESSION_ID_UNSET) return
-        val enabled = prefs.getBoolean(HiFiAudio.KEY_EQ_ENABLED, false)
-        // Apagado y con las bandas ya publicadas: no se crea el efecto nativo.
-        if (!enabled && prefs.contains(HiFiAudio.KEY_EQ_INFO)) { applyVolume(); return }
-        try {
-            val eq = Equalizer(0, audioSessionId)
-            val freqs = (0 until eq.numberOfBands).joinToString(",") { (eq.getCenterFreq(it.toShort()) / 1000).toString() }
-            prefs.edit().putString(
-                HiFiAudio.KEY_EQ_INFO,
-                "${eq.numberOfBands}|${eq.bandLevelRange[0]}|${eq.bandLevelRange[1]}|$freqs"
-            ).apply()
-            if (enabled) {
-                equalizer = eq
-                applyEqualizer()
-            } else {
-                eq.release() // solo servía para descubrir las bandas
-            }
-        } catch (_: Exception) {
-            // Dispositivo sin ecualizador: la función simplemente no está disponible.
-        }
-        applyVolume()
-    }
-
-    private fun applyEqualizer() {
-        val eq = equalizer ?: return
-        try {
-            eq.enabled = true
-            val levels = eqLevelsMb()
-            val range = eq.bandLevelRange
-            for (band in 0 until eq.numberOfBands) {
-                val level = (levels.getOrNull(band) ?: 0).coerceIn(range[0].toInt(), range[1].toInt())
-                eq.setBandLevel(band.toShort(), level.toShort())
-            }
-        } catch (_: Exception) { }
     }
 
     /** Con "preferir DAC USB" activo, dirige la salida al DAC USB conectado; si no, vuelve al automático. */
@@ -335,10 +306,9 @@ class MusicService : MediaSessionService(){
         newPlayer.shuffleModeEnabled = shuffleMode
         newPlayer.prepare()
 
-        equalizer?.release()
-        equalizer = null
         session.setPlayer(newPlayer)
         applyPreferredDevice()
+        applyVolume()
 
         newPlayer.playWhenReady = wasPlaying
         oldPlayer.release()
@@ -412,8 +382,6 @@ class MusicService : MediaSessionService(){
     override fun  onDestroy(){
     prefs.unregisterOnSharedPreferenceChangeListener(hifiPrefsListener)
     audioManager.unregisterAudioDeviceCallback(deviceCallback)
-    equalizer?.release()
-    equalizer = null
     mediaSession?.run {
         player.release()
         release()

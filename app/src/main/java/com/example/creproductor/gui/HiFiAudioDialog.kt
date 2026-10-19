@@ -58,6 +58,7 @@ fun HiFiAudioDialog(
     val sampleRate = remember { HiFiAudio.deviceSampleRate(context) }
     var replayGain by remember { mutableStateOf(HiFiAudio.isReplayGainEnabled(context)) }
     var rgAlbum by remember { mutableStateOf(HiFiAudio.isReplayGainAlbumMode(context)) }
+    var rgBoost by remember { mutableStateOf(HiFiAudio.isReplayGainBoostEnabled(context)) }
     var preferUsb by remember { mutableStateOf(HiFiAudio.isPreferUsbEnabled(context)) }
     val outputs = remember { HiFiAudio.outputDevices(context) }
 
@@ -119,6 +120,17 @@ fun HiFiAudioDialog(
                 )
 
                 if (replayGain) {
+                    AudioOption(
+                        title = "Permitir subir el volumen",
+                        description = "Si la pista es más baja que la referencia, la sube solo hasta lo que su " +
+                            "pico permite sin recortar (necesita la etiqueta de pico). Sin efecto con offload.",
+                        risk = "Activa el procesador de audio en 32 bits float; con offload no se aplica.",
+                        checked = rgBoost,
+                        onCheckedChange = { enabled ->
+                            rgBoost = enabled
+                            HiFiAudio.setReplayGainBoostEnabled(context, enabled)
+                        }
+                    )
                     TextButton(onClick = {
                         rgAlbum = !rgAlbum
                         HiFiAudio.setReplayGainAlbumMode(context, rgAlbum)
