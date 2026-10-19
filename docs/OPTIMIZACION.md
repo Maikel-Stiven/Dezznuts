@@ -40,6 +40,13 @@ La posición de reproducción es el único dato que cambia continuamente (cada 5
 - **`SearchScreen`:** los conteos de álbumes/canciones por artista se calculan una vez por (biblioteca, artista) con `remember`, no en cada recomposición de la fila.
 - **`GridScreens`:** la lista de claves (`keys.toList()`) se recuerda con `remember` y los álbumes ahora tienen `key`.
 
+### 5. Revisión de las funciones de audiófilos (1.1.0)
+- **Fallo corregido en el ecualizador:** el filtro reasignaba el estado de las bandas al cambiar cuántas estaban activas, mientras el hilo de audio lo leía → `ArrayIndexOutOfBoundsException` (reproducido con un test concurrente) que habría cortado la reproducción al mover un deslizador. Ahora el estado tiene tamaño fijo (16 bandas) y cada banda conserva su sitio; una banda que se activa arranca con el estado limpio.
+- **Conversión de formatos del procesador:** un bucle por formato en lugar de un `when` por muestra (a 96 kHz estéreo son 192 000 muestras/s) y volcado/lectura en bloque para float. El filtro cuesta ~1 ms por segundo de audio (5 bandas, 96 kHz estéreo); un test lo vigila con presupuesto de tiempo real.
+- **Cachés de escaneo:** la cabecera FLAC/WAV (Android < 16) y la hoja CUE se leen una vez por canción y no en cada recarga silenciosa de MediaStore, que ocurre por cada archivo nuevo.
+- **Ruta real de salida:** se crea un `AudioTrack` por pista; ahora solo se escribe en las preferencias (y se notifica a la interfaz) si la ruta cambió.
+- **Duplicados:** título y artista se normalizan una sola vez por canción (antes, tres).
+
 ## Optimizaciones previas ya presentes en la rama
 
 | Qué | Efecto |

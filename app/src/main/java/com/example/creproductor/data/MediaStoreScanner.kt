@@ -5,12 +5,21 @@ import android.content.Context
 import android.os.Build
 import android.provider.MediaStore
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 
 private const val TECH_COLUMNS_SDK = 36
+
+// Lo que hay que leer del disco (cabecera FLAC/WAV y hoja CUE) no cambia entre recargas de la biblioteca: se
+// recuerda por canción para que las recargas silenciosas (MediaStore avisa por cada archivo nuevo) no vuelvan a abrir
+// miles de archivos. La clave incluye la duración, así que un archivo reemplazado se vuelve a leer.
+private val NO_HEADER = AudioHeader.Info(0, 0)
+private val headerCache = ConcurrentHashMap<String, AudioHeader.Info>()
+private val NO_SHEET = CueSheet("", "", "", emptyList())
+private val cueCache = ConcurrentHashMap<String, CueSheet>()
 private const val CUE_MIN_DURATION_MS = 8 * 60_000L
 private val CUE_EXTENSIONS = listOf(".flac", ".wav", ".ape", ".wv")
 
@@ -96,7 +105,8 @@ class MediaStoreScanner (private  val context: Context) {
                 var bits = if (bitsCol != -1) cursor.getInt(bitsCol) else 0
                 // Android < 16: MediaStore no informa de esto; para FLAC/WAV se lee la cabecera del archivo.
                 if (rateCol == -1 && path.isNotEmpty() && (path.endsWith(".flac", true) || path.endsWith(".wav", true))) {
-                    AudioHeader.read(path)?.let { sampleRate = it.sampleRate; bits = it.bitsPerSample }
+                    headerCache.getOrPut("$id:$duration") { AudioHeader.read(path) ?: NO_HEADER }
+                        .takeIf { it !== NO_HEADER }?.let { sampleRate = it.sampleRate; bits = it.bitsPerSample }
                 }
                 val bitrate = if (bitrateCol != -1) cursor.getInt(bitrateCol) else 0
 
@@ -157,14 +167,8 @@ class MediaStoreScanner (private  val context: Context) {
         // Un álbum entero dura mucho: el corte evita abrir cada archivo corto del catálogo.
         if (path.isEmpty() || song.duration < CUE_MIN_DURATION_MS ||
             CUE_EXTENSIONS.none { path.endsWith(it, ignoreCase = true) }) return null
-        // 1) CUESHEET incrustado en el FLAC (legible siempre) · 2) .cue al lado (solo si el sistema deja leerlo).
-        val embedded = if (path.endsWith(".flac", ignoreCase = true)) FlacTags.read(path, "CUESHEET") else null
-        val text = embedded ?: try {
-            File(path.substringBeforeLast('.') + ".cue").takeIf { it.isFile }?.readText()
-        } catch (_: Exception) { null } ?: return null
-        val sheet = CueSheet.parse(text, song.duration) ?: return null
-        // Un .cue al lado que apunta a otro archivo no corresponde a este (el incrustado ya es de este archivo).
-        if (embedded == null && !sheet.fileName.substringAfterLast('/').substringAfterLast('\\').equals(File(path).name, ignoreCase = true)) return null
+        val sheet = cueCache.getOrPut("${song.id}:${song.duration}") { loadCueSheet(song) ?: NO_SHEET }
+            .takeIf { it !== NO_SHEET } ?: return null
         return sheet.tracks.map { t ->
             song.copy(
                 id = -(song.id * 1000 + t.number),
@@ -177,5 +181,19 @@ class MediaStoreScanner (private  val context: Context) {
                 cueEndMs = t.endMs
             )
         }
+    }
+
+    /** Lee y valida la hoja CUE de un archivo (lo caro; el resultado se guarda en [cueCache]). */
+    private fun loadCueSheet(song: Song): CueSheet? {
+        val path = song.path
+        // 1) CUESHEET incrustado en el FLAC (legible siempre) · 2) .cue al lado (solo si el sistema deja leerlo).
+        val embedded = if (path.endsWith(".flac", ignoreCase = true)) FlacTags.read(path, "CUESHEET") else null
+        val text = embedded ?: try {
+            File(path.substringBeforeLast('.') + ".cue").takeIf { it.isFile }?.readText()
+        } catch (_: Exception) { null } ?: return null
+        val sheet = CueSheet.parse(text, song.duration) ?: return null
+        // Un .cue al lado que apunta a otro archivo no corresponde a este (el incrustado ya es de este archivo).
+        if (embedded == null && !sheet.fileName.substringAfterLast('/').substringAfterLast('\\').equals(File(path).name, ignoreCase = true)) return null
+        return sheet
     }
 }

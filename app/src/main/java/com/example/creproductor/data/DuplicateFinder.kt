@@ -43,8 +43,12 @@ object DuplicateFinder {
         durationOf: (T) -> Long,
         bestFirst: Comparator<T>
     ): List<Group<T>> =
-        items.filter { normalize(titleOf(it)).isNotEmpty() }
-            .groupBy { normalize(titleOf(it)) + "|" + normalize(artistOf(it)) }
+        items.mapNotNull { item ->
+            // Cada título y artista se normaliza una sola vez (es lo caro: regex + Normalizer).
+            val title = normalize(titleOf(item))
+            if (title.isEmpty()) null else (title + "|" + normalize(artistOf(item))) to item
+        }
+            .groupBy({ it.first }, { it.second })
             .values.filter { it.size > 1 }
             .flatMap { sameName -> clusterByDuration(sameName, durationOf) }
             .filter { it.size > 1 }
