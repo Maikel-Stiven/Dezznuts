@@ -58,16 +58,6 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: MusicViewModel by viewModels()
 
-    override fun onStart() {
-        super.onStart()
-        viewModel.setUiVisible(true)
-    }
-
-    override fun onStop() {
-        viewModel.setUiVisible(false)
-        super.onStop()
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
