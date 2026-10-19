@@ -31,6 +31,7 @@ import com.example.creproductor.data.HiFiAudio
 import com.example.creproductor.data.QualityTier
 import com.example.creproductor.data.MediaStoreScanner
 import com.example.creproductor.data.Song
+import com.example.creproductor.data.trackPlaybackPosition
 import com.example.creproductor.service.MusicService
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -42,9 +43,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -330,34 +329,19 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     /**
      * Sondea la posición solo mientras la barra la observa y hay reproducción.
      *
-     * `subscriptionCount` cuenta los colectores de [_currentPositionMs] (el `asStateFlow()` delega en él).
-     * Hoy el único es MainActivity, dentro de `if (isPlayerFullScreenVisible…)`. Si alguien más empieza a
-     * recolectar `currentPositionMs`, este bucle correrá también con la pantalla del reproductor cerrada:
-     * revisa este punto antes de añadir un colector.
+     * El bucle vive en [trackPlaybackPosition] (lógica pura, con pruebas). `subscriptionCount`
+     * cuenta los colectores de [_currentPositionMs] (el `asStateFlow()` delega en él); hoy el
+     * único es MainActivity, dentro de `if (isPlayerFullScreenVisible…)`. Si alguien más empieza
+     * a recolectar `currentPositionMs`, el bucle correrá también con la pantalla cerrada.
      */
     private fun startPositionTracker(){
-        viewModelScope.launch {
-            combine(
-                _currentPositionMs.subscriptionCount.map { it > 0 },
-                _isPlaying
-            ) { observado, sonando -> observado && sonando }
-                .distinctUntilChanged()
-                .collectLatest { activo ->
-                    if (activo) {
-                        while (true) {
-                            _currentPositionMs.value =
-                                mediaController?.currentPosition ?: _currentPositionMs.value
-                            delay(500L)
-                        }
-                    } else {
-                        // Solo si ya hay pista: al arrancar el controlador puede estar vacío y
-                        // escribir 0 pisaría la posición restaurada de last_position_ms.
-                        mediaController
-                            ?.takeIf { it.currentMediaItem != null }
-                            ?.let { _currentPositionMs.value = it.currentPosition }
-                    }
-                }
-        }
+        viewModelScope.trackPlaybackPosition(
+            position = _currentPositionMs,
+            isPlaying = _isPlaying,
+            readPosition = {
+                mediaController?.takeIf { it.currentMediaItem != null }?.currentPosition
+            }
+        )
     }
 
     /**
