@@ -64,12 +64,14 @@ object AudioQuality {
 
     /**
      * Ruta de salida **real** (la que abrió el `AudioTrack`), no la solicitada:
+     * - bit-perfect (DAC USB con mezclador bit-perfect, ver [BitPerfect]): el sistema no toca la señal;
      * - offload: el DSP recibe el flujo comprimido, sin remuestreo en la app;
      * - si la frecuencia del track difiere de la nativa del dispositivo, el mezclador remuestrea;
      * - si coinciden, el PCM llega sin conversión de frecuencia.
      */
-    fun route(offload: Boolean, pcmBits: Int, trackRate: Int, deviceRate: Int?): String {
+    fun route(offload: Boolean, pcmBits: Int, trackRate: Int, deviceRate: Int?, bitPerfect: Boolean = false): String {
         if (offload) return "Offload"
+        if (bitPerfect) return "Bit-perfect ${khz(trackRate)} / $pcmBits bit"
         val pcm = if (pcmBits > 0) "PCM $pcmBits bit" else "PCM"
         val rate = if (trackRate > 0) " ${khz(trackRate)}" else ""
         return when {
