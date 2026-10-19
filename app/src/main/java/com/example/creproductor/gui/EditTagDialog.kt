@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.creproductor.data.CoverFetcher
 import com.example.creproductor.data.Song
+import com.example.creproductor.data.TagSuggestions
 import com.example.creproductor.data.YoutubeTitleCleaner
 import kotlinx.coroutines.launch
 
@@ -49,9 +51,11 @@ fun EditTagDialog(
     onDismiss: () -> Unit,
     onSave: (title: String, artist: String, album: String, coverUriOrUrl: String?) -> Unit
 ){
+    // Los marcadores "<unknown>" / "Artista desconocido" no son datos: el campo empieza vacío para escribir el real.
     var title by remember { mutableStateOf(song.title) }
-    var artist by remember { mutableStateOf(song.artist) }
-    var album by remember { mutableStateOf(song.album) }
+    var artist by remember { mutableStateOf(if (TagSuggestions.isUnknown(song.artist)) "" else song.artist) }
+    var album by remember { mutableStateOf(if (TagSuggestions.isUnknown(song.album)) "" else song.album) }
+    val suggestion = remember(song) { TagSuggestions.suggest(song.title, song.artist, java.io.File(song.path).name) }
     var selectedCoverUri by remember { mutableStateOf(song.albumArtUri?.toString()) }
     var isSearchingWeb by remember { mutableStateOf(false) }
 
@@ -156,6 +160,15 @@ fun EditTagDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                // Artista desconocido: se propone el que sale del nombre del archivo ("Artista - Título").
+                if (suggestion != null && (artist != suggestion.artist || title != suggestion.title)) {
+                    AssistChip(
+                        onClick = { artist = suggestion.artist; title = suggestion.title },
+                        label = { Text("Usar «${suggestion.artist}» — «${suggestion.title}»", maxLines = 1) },
+                        leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    )
+                }
+
                 OutlinedTextField(
                     value = album,
                     onValueChange = { album = it },
@@ -167,8 +180,10 @@ fun EditTagDialog(
         },
         confirmButton = {
             Button(
+                enabled = title.isNotBlank(),
                 onClick = {
-                    onSave(title, artist, album, selectedCoverUri)
+                    // La portada solo se reescribe si el usuario la cambió.
+                    onSave(title, artist, album, selectedCoverUri.takeIf { it != song.albumArtUri?.toString() })
                 }
             ) {
                 Text("Guardar")

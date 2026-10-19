@@ -53,6 +53,9 @@ object HiFiAudio {
     const val KEY_EQ_ENABLED = "eq_enabled"
     const val KEY_EQ_BANDS = "eq_bands_v2"
 
+    /** Bit-perfect con DAC USB (Android 14+, ver [BitPerfect]). Apagado por defecto. */
+    const val KEY_BITPERFECT = "hifi_bitperfect"
+
     /** Duración del fundido de entrada y salida en ms (0 = apagado). */
     const val KEY_FADE_MS = "hifi_fade_ms"
 
@@ -164,5 +167,10 @@ object HiFiAudio {
     fun fadeMs(context: Context): Int = prefs(context).getInt(KEY_FADE_MS, 0)
     fun setFadeMs(context: Context, ms: Int) {
         prefs(context).edit().putInt(KEY_FADE_MS, ms).apply()
+    }
+
+    fun isBitPerfectEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_BITPERFECT, false)
+    fun setBitPerfectEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_BITPERFECT, enabled).apply()
     }
 }

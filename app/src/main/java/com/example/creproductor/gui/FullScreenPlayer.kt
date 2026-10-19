@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
@@ -113,6 +114,8 @@ fun FullScreenPlayer(
     repeatMode: RepeatMode = RepeatMode.OFF,
     isShuffleEnabled: Boolean = false,
     audioInfo: String = "",
+    onOpenEqualizer: () -> Unit = {},
+    onEditSong: (Song) -> Unit = {},
     onToggleShuffle: () -> Unit = {},
     onTogglePlayPause: () -> Unit,
     onNextClick: () -> Unit,
@@ -238,12 +241,21 @@ fun FullScreenPlayer(
                     )
                 }
 
-                IconButton(onClick = { showTrackInfo = true }) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Información técnica",
-                        modifier = Modifier.size(28.dp)
-                    )
+                Row {
+                    IconButton(onClick = onOpenEqualizer) {
+                        Icon(
+                            imageVector = Icons.Default.Tune,
+                            contentDescription = "Ecualizador",
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+                    IconButton(onClick = { showTrackInfo = true }) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Información técnica",
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
                 }
             }
 
@@ -484,7 +496,7 @@ fun FullScreenPlayer(
             }
         }
     }
-    if (showTrackInfo) TrackInfoDialog(song, audioInfo) { showTrackInfo = false }
+    if (showTrackInfo) TrackInfoDialog(song, audioInfo, onEdit = { onEditSong(song) }) { showTrackInfo = false }
     if (showQueueBottomSheet){
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         val queueLazyListState = rememberLazyListState()

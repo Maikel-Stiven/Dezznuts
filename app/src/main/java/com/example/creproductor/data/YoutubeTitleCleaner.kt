@@ -9,20 +9,26 @@ data class ParsedMetaData(
 
 object YoutubeTitleCleaner {
 
+    // Se compilan una vez (antes, en cada llamada: con miles de canciones sin etiquetas eran decenas de miles).
+    private val EXTENSION = Regex("\\.(mp3|m4a|flac|wav|webm)$", RegexOption.IGNORE_CASE)
+    private val NOISE_BRACKETS = Regex("(?i)\\[(official|video|lyric|audio|4k|hd|topic).*?]")
+    private val NOISE_PARENS = Regex("(?i)\\((official|video|lyric|audio|4k|hd|topic).*?\\)")
+    private val NOISE_WORDS = Regex("(?i)\\b(official video|music video|lyric video|audio|full song|release)\\b")
+    private val SEPARATORS = listOf(" - ", " – ", " — ", " · ")
+
     fun parseFileName(rawName: String): ParsedMetaData{
         val isTopic = rawName.contains("Topic", ignoreCase = true)
 
         val clean = rawName
-            .replace(Regex("\\.(mp3|m4a|flac|wav|webm)$", RegexOption.IGNORE_CASE), "")
-            .replace(Regex("(?i)\\[(official|video|lyric|audio|4k|hd|topic).*?]"), "")
-            .replace(Regex("(?i)\\((official|video|lyric|audio|4k|hd|topic).*?\\)"), "")
-            .replace(Regex("(?i)\\b(official video|music video|lyric video|audio|full song|release)\\b"), "")
+            .replace(EXTENSION, "")
+            .replace(NOISE_BRACKETS, "")
+            .replace(NOISE_PARENS, "")
+            .replace(NOISE_WORDS, "")
             .trim()
         var artist = "Artista desconocido"
         var title = clean
 
-        val separators = listOf(" - ", " – ", " — ", " · ")
-        for (sep in separators){
+        for (sep in SEPARATORS){
             if (clean.contains(sep)){
                 val parts = clean.split(sep, limit = 2)
                 artist = parts[0].trim()

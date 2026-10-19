@@ -31,6 +31,22 @@ object EqBands {
         EqBand(3600f, 0f, 1f), EqBand(14000f, 0f, 1f)
     )
 
+    /** Presets listos (5 bandas, mismas frecuencias que [DEFAULT]); "Plano" es el primero. */
+    val PRESETS: List<Pair<String, List<EqBand>>> = listOf(
+        "Plano" to DEFAULT,
+        "Graves" to listOf(EqBand(60f, 6f, 0.9f), EqBand(230f, 3f, 1f), EqBand(910f, 0f, 1f), EqBand(3600f, 0f, 1f), EqBand(14000f, 0f, 1f)),
+        "Voces" to listOf(EqBand(60f, -2f, 1f), EqBand(230f, -1f, 1f), EqBand(910f, 3f, 1.1f), EqBand(3600f, 4f, 1.2f), EqBand(14000f, 1f, 1f)),
+        "Brillo" to listOf(EqBand(60f, 0f, 1f), EqBand(230f, 0f, 1f), EqBand(910f, 1f, 1f), EqBand(3600f, 3f, 1f), EqBand(14000f, 6f, 0.8f)),
+        "Loudness" to listOf(EqBand(60f, 5f, 0.9f), EqBand(230f, 1f, 1f), EqBand(910f, -2f, 1f), EqBand(3600f, 1f, 1f), EqBand(14000f, 5f, 0.9f))
+    )
+
+    /** Nombre del preset que coincide con `bands`, o `null` si son ajustes propios ("Personalizado"). */
+    fun presetNameOf(bands: List<EqBand>): String? = PRESETS.firstOrNull { (_, p) ->
+        p.size == bands.size && p.zip(bands).all { (a, b) ->
+            abs(a.freqHz - b.freqHz) < 1f && abs(a.gainDb - b.gainDb) < 0.05f && abs(a.q - b.q) < 0.05f
+        }
+    }?.first
+
     /** `"60:0.0:1.0;230:3.5:1.2;…"`. */
     fun encode(bands: List<EqBand>): String = bands.joinToString(";") { "${it.freqHz}:${it.gainDb}:${it.q}" }
 
@@ -106,17 +122,59 @@ class ParametricEq(private val sampleRate: Int, private val channels: Int) {
     }
 
     private fun coeffs(b: EqBand): Coeffs {
+        val c = PeakingFilter.coeffs(b, sampleRate)
+        return Coeffs(c[0], c[1], c[2], c[3], c[4])
+    }
+}
+
+/**
+ * Filtro "peaking" RBJ. La gráfica del ecualizador y el procesador de audio comparten esta fórmula, así que
+ * la curva que se dibuja es exactamente la que suena.
+ */
+object PeakingFilter {
+    /** `[b0, b1, b2, a1, a2]` ya normalizados por a0. */
+    fun coeffs(b: EqBand, sampleRate: Int): DoubleArray {
         val f = min(b.freqHz, sampleRate * 0.45f).toDouble()
         val a = 10.0.pow(b.gainDb / 40.0)
         val w0 = 2 * PI * f / sampleRate
         val alpha = sin(w0) / (2 * b.q)
         val a0 = 1 + alpha / a
-        return Coeffs(
-            b0 = (1 + alpha * a) / a0,
-            b1 = -2 * cos(w0) / a0,
-            b2 = (1 - alpha * a) / a0,
-            a1 = -2 * cos(w0) / a0,
-            a2 = (1 - alpha / a) / a0
+        return doubleArrayOf(
+            (1 + alpha * a) / a0,
+            -2 * cos(w0) / a0,
+            (1 - alpha * a) / a0,
+            -2 * cos(w0) / a0,
+            (1 - alpha / a) / a0
         )
+    }
+
+    /** Respuesta en dB de la cascada de bandas a `freqHz` (módulo de H(e^jw)). */
+    fun responseDb(bands: List<EqBand>, freqHz: Float, sampleRate: Int = 48_000): Float =
+        responseCurveDb(bands, floatArrayOf(freqHz), sampleRate)[0]
+
+    /**
+     * Respuesta en dB en muchas frecuencias a la vez; es lo que dibuja la curva en cada fotograma. Los coeficientes
+     * se calculan **una vez por banda** (no por punto) y el seno/coseno de cada frecuencia una vez para todas las
+     * bandas: con 160 puntos y 5 bandas son unas 10 veces menos funciones trigonométricas.
+     */
+    fun responseCurveDb(bands: List<EqBand>, freqs: FloatArray, sampleRate: Int = 48_000): FloatArray {
+        val out = FloatArray(freqs.size)
+        val active = bands.filter { abs(it.gainDb) >= 0.05f }
+        if (active.isEmpty()) return out
+        val coeffs = active.map { coeffs(it, sampleRate) }
+        for (i in freqs.indices) {
+            val w = 2 * PI * min(freqs[i], sampleRate * 0.49f) / sampleRate
+            val c1 = cos(w); val s1 = sin(w)
+            val c2 = c1 * c1 - s1 * s1; val s2 = 2 * s1 * c1          // cos(2w), sin(2w) sin llamar otra vez
+            var db = 0.0
+            for (k in coeffs) {
+                // H = (b0 + b1 z⁻¹ + b2 z⁻²) / (1 + a1 z⁻¹ + a2 z⁻²) con z⁻ⁿ = cos(nw) − j·sin(nw)
+                val nr = k[0] + k[1] * c1 + k[2] * c2; val ni = -(k[1] * s1 + k[2] * s2)
+                val dr = 1 + k[3] * c1 + k[4] * c2;    val di = -(k[3] * s1 + k[4] * s2)
+                db += 10 * kotlin.math.log10((nr * nr + ni * ni) / (dr * dr + di * di))
+            }
+            out[i] = db.toFloat()
+        }
+        return out
     }
 }

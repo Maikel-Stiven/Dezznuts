@@ -47,9 +47,10 @@ object AudioTagWriter {
             val audioFile = AudioFileIO.read(tempFile)
             val tag = audioFile.tagOrCreateAndSetDefault
 
-            tag.setField(FieldKey.TITLE, newTitle)
-            tag.setField(FieldKey.ARTIST, newArtist)
-            tag.setField(FieldKey.ALBUM, newAlbum)
+            // Un campo vacío significa "no tocar": así no se escribe un marcador como "<unknown>" dentro del archivo.
+            if (newTitle.isNotBlank()) tag.setField(FieldKey.TITLE, newTitle)
+            if (newArtist.isNotBlank()) tag.setField(FieldKey.ARTIST, newArtist)
+            if (newAlbum.isNotBlank()) tag.setField(FieldKey.ALBUM, newAlbum)
 
             if (!coverUrlOrUri.isNullOrBlank()){
                 val imageBytes = fetchImageBytes(context, coverUrlOrUri)
