@@ -47,6 +47,13 @@ La posición de reproducción es el único dato que cambia continuamente (cada 5
 - **Ruta real de salida:** se crea un `AudioTrack` por pista; ahora solo se escribe en las preferencias (y se notifica a la interfaz) si la ruta cambió.
 - **Duplicados:** título y artista se normalizan una sola vez por canción (antes, tres).
 
+### 6. Apertura lenta de una canción tras entrar una canción nueva
+- **Síntoma:** al detectarse una canción nueva, la app tardaba un poco en dejar reproducir.
+- **Causa (confirmada por la lógica, medida en emulador):** la caché de URI de reproducción se vaciaba entera en cada recarga de la biblioteca (`publishSongs`), así que la siguiente reproducción volvía a comprobar con `File.canRead()` **cada** canción de la cola. Con 2 512 canciones son ~800 ms de accesos a disco en el emulador; en un móvil, donde el almacenamiento pasa por una capa más lenta, es más.
+- **Arreglo:** (1) la caché guarda la ruta con la que se resolvió, así que se invalida sola si la ruta cambia y ya **no se vacía** al recargar; solo se podan las canciones que desaparecen. (2) Un precalentamiento en segundo plano resuelve los URI que faltan por tandas de 250 y paralelismo limitado a 4, de modo que tocar una canción no paga esos accesos.
+- **Medición (2 512 canciones, emulador API 35):** construir la cola al tocar una canción: 16–18 ms; tras entrar una canción nueva solo se resuelve esa (2 ms) y la cola vuelve a construirse en 16 ms. La recarga silenciosa tarda 40 ms.
+- **Límite:** no se pudo reproducir la lentitud original en el emulador (el almacenamiento es rápido); la causa se deduce del coste medido y de que la caché se vaciaba. Conviene confirmarlo en el móvil donde se vio.
+
 ## Optimizaciones previas ya presentes en la rama
 
 | Qué | Efecto |

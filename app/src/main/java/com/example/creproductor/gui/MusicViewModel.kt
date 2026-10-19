@@ -31,6 +31,10 @@ import com.example.creproductor.data.MediaStoreScanner
 import com.example.creproductor.data.Song
 import com.example.creproductor.service.MusicService
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -366,6 +370,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
      */
     private fun buildMediaItems(queue: List<Song>): List<MediaItem> {
         var porRuta = 0
+        val t0 = SystemClock.elapsedRealtime()
         val items = queue.map { song ->
             val uri = playbackUri(song)
             if (uri.scheme == "file") porRuta++
@@ -390,7 +395,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         Log.i(
             "DezzSeek",
             "cola de ${queue.size} pistas: $porRuta por file://, " +
-                "${queue.size - porRuta} por content://"
+                "${queue.size - porRuta} por content:// (${SystemClock.elapsedRealtime() - t0} ms)"
         )
         return items
     }
@@ -410,14 +415,40 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
      * extraíble, archivos que solo expone el proveedor), se vuelve al
      * `content://`, que siempre funciona.
      */
-    private fun playbackUri(song: Song): Uri = playbackUriCache.getOrPut(song.id) {
+    private fun playbackUri(song: Song): Uri {
+        val cached = playbackUriCache[song.id]
+        if (cached != null && cached.path == song.path) return cached.uri   // la ruta no cambió: sigue valiendo
         val path = song.path
         val file = if (path.isNotEmpty()) File(path) else null
-        if (file != null && file.canRead()) Uri.fromFile(file) else song.contentUri
+        val uri = if (file != null && file.canRead()) Uri.fromFile(file) else song.contentUri
+        playbackUriCache[song.id] = ResolvedUri(path, uri)
+        return uri
     }
 
-    /** `id → URI` ya resuelto: evita un `canRead()` (acceso a disco) por canción en cada cambio de cola. */
-    private val playbackUriCache = java.util.concurrent.ConcurrentHashMap<Long, Uri>() // se usa desde Default y se limpia desde Main
+    private class ResolvedUri(val path: String, val uri: Uri)
+
+    /**
+     * `id → URI` ya resuelto: evita un `canRead()` (un acceso al almacenamiento) por canción en cada cambio de cola.
+     * Se guarda con la ruta con la que se resolvió, así que una canción cuya ruta cambia se vuelve a resolver sola y
+     * **no hace falta vaciarla cuando la biblioteca se recarga** (antes, cada canción nueva obligaba a repetir los miles
+     * de accesos en la siguiente reproducción: justo el "se demora al entrar a la canción").
+     */
+    private val playbackUriCache = java.util.concurrent.ConcurrentHashMap<Long, ResolvedUri>()
+
+    /**
+     * Resuelve en segundo plano los URI que faltan, para que tocar una canción no pague esos accesos. Va por tandas y
+     * con paralelismo limitado: en el almacenamiento de un móvil cada acceso es lento y la espera es de E/S, no de CPU.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private suspend fun warmUpPlaybackUris(songs: List<Song>) {
+        val missing = songs.filter { playbackUriCache[it.id]?.path != it.path }
+        if (missing.isEmpty()) return
+        val t0 = SystemClock.elapsedRealtime()
+        withContext(Dispatchers.IO.limitedParallelism(4)) {
+            coroutineScope { missing.chunked(250).map { chunk -> async { chunk.forEach { playbackUri(it) } } }.awaitAll() }
+        }
+        Log.i("DezzSeek", "URI de reproducción precalculados: ${missing.size} en ${SystemClock.elapsedRealtime() - t0} ms")
+    }
 
     fun seekTo(positionMs: Long){
         // Marca el inicio de la medición para la traza de PlaybackDiagnostics.
@@ -468,11 +499,14 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
             val updated = songs.map { song ->
                 if (savedFavIds.contains(song.id)) song.copy(isFavorite = true) else song
             }
+            // Canciones que ya no están: fuera de la caché (las nuevas se resuelven en el precalentamiento).
+            val ids = updated.mapTo(HashSet()) { it.id }
+            playbackUriCache.keys.retainAll(ids)
             withContext(Dispatchers.Main){
-                playbackUriCache.clear() // la biblioteca cambió: las rutas pueden haber cambiado (en Main, donde se usa)
                 _uiState.value = UiState.Success(updated)
                 restoreDashboardLists(updated)
             }
+            warmUpPlaybackUris(updated)
         }
     }
 
