@@ -1,6 +1,7 @@
 package com.example.creproductor.gui
 
 import androidx.activity.compose.BackHandler
+import com.example.creproductor.data.coverModel
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -90,7 +91,7 @@ fun AlbumDetailScreen(
         albumSongs.firstOrNull{it.year > 0}?.year
     }
     val albumCover = remember (albumSongs){
-        albumSongs.firstOrNull{it.albumArtUri != null}?.albumArtUri
+        albumSongs.firstOrNull{it.albumArtUri != null}?.coverModel
     }
 
     val formattedTotalDuration = remember (albumSongs) {
@@ -316,7 +317,7 @@ private fun AlbumTrackItem(
         ){
             if (song.albumArtUri != null){
                 AsyncImage(
-                    model = song.albumArtUri,
+                    model = song.coverModel,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop

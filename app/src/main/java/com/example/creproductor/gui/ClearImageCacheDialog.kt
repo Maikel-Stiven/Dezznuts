@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.creproductor.data.ArtistImageFetcher
+import com.example.creproductor.data.SongCoverCache
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -46,7 +47,7 @@ fun ClearImageCacheDialog(onDismiss: () -> Unit) {
 
     LaunchedEffect(Unit) {
         sizeBytes = withContext(Dispatchers.IO) {
-            ArtistImageFetcher.artistImageCacheSize(context)
+            ArtistImageFetcher.artistImageCacheSize(context) + SongCoverCache.size(context)
         }
     }
 
@@ -58,7 +59,7 @@ fun ClearImageCacheDialog(onDismiss: () -> Unit) {
         title = { Text("Borrar caché de imágenes") },
         text = {
             Column {
-                Text("Se borrarán las fotos de artistas descargadas. Se volverán a descargar cuando hagan falta.")
+                Text("Se borrarán las fotos de artistas descargadas y las carátulas extraídas de los archivos. Se volverán a generar cuando hagan falta.")
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = when {
@@ -80,6 +81,7 @@ fun ClearImageCacheDialog(onDismiss: () -> Unit) {
                     scope.launch {
                         withContext(Dispatchers.IO) {
                             ArtistImageFetcher.clearArtistImageCache(context)
+                            SongCoverCache.clear(context)
                         }
                         Toast.makeText(context, "Caché de imágenes borrada", Toast.LENGTH_SHORT).show()
                         onDismiss()

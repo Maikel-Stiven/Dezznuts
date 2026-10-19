@@ -1,6 +1,7 @@
 package com.example.creproductor.gui
 
 import androidx.activity.compose.BackHandler
+import com.example.creproductor.data.coverModel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -70,7 +71,7 @@ fun PlaylistScreenDetail(
     }
 
     val displayCover = remember (playlist, playlistSongs) {
-        playlist.coverUri ?: playlistSongs.firstOrNull {it.albumArtUri != null }?.albumArtUri
+        playlist.coverUri ?: playlistSongs.firstOrNull {it.albumArtUri != null }?.coverModel
     }
 
     val formattedTotalDuration = remember (playlistSongs) {
@@ -306,7 +307,7 @@ private fun  PlaylistTrackItem(
         ){
             if (song.albumArtUri != null){
                 AsyncImage(
-                    model = song.albumArtUri,
+                    model = song.coverModel,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop

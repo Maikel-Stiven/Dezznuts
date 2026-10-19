@@ -1,6 +1,7 @@
 package com.example.creproductor.gui
 
 import androidx.activity.compose.BackHandler
+import com.example.creproductor.data.coverModel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
@@ -289,19 +290,19 @@ fun FullScreenPlayer(
                         }
                         .clip(RoundedCornerShape(5.dp))
                         .background(
-                            if (currentPagerSong?.albumArtUri != null) MaterialTheme.colorScheme.surfaceVariant
+                            if (currentPagerSong?.coverModel != null) MaterialTheme.colorScheme.surfaceVariant
                             else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
                         ),
                     contentAlignment = Alignment.Center
 
                 ) {
-                    if (currentPagerSong?.albumArtUri != null) {
+                    if (currentPagerSong?.coverModel != null) {
 
                         val context = LocalContext.current
 
                         AsyncImage(
                             model = ImageRequest.Builder(context)
-                                .data(currentPagerSong.albumArtUri)
+                                .data(currentPagerSong.coverModel)
                                 .fetcherDispatcher(Dispatchers.IO)
                                 .decoderDispatcher(Dispatchers.IO)
                                 .crossfade(true)
@@ -706,7 +707,7 @@ fun FullScreenPlayer(
                                 if (queueSong.albumArtUri != null) {
                                     AsyncImage(
                                         model = ImageRequest.Builder(LocalContext.current)
-                                            .data(queueSong.albumArtUri)
+                                            .data(queueSong.coverModel)
                                             .fetcherDispatcher(Dispatchers.IO)
                                             .decoderDispatcher(Dispatchers.IO)
                                             .crossfade(true)

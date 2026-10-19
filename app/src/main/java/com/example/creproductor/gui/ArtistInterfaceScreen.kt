@@ -1,6 +1,7 @@
 package com.example.creproductor.gui
 
 import androidx.activity.compose.BackHandler
+import com.example.creproductor.data.coverModel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
@@ -71,7 +72,7 @@ fun ArtistDetailScreen (
     }
 
     val avatarUri = remember (artistSongs){
-        artistSongs.firstOrNull { it.albumArtUri != null}?.albumArtUri
+        artistSongs.firstOrNull { it.albumArtUri != null}?.coverModel
     }
 
     // Foto del artista: primero la de internet (Deezer) y, si no hay, la portada de
@@ -250,7 +251,7 @@ fun ArtistDetailScreen (
                         ) {
                             items(albumsMap.keys.toList(), key = {it}) {albumName ->
                                 val albumSongs = albumsMap[albumName] ?: emptyList()
-                                val  cover = albumSongs.firstOrNull {it.albumArtUri != null}?.albumArtUri
+                                val  cover = albumSongs.firstOrNull {it.albumArtUri != null}?.coverModel
 
                                 Column(
                                     modifier = Modifier
@@ -365,7 +366,7 @@ private fun ArtistTrackItem(
         ){
             if (song.albumArtUri != null){
                 AsyncImage(
-                    model = song.albumArtUri,
+                    model = song.coverModel,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop

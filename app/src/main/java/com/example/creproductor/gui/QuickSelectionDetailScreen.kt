@@ -1,6 +1,7 @@
 package com.example.creproductor.gui
 
 import androidx.activity.compose.BackHandler
+import com.example.creproductor.data.coverModel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -66,7 +67,7 @@ fun QuickSelectDetailScreen(
     }
 
     val coverUris = remember(categorySongs){
-        categorySongs.mapNotNull { it.albumArtUri }.distinct().take(3)
+        categorySongs.mapNotNull { it.coverModel }.distinct().take(3)
     }
 
     val formattedInfo = remember (categorySongs) {
@@ -328,7 +329,7 @@ private fun QuickSelectTrackItem(
         ){
             if (song.albumArtUri != null){
                 AsyncImage(
-                    model= song.albumArtUri,
+                    model = song.coverModel,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop

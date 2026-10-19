@@ -1,6 +1,7 @@
 package com.example.creproductor.gui
 
 import androidx.compose.foundation.background
+import com.example.creproductor.data.coverModel
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -103,7 +104,7 @@ fun AlbumsGridScreen(
                     else -> firstSong.artist
                 }
 
-                val  covertUri = albumSongs.firstOrNull{ it.albumArtUri != null}?.albumArtUri
+                val  covertUri = albumSongs.firstOrNull{ it.albumArtUri != null}?.coverModel
                 val countText = if (albumSongs.size == 1) "1 canción" else "${albumSongs.size} canciones"
 
                 Column(
@@ -291,7 +292,7 @@ fun ArtistsListScreen(
         ) {
             items(artistsKeys, key = { it }) {artistName ->
                 val artistSongs = artistsMap[artistName] ?: emptyList()
-                val avatarUri = artistSongs.firstOrNull { it.albumArtUri != null }?. albumArtUri
+                val avatarUri = artistSongs.firstOrNull { it.albumArtUri != null }?.coverModel
 
                 // Foto real del artista (Deezer). Comparte caché con la búsqueda y con la
                 // ficha del artista, así que aparece al instante si ya se cargó antes.

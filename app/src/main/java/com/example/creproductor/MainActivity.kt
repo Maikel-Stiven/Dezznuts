@@ -42,6 +42,8 @@ import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.disk.DiskCache
 import com.example.creproductor.data.Song
+import com.example.creproductor.data.SongCoverFetcher
+import com.example.creproductor.data.coverModel
 import com.example.creproductor.gui.AppDrawerContent
 import com.example.creproductor.gui.ClearImageCacheDialog
 import com.example.creproductor.gui.DrawerMenuItem
@@ -69,6 +71,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val imageLoader = ImageLoader.Builder(this)
+            .components {
+                // Carátulas: MediaStore o, si el proveedor no las indexa, la embebida del archivo.
+                add(SongCoverFetcher.Factory(applicationContext))
+            }
             .diskCache {
                 DiskCache.Builder()
                     .directory(cacheDir.resolve(ArtistImageFetcher.IMAGE_CACHE_DIR))
