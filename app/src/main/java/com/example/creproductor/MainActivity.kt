@@ -3,6 +3,8 @@ package com.example.creproductor
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.Manifest
 import android.os.Build
+import android.provider.MediaStore
+import androidx.activity.result.IntentSenderRequest
 import android.os.Bundle
 import androidx.activity.compose.BackHandler
 import androidx.activity.ComponentActivity
@@ -44,6 +46,7 @@ import com.example.creproductor.gui.ClearImageCacheDialog
 import com.example.creproductor.gui.DrawerMenuItem
 import com.example.creproductor.gui.EditTagDialog
 import com.example.creproductor.gui.FullScreenPlayer
+import com.example.creproductor.gui.DuplicatesDialog
 import com.example.creproductor.gui.EqualizerDialog
 import com.example.creproductor.gui.HiFiAudioDialog
 import com.example.creproductor.gui.QualityBadge
@@ -92,6 +95,11 @@ class MainActivity : ComponentActivity() {
                     var showClearImageCacheDialog by remember { mutableStateOf(false) }
                     var showHiFiAudioDialog by remember { mutableStateOf(false) }
                     var showEqualizerDialog by remember { mutableStateOf(false) }
+                    var showDuplicatesDialog by remember { mutableStateOf(false) }
+                    // Confirmación del sistema para borrar archivos (Android 11+); al terminar se recarga la biblioteca.
+                    val deleteLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
+                        viewModel.loadSongs(silent = true)
+                    }
                     var isFirstPage by remember { mutableStateOf(true) }
 
                     val requiredPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -160,6 +168,7 @@ class MainActivity : ComponentActivity() {
                                             onMenuItem= { menuItem ->
                                                 when(menuItem) {
                                                     is DrawerMenuItem.Equalizer -> { showEqualizerDialog = true }
+                                                    is DrawerMenuItem.SearchDuplicates -> { showDuplicatesDialog = true }
                                                     is DrawerMenuItem.ScanFiles -> { /*Falta lógica del escaner de archivos*/}
                                                     is DrawerMenuItem.AudioCutter -> {/*Falta lógica del cortador de audio*/}
                                                     is DrawerMenuItem.SleepTimer -> {/*Falta lógica del temporizador*/}
@@ -258,6 +267,19 @@ class MainActivity : ComponentActivity() {
                                 onDismiss = { showHiFiAudioDialog = false },
                                 onSettingsChanged = { viewModel.refreshAudioOutput() },
                                 onOpenEqualizer = { showEqualizerDialog = true }
+                            )
+                        }
+
+                        if (showDuplicatesDialog) {
+                            DuplicatesDialog(
+                                songs = (uiState as? UiState.Success)?.songs.orEmpty(),
+                                onDelete = { toDelete ->
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                        val request = MediaStore.createDeleteRequest(contentResolver, toDelete.map { it.contentUri })
+                                        deleteLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
+                                    }
+                                },
+                                onDismiss = { showDuplicatesDialog = false }
                             )
                         }
 
