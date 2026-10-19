@@ -445,9 +445,9 @@ fun FullScreenPlayer(
                                 overflow = TextOverflow.Ellipsis
                             )
                             if (audioInfo.isNotBlank()) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(4.dp),
                                     modifier = Modifier.padding(top = 4.dp)
                                 ) {
                                     QualityBadge(song.quality)
@@ -455,6 +455,7 @@ fun FullScreenPlayer(
                                         text = audioInfo.replace(" → ", "\n"),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.primary,
+                                        textAlign = TextAlign.Center,
                                         maxLines = 2,
                                         overflow = TextOverflow.Ellipsis
                                     )

@@ -372,6 +372,17 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
             MediaItem.Builder()
                 .setMediaId(song.id.toString())
                 .setUri(uri)
+                .apply {
+                    // Pista de una hoja CUE: se reproduce solo su tramo del archivo largo.
+                    if (song.cueStartMs >= 0) {
+                        setClippingConfiguration(
+                            MediaItem.ClippingConfiguration.Builder()
+                                .setStartPositionMs(song.cueStartMs)
+                                .setEndPositionMs(song.cueEndMs)
+                                .build()
+                        )
+                    }
+                }
                 .build()
         }
         // Si la ruta no es legible, la app cae a content:// sin avisar y el

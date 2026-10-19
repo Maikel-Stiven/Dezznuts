@@ -30,7 +30,10 @@ data class Song (
     val sampleRate: Int = 0,
     val bitsPerSample: Int = 0,
     val bitrate: Int = 0,
-    val quality: QualityTier = QualityTier.LOSSY
+    val quality: QualityTier = QualityTier.LOSSY,
+    /** Pista de una hoja CUE: tramo [inicio, fin) en ms del archivo largo (−1 = canción normal). */
+    val cueStartMs: Long = -1L,
+    val cueEndMs: Long = -1L
 )
 
 

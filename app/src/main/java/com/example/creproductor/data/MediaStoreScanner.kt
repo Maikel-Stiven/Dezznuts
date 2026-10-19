@@ -4,12 +4,15 @@ import android.content.ContentUris
 import android.content.Context
 import android.os.Build
 import android.provider.MediaStore
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 
 private const val TECH_COLUMNS_SDK = 36
+private const val CUE_MIN_DURATION_MS = 8 * 60_000L
+private val CUE_EXTENSIONS = listOf(".flac", ".wav", ".ape", ".wv")
 
 class MediaStoreScanner (private  val context: Context) {
     fun scanAudioFiles(chunkSize: Int = 100): Flow<List<Song>> = flow {
@@ -109,8 +112,7 @@ class MediaStoreScanner (private  val context: Context) {
                     )
                 }else null
 
-                buffer.add(
-                    Song(
+                val song = Song(
                         id = id,
                         title = title,
                         artist = artist,
@@ -128,7 +130,10 @@ class MediaStoreScanner (private  val context: Context) {
                         bitrate = bitrate,
                         quality = AudioQuality.tier(mime, path, bits, sampleRate)
                     )
-                )
+
+                // Álbum entero en un solo archivo con su .cue: se ofrece pista a pista (y no el archivo largo).
+                val tracks = cueTracksOf(song)
+                if (tracks != null) buffer.addAll(tracks) else buffer.add(song)
 
                 if (buffer.size >= chunkSize){
                     emit(buffer.toList())
@@ -141,4 +146,36 @@ class MediaStoreScanner (private  val context: Context) {
             }
         }
     }.flowOn(Dispatchers.IO)
+
+    /**
+     * Pistas virtuales de un archivo con hoja CUE, o `null` si no aplica. Solo se mira (una consulta al disco)
+     * en formatos donde los álbumes completos son habituales. Los ids de las pistas son negativos
+     * (`−(id·1000 + nº)`) para no chocar con los de MediaStore.
+     */
+    private fun cueTracksOf(song: Song): List<Song>? {
+        val path = song.path
+        // Un álbum entero dura mucho: el corte evita abrir cada archivo corto del catálogo.
+        if (path.isEmpty() || song.duration < CUE_MIN_DURATION_MS ||
+            CUE_EXTENSIONS.none { path.endsWith(it, ignoreCase = true) }) return null
+        // 1) CUESHEET incrustado en el FLAC (legible siempre) · 2) .cue al lado (solo si el sistema deja leerlo).
+        val embedded = if (path.endsWith(".flac", ignoreCase = true)) FlacTags.read(path, "CUESHEET") else null
+        val text = embedded ?: try {
+            File(path.substringBeforeLast('.') + ".cue").takeIf { it.isFile }?.readText()
+        } catch (_: Exception) { null } ?: return null
+        val sheet = CueSheet.parse(text, song.duration) ?: return null
+        // Un .cue al lado que apunta a otro archivo no corresponde a este (el incrustado ya es de este archivo).
+        if (embedded == null && !sheet.fileName.substringAfterLast('/').substringAfterLast('\\').equals(File(path).name, ignoreCase = true)) return null
+        return sheet.tracks.map { t ->
+            song.copy(
+                id = -(song.id * 1000 + t.number),
+                title = t.title,
+                artist = t.performer.ifBlank { song.artist },
+                album = sheet.album.ifBlank { song.album },
+                trackNumber = t.number,
+                duration = t.endMs - t.startMs,
+                cueStartMs = t.startMs,
+                cueEndMs = t.endMs
+            )
+        }
+    }
 }
