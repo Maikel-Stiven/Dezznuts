@@ -80,6 +80,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     private val favPrefsListener =
         SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (key == "fav_ids") syncFavoritesFromPrefs()
+            else if (key == HiFiAudio.KEY_REAL_ROUTE) refreshAudioInfo()
         }
 
     private val _uiState = MutableStateFlow<UiState>(UiState.PermissionRequired)
@@ -231,6 +232,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                     }
 
                     override fun onTracksChanged(tracks: Tracks) {
+                        lastTracks = tracks
                         _audioInfo.value = describeAudio(tracks)
                     }
 
@@ -271,19 +273,17 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
      * debajo, la ruta de salida **solicitada** (offload / float / PCM): si el chip no
      * soporta offload, ExoPlayer cae a PCM por su cuenta sin avisar a la app.
      */
+    private var lastTracks: Tracks? = null
+
+    private fun refreshAudioInfo() { lastTracks?.let { _audioInfo.value = describeAudio(it) } }
+
     private fun describeAudio(tracks: Tracks): String {
         val format = tracks.groups
             .firstOrNull { it.type == C.TRACK_TYPE_AUDIO && it.isSelected }
             ?.let { g -> (0 until g.length).firstOrNull { g.isTrackSelected(it) }?.let { g.getTrackFormat(it) } }
             ?: return ""
         val song = _currentSong.value
-        val bits = when (format.pcmEncoding) {
-            C.ENCODING_PCM_8BIT -> 8
-            C.ENCODING_PCM_16BIT -> 16
-            C.ENCODING_PCM_24BIT -> 24
-            C.ENCODING_PCM_32BIT, C.ENCODING_PCM_FLOAT -> 32
-            else -> song?.bitsPerSample ?: 0
-        }
+        val bits = AudioQuality.bitsOfPcmEncoding(format.pcmEncoding).takeIf { it > 0 } ?: song?.bitsPerSample ?: 0
         val label = AudioQuality.label(
             format.sampleMimeType,
             format.sampleRate.takeIf { it > 0 } ?: song?.sampleRate ?: 0,
@@ -291,7 +291,8 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
             format.bitrate.takeIf { it > 0 } ?: song?.bitrate ?: 0
         )
         val ctx = getApplication<Application>()
-        val route = when {
+        // Ruta real publicada por el servicio; hasta que llegue, la solicitada.
+        val route = prefs.getString(HiFiAudio.KEY_REAL_ROUTE, null) ?: when {
             HiFiAudio.isOffloadEnabled(ctx) -> "Offload"
             HiFiAudio.isFloatOutputEnabled(ctx) && bits > 16 -> "Float 32 bit"
             else -> "PCM"

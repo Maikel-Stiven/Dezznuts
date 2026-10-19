@@ -54,6 +54,12 @@ object HiFiAudio {
     const val KEY_EQ_LEVELS = "eq_levels"
     const val KEY_EQ_INFO = "eq_info"
 
+    /** Ruta de salida real que publica el servicio al abrir el AudioTrack (ver MusicService). */
+    const val KEY_REAL_ROUTE = "audio_real_route"
+
+    /** ReplayGain por "track" (por defecto) o "album". */
+    const val KEY_RG_MODE = "hifi_rg_mode"
+
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -127,5 +133,11 @@ object HiFiAudio {
             val rates = d.sampleRates.takeIf { it.isNotEmpty() }?.joinToString("/") { "${it / 1000.0}".removeSuffix(".0") } ?: "—"
             "${d.productName} · $type · $rates kHz"
         }
+    }
+
+    /** `true` = ganancia de álbum (respeta la dinámica entre pistas de un disco); `false` = por pista. */
+    fun isReplayGainAlbumMode(context: Context): Boolean = prefs(context).getString(KEY_RG_MODE, "track") == "album"
+    fun setReplayGainAlbumMode(context: Context, album: Boolean) {
+        prefs(context).edit().putString(KEY_RG_MODE, if (album) "album" else "track").apply()
     }
 }

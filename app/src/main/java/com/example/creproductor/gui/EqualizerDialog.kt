@@ -22,6 +22,8 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.creproductor.data.HiFiAudio
@@ -76,6 +78,7 @@ fun EqualizerDialog(onDismiss: () -> Unit) {
                             style = MaterialTheme.typography.labelMedium
                         )
                         Slider(
+                            modifier = Modifier.semantics { contentDescription = "Banda ${freqs.getOrNull(i) ?: i} Hz" },
                             value = levels[i].toFloat(),
                             onValueChange = { levels[i] = it.toInt() },
                             onValueChangeFinished = { save() },

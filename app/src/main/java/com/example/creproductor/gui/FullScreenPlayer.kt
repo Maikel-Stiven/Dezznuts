@@ -132,6 +132,7 @@ fun FullScreenPlayer(
     }
 
     var showQueueBottomSheet by remember { mutableStateOf(false) }
+    var showTrackInfo by remember { mutableStateOf(false) }
 
     var lastClickTime by remember { mutableStateOf(0L) }
     fun safeClick(action: () -> Unit){
@@ -237,10 +238,10 @@ fun FullScreenPlayer(
                     )
                 }
 
-                IconButton(onClick = { /* Menú de opciones*/ }) {
+                IconButton(onClick = { showTrackInfo = true }) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Opciones",
+                        contentDescription = "Información técnica",
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -482,6 +483,7 @@ fun FullScreenPlayer(
             }
         }
     }
+    if (showTrackInfo) TrackInfoDialog(song, audioInfo) { showTrackInfo = false }
     if (showQueueBottomSheet){
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         val queueLazyListState = rememberLazyListState()

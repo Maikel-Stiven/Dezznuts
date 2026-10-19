@@ -57,6 +57,7 @@ fun HiFiAudioDialog(
     var offload by remember { mutableStateOf(HiFiAudio.isOffloadEnabled(context)) }
     val sampleRate = remember { HiFiAudio.deviceSampleRate(context) }
     var replayGain by remember { mutableStateOf(HiFiAudio.isReplayGainEnabled(context)) }
+    var rgAlbum by remember { mutableStateOf(HiFiAudio.isReplayGainAlbumMode(context)) }
     var preferUsb by remember { mutableStateOf(HiFiAudio.isPreferUsbEnabled(context)) }
     val outputs = remember { HiFiAudio.outputDevices(context) }
 
@@ -116,6 +117,13 @@ fun HiFiAudioDialog(
                         HiFiAudio.setReplayGainEnabled(context, enabled)
                     }
                 )
+
+                if (replayGain) {
+                    TextButton(onClick = {
+                        rgAlbum = !rgAlbum
+                        HiFiAudio.setReplayGainAlbumMode(context, rgAlbum)
+                    }) { Text(if (rgAlbum) "Modo: álbum (conserva la dinámica del disco)" else "Modo: pista (iguala cada canción)") }
+                }
 
                 AudioOption(
                     title = "Preferir DAC USB",

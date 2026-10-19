@@ -50,7 +50,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
 
     //Librerias para el reproductor
-    val media3Version = "1.4.1"
+    val media3Version = "1.9.1"
     implementation("androidx.media3:media3-exoplayer:$media3Version")
     implementation("androidx.media3:media3-session:$media3Version")
     implementation("androidx.compose.material:material-icons-extended-android:1.7.8")

@@ -7,6 +7,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,6 +25,7 @@ fun QualityBadge(tier: QualityTier, modifier: Modifier = Modifier) {
         fontWeight = FontWeight.Bold,
         color = if (hires) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer,
         modifier = modifier
+            .semantics { contentDescription = if (hires) "Calidad Hi-Res" else "Calidad sin pérdida" }
             .background(
                 if (hires) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
                 RoundedCornerShape(4.dp)

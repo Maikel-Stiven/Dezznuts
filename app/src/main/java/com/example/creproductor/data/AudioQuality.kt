@@ -48,8 +48,30 @@ object AudioQuality {
             bitrate.takeIf { it > 0 }?.let { "${it / 1000} kbps" }
         ).joinToString(" · ")
 
-    private fun khz(hz: Int): String {
+    fun khz(hz: Int): String {
         val k = hz / 1000.0
         return (if (hz % 1000 == 0) "%d".format(hz / 1000) else "%.1f".format(java.util.Locale.US, k)) + " kHz"
+    }
+
+    /** Profundidad en bits de una codificación PCM de Media3 (`C.ENCODING_PCM_*`); 0 si no es PCM conocido. */
+    fun bitsOfPcmEncoding(encoding: Int): Int = when (encoding) {
+        3 -> 8          // C.ENCODING_PCM_8BIT
+        2 -> 16         // C.ENCODING_PCM_16BIT
+        21 -> 24        // C.ENCODING_PCM_24BIT
+        22, 4 -> 32     // C.ENCODING_PCM_32BIT / C.ENCODING_PCM_FLOAT
+        else -> 0
+    }
+
+    /**
+     * Ruta de salida **real** (la que abrió el `AudioTrack`), no la solicitada:
+     * - offload: el DSP recibe el flujo comprimido, sin remuestreo en la app;
+     * - si la frecuencia del track difiere de la nativa del dispositivo, el mezclador remuestrea;
+     * - si coinciden, el PCM llega sin conversión de frecuencia.
+     */
+    fun route(offload: Boolean, pcmBits: Int, trackRate: Int, deviceRate: Int?): String = when {
+        offload -> "Offload"
+        deviceRate != null && trackRate > 0 && trackRate != deviceRate ->
+            "PCM ${khz(trackRate)} → remuestreado a ${khz(deviceRate)}"
+        else -> (if (pcmBits > 16) "PCM $pcmBits bit" else "PCM") + (if (trackRate > 0) " ${khz(trackRate)} directo" else "")
     }
 }

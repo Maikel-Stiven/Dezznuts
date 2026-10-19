@@ -21,6 +21,8 @@ import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.extractor.metadata.id3.TextInformationFrame
 import androidx.media3.extractor.metadata.vorbis.VorbisComment
@@ -30,6 +32,7 @@ import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import com.example.creproductor.R
+import com.example.creproductor.data.AudioQuality
 import com.example.creproductor.data.HiFiAudio
 import com.example.creproductor.data.ReplayGain
 import com.google.common.util.concurrent.Futures
@@ -51,7 +54,7 @@ class MusicService : MediaSessionService(){
     /** Aplica en vivo los ajustes de ReplayGain / ecualizador / DAC USB en cuanto cambian sus prefs. */
     private val hifiPrefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         when (key) {
-            HiFiAudio.KEY_REPLAYGAIN -> {
+            HiFiAudio.KEY_REPLAYGAIN, HiFiAudio.KEY_RG_MODE -> {
                 trackGainDb = currentReplayGainDb()
                 applyVolume()
             }
@@ -165,6 +168,21 @@ class MusicService : MediaSessionService(){
      * para que el botón de la notificación muestre el estado correcto.
      */
     private fun attachPlayerListener(player: ExoPlayer) {
+        // Lo que el AudioTrack abrió de verdad: offload, frecuencia y profundidad reales.
+        player.addAnalyticsListener(object : AnalyticsListener {
+            override fun onAudioTrackInitialized(
+                eventTime: AnalyticsListener.EventTime,
+                audioTrackConfig: AudioSink.AudioTrackConfig
+            ) {
+                val route = AudioQuality.route(
+                    offload = audioTrackConfig.offload,
+                    pcmBits = AudioQuality.bitsOfPcmEncoding(audioTrackConfig.encoding),
+                    trackRate = audioTrackConfig.sampleRate,
+                    deviceRate = HiFiAudio.deviceSampleRate(this@MusicService)
+                )
+                prefs.edit().putString(HiFiAudio.KEY_REAL_ROUTE, route).apply()
+            }
+        })
         player.addListener(object : Player.Listener {
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 updateNotificationLayout()
@@ -201,7 +219,10 @@ class MusicService : MediaSessionService(){
                 }
             }
         }
-        return ReplayGain.parseDb(gains["REPLAYGAIN_TRACK_GAIN"] ?: gains["REPLAYGAIN_ALBUM_GAIN"])
+        val track = gains["REPLAYGAIN_TRACK_GAIN"]
+        val album = gains["REPLAYGAIN_ALBUM_GAIN"]
+        // Cada modo cae al otro si falta su etiqueta.
+        return ReplayGain.parseDb(if (HiFiAudio.isReplayGainAlbumMode(this)) album ?: track else track ?: album)
     }
 
     /**

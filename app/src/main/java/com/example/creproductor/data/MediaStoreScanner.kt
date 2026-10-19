@@ -83,8 +83,12 @@ class MediaStoreScanner (private  val context: Context) {
 
 
                 val mime = cursor.getString(mimeCol) ?: ""
-                val sampleRate = if (rateCol != -1) cursor.getInt(rateCol) else 0
-                val bits = if (bitsCol != -1) cursor.getInt(bitsCol) else 0
+                var sampleRate = if (rateCol != -1) cursor.getInt(rateCol) else 0
+                var bits = if (bitsCol != -1) cursor.getInt(bitsCol) else 0
+                // Android < 11: MediaStore no informa de esto; para FLAC/WAV se lee la cabecera del archivo.
+                if (rateCol == -1 && path.isNotEmpty() && (path.endsWith(".flac", true) || path.endsWith(".wav", true))) {
+                    AudioHeader.read(path)?.let { sampleRate = it.sampleRate; bits = it.bitsPerSample }
+                }
                 val bitrate = if (bitrateCol != -1) cursor.getInt(bitrateCol) else 0
 
                 val contentUri = ContentUris.withAppendedId(
