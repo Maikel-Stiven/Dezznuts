@@ -42,7 +42,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -231,6 +233,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                 controller.addListener(object : Player.Listener {
                     override fun onIsPlayingChanged(isPlaying: Boolean) {
                         _isPlaying.value = isPlaying
+                        if (!isPlaying) persistPosition()
                     }
 
                     override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
@@ -245,6 +248,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                     override fun onPlaybackStateChanged(playbackState: Int) {
                         if (playbackState == Player.STATE_ENDED){
                             _isPlaying.value = false
+                            persistPosition()
                         }
                     }
 
@@ -267,6 +271,10 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                                 registerSongPlay(foundSong)
                             }
                         }
+                        // Un cambio de cola (incluida la restauración inicial de setMediaItems) no es una
+                        // reproducción: guardar aquí escribiría 0 y pisaría last_position_ms.
+                        // AUTO, SEEK y REPEAT sí son movimientos reales.
+                        if (reason != Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) persistPosition()
                     }
                 })
             },
@@ -319,18 +327,53 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         )
     }
 
+    /**
+     * Sondea la posición solo mientras la barra la observa y hay reproducción.
+     *
+     * `subscriptionCount` cuenta los colectores de [_currentPositionMs] (el `asStateFlow()` delega en él).
+     * Hoy el único es MainActivity, dentro de `if (isPlayerFullScreenVisible…)`. Si alguien más empieza a
+     * recolectar `currentPositionMs`, este bucle correrá también con la pantalla del reproductor cerrada:
+     * revisa este punto antes de añadir un colector.
+     */
     private fun startPositionTracker(){
         viewModelScope.launch {
-            while (true){
-                mediaController?.let{ controller ->
-                    if (controller.isPlaying){
-                        _currentPositionMs.value = controller.currentPosition
-                        prefs.edit{putLong("last_position_ms", controller.currentPosition)}
+            combine(
+                _currentPositionMs.subscriptionCount.map { it > 0 },
+                _isPlaying
+            ) { observado, sonando -> observado && sonando }
+                .distinctUntilChanged()
+                .collectLatest { activo ->
+                    if (activo) {
+                        while (true) {
+                            _currentPositionMs.value =
+                                mediaController?.currentPosition ?: _currentPositionMs.value
+                            delay(500L)
+                        }
+                    } else {
+                        // Solo si ya hay pista: al arrancar el controlador puede estar vacío y
+                        // escribir 0 pisaría la posición restaurada de last_position_ms.
+                        mediaController
+                            ?.takeIf { it.currentMediaItem != null }
+                            ?.let { _currentPositionMs.value = it.currentPosition }
                     }
                 }
-                delay(1000L)
-            }
+        }
+    }
 
+    /**
+     * Guarda la posición y la canción actuales.
+     *
+     * Se llama en eventos reales del reproductor (pausa, fin, transición y cierre), nunca con un
+     * temporizador: así no hay una escritura por segundo mientras suena.
+     */
+    private fun persistPosition() {
+        val controller = mediaController ?: return
+        val songId = controller.currentMediaItem?.mediaId?.toLongOrNull() ?: return
+        // Al terminar la pista la posición es la duración; guardar 0 evita reabrir en el final.
+        val position = if (controller.playbackState == Player.STATE_ENDED) 0L else controller.currentPosition
+        prefs.edit {
+            putLong("last_position_ms", position)
+            putLong("last_song_id", songId)
         }
     }
 
@@ -555,6 +598,14 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         saveCurrentQueueIds(queueToUse.map { it.id })
         registerSongPlay(song)
 
+        // Pista elegida por el usuario: empieza en 0, así que la posición guardada debe ser 0.
+        // En las transiciones PLAYLIST_CHANGED no se persiste; esto cubre ese hueco.
+        _currentPositionMs.value = 0L
+        prefs.edit {
+            putLong("last_song_id", song.id)
+            putLong("last_position_ms", 0L)
+        }
+
         val controller = mediaController ?: return
         val targetIndex = queueToUse.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
 
@@ -678,6 +729,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     }
 
     override fun onCleared() {
+        persistPosition()
         prefs.unregisterOnSharedPreferenceChangeListener(favPrefsListener)
         getApplication<Application>().contentResolver.unregisterContentObserver(mediaStoreObserver)
         mediaController?.release()
@@ -887,7 +939,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         if (lastSongId != -1L && _currentSong.value == null){
             songMap[lastSongId]?.let { lastSong ->
                 _currentSong.value = lastSong
-                _currentPositionMs.value = 0L
+                _currentPositionMs.value = prefs.getLong("last_position_ms", 0L)
             }
         }
     }

@@ -13,7 +13,7 @@ MusicViewModel ── StateFlow ──► MainActivity ──► FullScreenPlaye
                                                    └─ PlayerSeekBar (barra + tiempos)
 ```
 
-La posición de reproducción es el único dato que cambia continuamente (cada 500 ms), así que es donde más cuesta un error de diseño.
+La posición de reproducción es el único dato que cambia continuamente (cada 500 ms, y solo mientras la barra está en pantalla), así que es donde más cuesta un error de diseño.
 
 ## Cambios en esta rama
 
@@ -65,8 +65,8 @@ La posición de reproducción es el único dato que cambia continuamente (cada 5
 
 | Qué | Efecto |
 |---|---|
-| El sondeo de posición solo corre mientras **suena y la app es visible** (`collectLatest` sobre `isPlaying` + `uiVisible`) | En pausa o en segundo plano: 0 despertares de CPU (medido: de 2/s a 0 en emulador) |
-| La posición se guarda al ocultar la UI | Se restaura bien al reabrir sin sondear en segundo plano |
+| El sondeo de posición solo corre mientras **la barra la observa y suena** (`subscriptionCount` + `collectLatest` sobre `isPlaying`) | En pausa o con la pantalla del reproductor cerrada: 0 ticks; con ella abierta, 500 ms |
+| La posición se persiste en **eventos del reproductor** (pausa, fin, cambio de pista) y en `onTaskRemoved` | Sin escrituras periódicas; se restaura bien al reabrir |
 | `collectAsStateWithLifecycle` en lugar de `collectAsState` | La UI deja de recolectar flujos cuando no es visible |
 | Pertenencia a listas con `Set` y `remember` (`MainScreen`, `PlaylistScreen`) | De O(canciones × canciones de la lista) a O(canciones) |
 | Se quitó la dependencia `media3-ui` (sin uso) | APK release −0,65 MB |
