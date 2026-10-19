@@ -11,10 +11,14 @@ import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Metadata
 import androidx.media3.common.Player
@@ -34,6 +38,7 @@ import androidx.media3.session.SessionResult
 import com.example.creproductor.R
 import com.example.creproductor.data.AudioQuality
 import com.example.creproductor.data.EqBands
+import com.example.creproductor.data.Fade
 import com.example.creproductor.data.HiFiAudio
 import com.example.creproductor.data.OutputClass
 import com.example.creproductor.data.OutputProfiles
@@ -58,6 +63,18 @@ class MusicService : MediaSessionService(){
     private var processorActive = false
     private var lastRoute: String? = null
 
+    /** Reproductor real; la sesión usa un [FadingPlayer] que lo envuelve para fundir al pausar. */
+    private var exoPlayer: ExoPlayer? = null
+
+    // Fundidos: volumen base (ReplayGain) × factor de fundido. Solo hay temporizador mientras se está dentro de una
+    // rampa o a punto de entrar en la de salida; fuera de eso no se despierta la CPU.
+    private var baseVolume = 1f
+    private var resumeAt = 0L
+    private var pauseFadeStart = -1L
+    private var lastFadeLog = 0L
+    private val handler = Handler(Looper.getMainLooper())
+    private val fadeTick = Runnable { updateFade() }
+
     private val audioManager by lazy { getSystemService(AUDIO_SERVICE) as AudioManager }
 
     /** Aplica en vivo los ajustes de ReplayGain / ecualizador / DAC USB en cuanto cambian sus prefs. */
@@ -72,6 +89,7 @@ class MusicService : MediaSessionService(){
                 if (needsProcessor() != processorActive) rebuildPlayer() else applyVolume()
             }
             HiFiAudio.KEY_EQ_BANDS -> applyVolume()
+            HiFiAudio.KEY_FADE_MS -> updateFade()
             HiFiAudio.KEY_PREFER_USB -> applyPreferredDevice()
             HiFiAudio.KEY_PROFILES -> {
                 // Al activarlos, los ajustes de ahora pasan a ser los de la salida actual.
@@ -134,8 +152,9 @@ class MusicService : MediaSessionService(){
         super.onCreate()
 
         val player = buildPlayer()
+        exoPlayer = player
         attachPlayerListener(player)
-        mediaSession = MediaSession.Builder(this, player)
+        mediaSession = MediaSession.Builder(this, FadingPlayer(player))
             .setCallback(CustomMediaSessionCallback())
             .build()
 
@@ -245,7 +264,17 @@ class MusicService : MediaSessionService(){
         player.addListener(object : Player.Listener {
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 updateNotificationLayout()
+                updateFade()
             }
+
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (isPlaying) resumeAt = SystemClock.elapsedRealtime()
+                updateFade()
+            }
+
+            override fun onPositionDiscontinuity(
+                oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int
+            ) = updateFade()
 
             override fun onTracksChanged(tracks: Tracks) {
                 readReplayGain(tracks)
@@ -293,10 +322,11 @@ class MusicService : MediaSessionService(){
      * limitada por el pico va al procesador. El EQ paramétrico recibe sus bandas en el mismo paso.
      */
     private fun applyVolume() {
-        val player = mediaSession?.player ?: return
+        if (exoPlayer == null) return
         val rgOn = HiFiAudio.isReplayGainEnabled(this)
         val plan = if (rgOn) ReplayGain.plan(trackGainDb, trackPeak, HiFiAudio.isReplayGainBoostEnabled(this)) else ReplayGain.Plan(1f, 0f)
-        player.volume = plan.volume
+        baseVolume = plan.volume
+        updateFade()
         eqProcessor.update(
             EqBands.decode(prefs.getString(HiFiAudio.KEY_EQ_BANDS, null)),
             prefs.getBoolean(HiFiAudio.KEY_EQ_ENABLED, false),
@@ -307,9 +337,72 @@ class MusicService : MediaSessionService(){
         }
     }
 
+    /**
+     * Volumen final = [baseVolume] × [Fade.factor]. Se reprograma solo si hace falta: dentro de una rampa cada
+     * 40 ms; en mitad de la pista, una única vez justo antes de que empiece la rampa de salida.
+     */
+    private fun updateFade() {
+        val player = exoPlayer ?: return
+        handler.removeCallbacks(fadeTick)
+        val fadeMs = HiFiAudio.fadeMs(this)
+        if (fadeMs <= 0) {
+            pauseFadeStart = -1L
+            player.volume = baseVolume
+            return
+        }
+        val now = SystemClock.elapsedRealtime()
+        val pos = player.currentPosition
+        val dur = player.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: -1L
+        val sinceResume = if (player.isPlaying) now - resumeAt else Long.MAX_VALUE
+        val sincePause = if (pauseFadeStart >= 0) now - pauseFadeStart else -1L
+
+        if (pauseFadeStart >= 0 && sincePause >= fadeMs) {
+            // Fundido de salida terminado: ahora sí se pausa (el volumen se queda en 0 hasta reanudar).
+            pauseFadeStart = -1L
+            player.volume = 0f
+            player.pause()
+            return
+        }
+        val factor = Fade.factor(pos, dur, fadeMs, sinceResume, sincePause)
+        player.volume = baseVolume * factor
+        if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0 && now - lastFadeLog >= 300) {
+            lastFadeLog = now
+            Log.i("DezzFade", "factor=%.2f pos=%d/%d reproduciendo=%b pausando=%b".format(factor, pos, dur, player.isPlaying, pauseFadeStart >= 0))
+        }
+
+        if (!player.isPlaying) return
+        val inRamp = pauseFadeStart >= 0 || pos < fadeMs || sinceResume < fadeMs || (dur > 0 && dur - pos <= fadeMs)
+        val delay = when {
+            inRamp -> 40L
+            dur > 0 -> minOf(1000L, dur - fadeMs - pos).coerceAtLeast(40L)   // despierta justo antes de la salida
+            else -> 0L
+        }
+        if (delay > 0) handler.postDelayed(fadeTick, delay)
+    }
+
+    /** Pide pausar con fundido. `false` si no hay que fundir (se pausa al instante). */
+    private fun beginPauseFade(): Boolean {
+        val player = exoPlayer ?: return false
+        if (HiFiAudio.fadeMs(this) <= 0 || !player.isPlaying || pauseFadeStart >= 0) return false
+        pauseFadeStart = SystemClock.elapsedRealtime()
+        updateFade()
+        return true
+    }
+
+    /** Envuelve al reproductor para que pausar (desde la app, la notificación o los auriculares) haga fundido. */
+    private inner class FadingPlayer(player: Player) : ForwardingPlayer(player) {
+        override fun pause() { if (!beginPauseFade()) super.pause() }
+        override fun play() { pauseFadeStart = -1L; super.play() }
+        override fun setPlayWhenReady(playWhenReady: Boolean) {
+            if (!playWhenReady && beginPauseFade()) return
+            if (playWhenReady) pauseFadeStart = -1L
+            super.setPlayWhenReady(playWhenReady)
+        }
+    }
+
     /** Con "preferir DAC USB" activo, dirige la salida al DAC USB conectado; si no, vuelve al automático. */
     private fun applyPreferredDevice() {
-        val player = mediaSession?.player as? ExoPlayer ?: return
+        val player = exoPlayer ?: return
         val usb = if (HiFiAudio.isPreferUsbEnabled(this)) {
             audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).firstOrNull {
                 it.type == AudioDeviceInfo.TYPE_USB_DEVICE || it.type == AudioDeviceInfo.TYPE_USB_HEADSET
@@ -333,7 +426,7 @@ class MusicService : MediaSessionService(){
      */
     private fun rebuildPlayer() {
         val session = mediaSession ?: return
-        val oldPlayer = session.player as? ExoPlayer ?: return
+        val oldPlayer = exoPlayer ?: return
 
         val mediaItems = (0 until oldPlayer.mediaItemCount).map { oldPlayer.getMediaItemAt(it) }
         val index = oldPlayer.currentMediaItemIndex
@@ -343,6 +436,8 @@ class MusicService : MediaSessionService(){
         val shuffleMode = oldPlayer.shuffleModeEnabled
 
         val newPlayer = buildPlayer()
+        exoPlayer = newPlayer
+        pauseFadeStart = -1L
         attachPlayerListener(newPlayer)
 
         if (mediaItems.isNotEmpty()) {
@@ -352,7 +447,7 @@ class MusicService : MediaSessionService(){
         newPlayer.shuffleModeEnabled = shuffleMode
         newPlayer.prepare()
 
-        session.setPlayer(newPlayer)
+        session.setPlayer(FadingPlayer(newPlayer))
         applyPreferredDevice()
         applyVolume()
 
@@ -426,6 +521,7 @@ class MusicService : MediaSessionService(){
     }
 
     override fun  onDestroy(){
+    handler.removeCallbacksAndMessages(null)
     prefs.unregisterOnSharedPreferenceChangeListener(hifiPrefsListener)
     audioManager.unregisterAudioDeviceCallback(deviceCallback)
     mediaSession?.run {

@@ -14,6 +14,7 @@ Todo viene **apagado por defecto** y no altera la señal salvo que el usuario lo
 
 | Hojas CUE | Biblioteca | Álbumes enteros en un solo archivo se ofrecen pista a pista (reproducción por tramo con `ClippingConfiguration`). Lee el `CUESHEET` **incrustado** en el FLAC; un `.cue` suelto solo se lee donde el sistema lo permita (en Android 11+ el almacenamiento con alcance lo bloquea). |
 | Duplicados y WhatsApp | Menú lateral | Agrupa por título/artista normalizados y duración; propone conservar la mejor calidad y borrar el resto con confirmación del sistema (`createDeleteRequest`, Android 11+). Lista aparte los audios de WhatsApp. |
+| Fundidos de entrada y salida | Diálogo Hi/Res | Duración 1, 2, 3 o 5 s (apagado por defecto). Fundido de entrada al empezar una pista y al reanudar; de salida en el tramo final de la pista y al pausar (también desde la notificación o los auriculares, porque la sesión usa un `ForwardingPlayer`). Curva cuadrática. Sin temporizador fuera de las rampas: en mitad de la pista se despierta una sola vez, justo antes de la salida. |
 | Perfiles por salida | Diálogo Hi/Res | Guarda ReplayGain y ecualizador por tipo de salida (altavoz, cable, Bluetooth, DAC USB) y los cambia solos al conectar o desconectar. |
 
 ## Optimización
@@ -47,6 +48,7 @@ Con archivos generados con ffmpeg (FLAC 16/44,1, FLAC 24/96 con `REPLAYGAIN_TRAC
 - **ReplayGain con subida:** una pista con `+10 dB` y pico `0,5` recibe `+6,02 dB`, el máximo que el pico permite.
 - **CUE:** un FLAC de 9 min con `CUESHEET` incrustado aparece como 3 pistas de 3:00; "Segunda" arranca en 00:00 / 03:00.
 - **Duplicados:** FLAC y MP3 con el mismo título → se conserva el FLAC; el borrado pide confirmación al sistema y elimina el archivo.
+- **Fundidos (3 s):** entrada 0 → 1 en 3 s y el temporizador se apaga; al pausar el factor baja de 1 a 0 y entonces se pausa; al reanudar vuelve a subir; en los últimos 3 s de la pista baja a 0 y la siguiente pista empieza de nuevo en 0.
 - **Offload:** el emulador no lo soporta y cae a PCM sin fallos (la ruta lo muestra).
 - **Error encontrado y corregido gracias al emulador:** `SAMPLERATE`/`BITS_PER_SAMPLE` no existen antes de Android 16; pedirlas cerraba la app al arrancar en Android 11–15.
 
