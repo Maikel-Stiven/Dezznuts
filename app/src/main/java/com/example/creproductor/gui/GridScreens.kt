@@ -72,6 +72,7 @@ fun AlbumsGridScreen(
             titleOf = {it.title}
         )
     }
+    val albumsKeys = remember(albumsMap) { albumsMap.keys.toList() }
 
     if (albumsMap.isEmpty()){
         Box(
@@ -93,7 +94,7 @@ fun AlbumsGridScreen(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(albumsMap.keys.toList()){albumName ->
+            items(albumsKeys, key = { it }){albumName ->
                 val albumSongs = albumsMap[albumName] ?: emptyList()
                 val firstSong = albumSongs.firstOrNull()
 
@@ -181,6 +182,7 @@ fun GenresGridScreen(
     val genresMap = remember (songs) {
         SongOrganizer.groupByGenre(songs) { it.genre }
     }
+    val genresKeys = remember(genresMap) { genresMap.keys.toList() }
 
     if (genresMap.isEmpty()){
         Box(
@@ -202,7 +204,7 @@ fun GenresGridScreen(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(genresMap.keys.toList(), key = {it}) { genreName ->
+            items(genresKeys, key = {it}) { genreName ->
                 val genreSongs = genresMap[genreName] ?: emptyList()
                 val countText = if (genreSongs.size == 1) "1 canción" else "${genreSongs.size} canciones"
                 val genreIcon = getGenreIcon(genreName)
@@ -268,6 +270,7 @@ fun ArtistsListScreen(
     val artistsMap = remember(songs) {
         SongOrganizer.groupByArtist(songs) { it.artist }
     }
+    val artistsKeys = remember(artistsMap) { artistsMap.keys.toList() }
 
     if (artistsMap.isEmpty()){
         Box(
@@ -286,7 +289,7 @@ fun ArtistsListScreen(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
-            items(artistsMap.keys.toList(), key = { it }) {artistName ->
+            items(artistsKeys, key = { it }) {artistName ->
                 val artistSongs = artistsMap[artistName] ?: emptyList()
                 val avatarUri = artistSongs.firstOrNull { it.albumArtUri != null }?. albumArtUri
 
@@ -374,6 +377,7 @@ fun FoldersListScreen(
     val foldersMap = remember(songs) {
         SongOrganizer.groupByFolder(songs) { it.path }
     }
+    val foldersKeys = remember(foldersMap) { foldersMap.keys.toList() }
 
     if (foldersMap.isEmpty()){
         Box(
@@ -392,7 +396,7 @@ fun FoldersListScreen(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
-            items(foldersMap.keys.toList(), key = { it }) { folderPath ->
+            items(foldersKeys, key = { it }) { folderPath ->
                 val folderSongs = foldersMap[folderPath] ?: emptyList()
                 val displayName = folderPath.substringAfterLast('/').ifBlank { folderPath }
                 val countText = if (folderSongs.size == 1) "1 canción" else "${folderSongs.size} canciones"
