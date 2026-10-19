@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,6 +14,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -88,6 +93,7 @@ fun MainScreen(
 
     val uiState by viewModel.uiState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val currentFilter by viewModel.currentFilter.collectAsState()
     val filteredSongs by viewModel.filteredSongs.collectAsState()
     val songs = (uiState as? UiState.Success)?.songs ?: emptyList()
     val  searchHistory by viewModel.searchHistory.collectAsState()
@@ -378,15 +384,31 @@ fun MainScreen(
                                          selectedQuickSelectSongs = categorySongs
                                      }
                                  )
-                                 AppTab.SONGS -> SongListScreen(
-                                     songs = filteredSongs,
-                                     currentSongId = currentSong?.id,
-                                     isPlaying = isPlaying,
-                                     onSongClick = {song ->
-                                         viewModel.playSong(song, customQueue = filteredSongs)
-                                     },
-                                     onEditSong = {}
-                                 )
+                                 AppTab.SONGS -> Column(modifier = Modifier.fillMaxSize()) {
+                                     Row(
+                                         modifier = Modifier
+                                             .horizontalScroll(rememberScrollState())
+                                             .padding(horizontal = 12.dp),
+                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                     ) {
+                                         SONG_FILTER_CHIPS.forEach { (filter, label) ->
+                                             FilterChip(
+                                                 selected = currentFilter == filter,
+                                                 onClick = { viewModel.setFilter(filter) },
+                                                 label = { Text(label) }
+                                             )
+                                         }
+                                     }
+                                     SongListScreen(
+                                         songs = filteredSongs,
+                                         currentSongId = currentSong?.id,
+                                         isPlaying = isPlaying,
+                                         onSongClick = {song ->
+                                             viewModel.playSong(song, customQueue = filteredSongs)
+                                         },
+                                         onEditSong = {}
+                                     )
+                                 }
                                  AppTab.ALBUMS -> AlbumsGridScreen(
                                      songs = songs,
                                      gridState = albumsGridState,
@@ -444,3 +466,11 @@ fun MainScreen(
         )
     }
 }
+
+/** Chips de la pestaña Canciones (constante: no se reconstruye en cada recomposición). */
+private val SONG_FILTER_CHIPS = listOf(
+    SongFilter.ALL to "Todas",
+    SongFilter.FAVORITES to "Favoritas",
+    SongFilter.LOSSLESS to "Lossless",
+    SongFilter.HIRES to "Hi-Res"
+)

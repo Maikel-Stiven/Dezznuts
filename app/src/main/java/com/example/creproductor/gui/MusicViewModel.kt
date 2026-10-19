@@ -17,11 +17,16 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
+import androidx.media3.common.C
 import androidx.media3.common.Player
+import androidx.media3.common.Tracks
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionToken
+import com.example.creproductor.data.AudioQuality
 import com.example.creproductor.data.AudioTagWriter
+import com.example.creproductor.data.HiFiAudio
+import com.example.creproductor.data.QualityTier
 import com.example.creproductor.data.MediaStoreScanner
 import com.example.creproductor.data.Song
 import com.example.creproductor.service.MusicService
@@ -56,7 +61,9 @@ sealed interface UiState {
 enum class SongFilter{
     ALL,
     FAVORITES,
-    RECENT
+    RECENT,
+    LOSSLESS,
+    HIRES
 }
 
 /** Tamaño de la primera publicación de la biblioteca y factor de crecimiento de las siguientes. */
@@ -90,6 +97,10 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     /** Canción en reproducción (o `null` si no hay ninguna). */
     private val _currentSong = MutableStateFlow<Song?>(null)
     val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
+
+    /** Datos técnicos de la pista que suena (códec, bits, kHz, kbps) y ruta de salida; vacío si no hay. */
+    private val _audioInfo = MutableStateFlow("")
+    val audioInfo: StateFlow<String> = _audioInfo.asStateFlow()
 
     /** Posición de reproducción en milisegundos (la actualiza el *tracker* cada 500 ms). */
     private val _currentPositionMs = MutableStateFlow(0L)
@@ -153,6 +164,8 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                 SongFilter.ALL -> true
                 SongFilter.FAVORITES -> song.isFavorite
                 SongFilter.RECENT -> true
+                SongFilter.LOSSLESS -> song.quality != QualityTier.LOSSY
+                SongFilter.HIRES -> song.quality == QualityTier.HIRES
             }
             val matchesQuery = SongOrganizer.matchesQuery(song.title, song.artist, song.album, query)
             matchesFilter && matchesQuery
@@ -217,6 +230,10 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                         _isShuffleEnabled.value = shuffleModeEnabled
                     }
 
+                    override fun onTracksChanged(tracks: Tracks) {
+                        _audioInfo.value = describeAudio(tracks)
+                    }
+
                     override fun onPlaybackStateChanged(playbackState: Int) {
                         if (playbackState == Player.STATE_ENDED){
                             _isPlaying.value = false
@@ -247,6 +264,39 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
             },
             ContextCompat.getMainExecutor(context)
         )
+    }
+
+    /**
+     * Describe la pista de audio activa con los datos reales que ve el reproductor y,
+     * debajo, la ruta de salida **solicitada** (offload / float / PCM): si el chip no
+     * soporta offload, ExoPlayer cae a PCM por su cuenta sin avisar a la app.
+     */
+    private fun describeAudio(tracks: Tracks): String {
+        val format = tracks.groups
+            .firstOrNull { it.type == C.TRACK_TYPE_AUDIO && it.isSelected }
+            ?.let { g -> (0 until g.length).firstOrNull { g.isTrackSelected(it) }?.let { g.getTrackFormat(it) } }
+            ?: return ""
+        val song = _currentSong.value
+        val bits = when (format.pcmEncoding) {
+            C.ENCODING_PCM_8BIT -> 8
+            C.ENCODING_PCM_16BIT -> 16
+            C.ENCODING_PCM_24BIT -> 24
+            C.ENCODING_PCM_32BIT, C.ENCODING_PCM_FLOAT -> 32
+            else -> song?.bitsPerSample ?: 0
+        }
+        val label = AudioQuality.label(
+            format.sampleMimeType,
+            format.sampleRate.takeIf { it > 0 } ?: song?.sampleRate ?: 0,
+            bits,
+            format.bitrate.takeIf { it > 0 } ?: song?.bitrate ?: 0
+        )
+        val ctx = getApplication<Application>()
+        val route = when {
+            HiFiAudio.isOffloadEnabled(ctx) -> "Offload"
+            HiFiAudio.isFloatOutputEnabled(ctx) && bits > 16 -> "Float 32 bit"
+            else -> "PCM"
+        }
+        return if (label.isEmpty()) "" else "$label → $route"
     }
 
     /**

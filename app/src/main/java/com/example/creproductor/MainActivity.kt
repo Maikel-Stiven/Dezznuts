@@ -44,7 +44,9 @@ import com.example.creproductor.gui.ClearImageCacheDialog
 import com.example.creproductor.gui.DrawerMenuItem
 import com.example.creproductor.gui.EditTagDialog
 import com.example.creproductor.gui.FullScreenPlayer
+import com.example.creproductor.gui.EqualizerDialog
 import com.example.creproductor.gui.HiFiAudioDialog
+import com.example.creproductor.gui.QualityBadge
 import com.example.creproductor.gui.MainScreen
 import com.example.creproductor.gui.MusicViewModel
 import com.example.creproductor.gui.UiState
@@ -83,11 +85,13 @@ class MainActivity : ComponentActivity() {
                     val currentQueue by viewModel.currentQueue.collectAsStateWithLifecycle()
                     val repeatMode by viewModel.repeatMode.collectAsStateWithLifecycle()
                     val isShuffleEnabled by viewModel.isShuffleEnabled.collectAsStateWithLifecycle()
+                    val audioInfo by viewModel.audioInfo.collectAsStateWithLifecycle()
 
                     var songToEdit by remember { mutableStateOf<Song?>(null) }
                     var isPlayerFullScreenVisible by remember { mutableStateOf(false) }
                     var showClearImageCacheDialog by remember { mutableStateOf(false) }
                     var showHiFiAudioDialog by remember { mutableStateOf(false) }
+                    var showEqualizerDialog by remember { mutableStateOf(false) }
                     var isFirstPage by remember { mutableStateOf(true) }
 
                     val requiredPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -215,6 +219,7 @@ class MainActivity : ComponentActivity() {
                                                 currentPositionMs = { currentPositionMs },
                                                 repeatMode = repeatMode,
                                                 isShuffleEnabled = isShuffleEnabled,
+                                                audioInfo = audioInfo,
                                                 onToggleShuffle = { viewModel.toggleShuffle() },
                                                 onTogglePlayPause = { viewModel.togglePlayPause() },
                                                 onNextClick = { viewModel.playNext() },
@@ -251,8 +256,13 @@ class MainActivity : ComponentActivity() {
                         if (showHiFiAudioDialog) {
                             HiFiAudioDialog(
                                 onDismiss = { showHiFiAudioDialog = false },
-                                onSettingsChanged = { viewModel.refreshAudioOutput() }
+                                onSettingsChanged = { viewModel.refreshAudioOutput() },
+                                onOpenEqualizer = { showEqualizerDialog = true }
                             )
+                        }
+
+                        if (showEqualizerDialog) {
+                            EqualizerDialog(onDismiss = { showEqualizerDialog = false })
                         }
                     }
                 }
@@ -365,6 +375,8 @@ fun SongItem(
                     overflow = TextOverflow.Ellipsis
                 )
             }
+
+            QualityBadge(song.quality, modifier = Modifier.padding(end = 6.dp))
 
             if (isSelected){
                 PlayingEqualizerIcon(

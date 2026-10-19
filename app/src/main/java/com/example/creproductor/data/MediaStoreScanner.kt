@@ -26,10 +26,14 @@ class MediaStoreScanner (private  val context: Context) {
             MediaStore.Audio.Media.ALBUM_ID,
             MediaStore.Audio.Media.YEAR,
             MediaStore.Audio.Media.DATA,
-            MediaStore.Audio.Media.TRACK
+            MediaStore.Audio.Media.TRACK,
+            MediaStore.Audio.Media.MIME_TYPE
         ).apply {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
                 add(MediaStore.Audio.Media.GENRE)
+                add(MediaStore.Audio.Media.SAMPLERATE)
+                add(MediaStore.Audio.Media.BITS_PER_SAMPLE)
+                add(MediaStore.Audio.Media.BITRATE)
             }
         }.toTypedArray()
 
@@ -52,9 +56,14 @@ class MediaStoreScanner (private  val context: Context) {
             val yearColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
             val dataCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
             val trackCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TRACK)
+            val mimeCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.MIME_TYPE)
             val genreCol = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
                 cursor.getColumnIndex(MediaStore.Audio.Media.GENRE)
             }else -1
+            // Datos técnicos: solo existen desde Android 11.
+            val rateCol = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) cursor.getColumnIndex(MediaStore.Audio.Media.SAMPLERATE) else -1
+            val bitsCol = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) cursor.getColumnIndex(MediaStore.Audio.Media.BITS_PER_SAMPLE) else -1
+            val bitrateCol = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) cursor.getColumnIndex(MediaStore.Audio.Media.BITRATE) else -1
 
             val buffer = mutableListOf<Song>()
 
@@ -72,6 +81,11 @@ class MediaStoreScanner (private  val context: Context) {
                 val rawGenre = if (genreCol != -1) cursor.getString(genreCol) else null
                 val genre = if (!rawGenre.isNullOrBlank()) rawGenre.fixEncoding() else "Desconocido"
 
+
+                val mime = cursor.getString(mimeCol) ?: ""
+                val sampleRate = if (rateCol != -1) cursor.getInt(rateCol) else 0
+                val bits = if (bitsCol != -1) cursor.getInt(bitsCol) else 0
+                val bitrate = if (bitrateCol != -1) cursor.getInt(bitrateCol) else 0
 
                 val contentUri = ContentUris.withAppendedId(
                     MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
@@ -97,7 +111,12 @@ class MediaStoreScanner (private  val context: Context) {
                         year = year,
                         trackNumber = trackNumber,
                         path = path,
-                        genre = genre
+                        genre = genre,
+                        mimeType = mime,
+                        sampleRate = sampleRate,
+                        bitsPerSample = bits,
+                        bitrate = bitrate,
+                        quality = AudioQuality.tier(mime, path, bits, sampleRate)
                     )
                 )
 

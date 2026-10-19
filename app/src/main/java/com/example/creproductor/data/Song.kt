@@ -24,7 +24,13 @@ data class Song (
     val playCount: Int = 0,
     val isFavorite: Boolean = false,
     val lastPlayedTimestamp: Long = 0L,
-    val genre: String = "Desconocido"
+    val genre: String = "Desconocido",
+    /** Datos técnicos del archivo (0 / "" si el sistema no los informa). */
+    val mimeType: String = "",
+    val sampleRate: Int = 0,
+    val bitsPerSample: Int = 0,
+    val bitrate: Int = 0,
+    val quality: QualityTier = QualityTier.LOSSY
 )
 
 

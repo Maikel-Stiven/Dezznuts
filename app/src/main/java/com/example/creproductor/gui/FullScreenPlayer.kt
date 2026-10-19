@@ -112,6 +112,7 @@ fun FullScreenPlayer(
     currentPositionMs: () -> Long,
     repeatMode: RepeatMode = RepeatMode.OFF,
     isShuffleEnabled: Boolean = false,
+    audioInfo: String = "",
     onToggleShuffle: () -> Unit = {},
     onTogglePlayPause: () -> Unit,
     onNextClick: () -> Unit,
@@ -442,6 +443,22 @@ fun FullScreenPlayer(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 overflow = TextOverflow.Ellipsis
                             )
+                            if (audioInfo.isNotBlank()) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    modifier = Modifier.padding(top = 4.dp)
+                                ) {
+                                    QualityBadge(song.quality)
+                                    Text(
+                                        text = audioInfo,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
                         }
 
                         IconButton(onClick = {
