@@ -88,3 +88,40 @@ class ParametricEqRobustnessTest {
         org.junit.Assert.assertTrue("demasiado lento: $msPerSecondOfAudio ms", msPerSecondOfAudio < 250)
     }
 }
+
+class EqResponseTest {
+    @Test fun lasCurvaDibujadaCoincideConLaGananciaDeLaBanda() {
+        val bands = listOf(EqBand(1000f, 6f, 1f))
+        // en la frecuencia central, la respuesta es exactamente la ganancia de la banda
+        assertEquals(6f, PeakingFilter.responseDb(bands, 1000f), 0.05f)
+        // muy lejos de la banda, ≈ 0 dB
+        assertEquals(0f, PeakingFilter.responseDb(bands, 30f), 0.2f)
+        assertEquals(0f, PeakingFilter.responseDb(bands, 18000f), 0.5f)
+        // plano = 0 dB en todas partes
+        assertEquals(0f, PeakingFilter.responseDb(EqBands.DEFAULT, 440f), 0.001f)
+    }
+
+    @Test fun lasBandasSeSumanEnDb() {
+        val two = listOf(EqBand(1000f, 3f, 1f), EqBand(1000f, 3f, 1f))
+        assertEquals(6f, PeakingFilter.responseDb(two, 1000f), 0.1f)
+    }
+
+    @Test fun reconocePresets() {
+        assertEquals("Plano", EqBands.presetNameOf(EqBands.DEFAULT))
+        assertEquals("Graves", EqBands.presetNameOf(EqBands.PRESETS[1].second))
+        assertEquals(null, EqBands.presetNameOf(EqBands.DEFAULT.map { it.copy(gainDb = 1f) }))
+    }
+
+    /** La curva dibujada debe coincidir con lo que mide el filtro real sobre un tono (misma fórmula). */
+    @Test fun graficaYAudioCoinciden() {
+        val bands = listOf(EqBand(2000f, 5f, 1.5f))
+        val fs = 48_000
+        val eq = ParametricEq(fs, 1).apply { setBands(bands); extraGain = 10f.let { Math.pow(10.0, 5.0 / 20).toFloat() } } // anula el preamp
+        val tone = 2000.0
+        val buf = FloatArray(fs) { (0.1 * kotlin.math.sin(2 * Math.PI * tone * it / fs)).toFloat() }
+        eq.process(buf, fs)
+        val rms = kotlin.math.sqrt(buf.drop(fs / 2).map { it.toDouble() * it }.average())
+        val ref = 0.1 / kotlin.math.sqrt(2.0)
+        assertEquals(PeakingFilter.responseDb(bands, 2000f).toDouble(), 20 * kotlin.math.log10(rms / ref), 0.1)
+    }
+}

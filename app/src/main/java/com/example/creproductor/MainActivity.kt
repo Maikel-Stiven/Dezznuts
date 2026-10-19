@@ -229,6 +229,7 @@ class MainActivity : ComponentActivity() {
                                                 repeatMode = repeatMode,
                                                 isShuffleEnabled = isShuffleEnabled,
                                                 audioInfo = audioInfo,
+                                                onOpenEqualizer = { showEqualizerDialog = true },
                                                 onToggleShuffle = { viewModel.toggleShuffle() },
                                                 onTogglePlayPause = { viewModel.togglePlayPause() },
                                                 onNextClick = { viewModel.playNext() },
