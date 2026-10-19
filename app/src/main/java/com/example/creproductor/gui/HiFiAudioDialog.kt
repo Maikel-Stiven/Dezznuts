@@ -59,6 +59,7 @@ fun HiFiAudioDialog(
     var replayGain by remember { mutableStateOf(HiFiAudio.isReplayGainEnabled(context)) }
     var rgAlbum by remember { mutableStateOf(HiFiAudio.isReplayGainAlbumMode(context)) }
     var rgBoost by remember { mutableStateOf(HiFiAudio.isReplayGainBoostEnabled(context)) }
+    var profiles by remember { mutableStateOf(HiFiAudio.isProfilesEnabled(context)) }
     var preferUsb by remember { mutableStateOf(HiFiAudio.isPreferUsbEnabled(context)) }
     val outputs = remember { HiFiAudio.outputDevices(context) }
 
@@ -146,6 +147,18 @@ fun HiFiAudioDialog(
                     onCheckedChange = { enabled ->
                         preferUsb = enabled
                         HiFiAudio.setPreferUsbEnabled(context, enabled)
+                    }
+                )
+
+                AudioOption(
+                    title = "Perfiles por salida",
+                    description = "Recuerda ReplayGain y ecualizador por separado para altavoz, cable, Bluetooth " +
+                        "y DAC USB, y los cambia solos al conectar o desconectar.",
+                    risk = "Al cambiar de salida se sustituyen tus ajustes actuales por los guardados de esa salida.",
+                    checked = profiles,
+                    onCheckedChange = { enabled ->
+                        profiles = enabled
+                        HiFiAudio.setProfilesEnabled(context, enabled)
                     }
                 )
 

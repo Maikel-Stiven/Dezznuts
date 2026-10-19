@@ -53,6 +53,11 @@ object HiFiAudio {
     const val KEY_EQ_ENABLED = "eq_enabled"
     const val KEY_EQ_BANDS = "eq_bands_v2"
 
+    /** Perfiles por salida: activos, clase de salida a la que pertenecen los ajustes actuales y un perfil por clase. */
+    const val KEY_PROFILES = "hifi_profiles"
+    const val KEY_PROFILE_ACTIVE = "hifi_profile_active"
+    const val KEY_PROFILE_PREFIX = "hifi_profile_"
+
     /** ReplayGain con subida de volumen (hasta lo que permita el pico de la pista). Apagado por defecto. */
     const val KEY_RG_BOOST = "hifi_rg_boost"
 
@@ -146,5 +151,10 @@ object HiFiAudio {
     fun isReplayGainBoostEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_RG_BOOST, false)
     fun setReplayGainBoostEnabled(context: Context, enabled: Boolean) {
         prefs(context).edit().putBoolean(KEY_RG_BOOST, enabled).apply()
+    }
+
+    fun isProfilesEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_PROFILES, false)
+    fun setProfilesEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_PROFILES, enabled).apply()
     }
 }

@@ -35,6 +35,9 @@ import com.example.creproductor.R
 import com.example.creproductor.data.AudioQuality
 import com.example.creproductor.data.EqBands
 import com.example.creproductor.data.HiFiAudio
+import com.example.creproductor.data.OutputClass
+import com.example.creproductor.data.OutputProfiles
+import com.example.creproductor.data.ProfileSettings
 import com.example.creproductor.data.ReplayGain
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -69,15 +72,52 @@ class MusicService : MediaSessionService(){
             }
             HiFiAudio.KEY_EQ_BANDS -> applyVolume()
             HiFiAudio.KEY_PREFER_USB -> applyPreferredDevice()
+            HiFiAudio.KEY_PROFILES -> {
+                // Al activarlos, los ajustes de ahora pasan a ser los de la salida actual.
+                if (HiFiAudio.isProfilesEnabled(this)) prefs.edit().putString(HiFiAudio.KEY_PROFILE_ACTIVE, currentOutputClass().name).apply()
+            }
         }
+    }
+
+    private fun currentOutputClass(): OutputClass =
+        OutputProfiles.classify(audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).map { it.type })
+
+    private fun liveSettings() = ProfileSettings(
+        replayGain = HiFiAudio.isReplayGainEnabled(this),
+        replayGainAlbum = HiFiAudio.isReplayGainAlbumMode(this),
+        replayGainBoost = HiFiAudio.isReplayGainBoostEnabled(this),
+        eqEnabled = prefs.getBoolean(HiFiAudio.KEY_EQ_ENABLED, false),
+        eqBands = prefs.getString(HiFiAudio.KEY_EQ_BANDS, null) ?: EqBands.encode(EqBands.DEFAULT)
+    )
+
+    /**
+     * Si cambió el tipo de salida: guarda los ajustes actuales en el perfil de la salida anterior y carga el de
+     * la nueva (si todavía no tiene perfil, se conservan los actuales). Los cambios se aplican solos porque
+     * pasan por las mismas preferencias que escucha [hifiPrefsListener].
+     */
+    private fun switchProfileIfNeeded() {
+        if (!HiFiAudio.isProfilesEnabled(this)) return
+        val now = currentOutputClass()
+        val before = prefs.getString(HiFiAudio.KEY_PROFILE_ACTIVE, null)?.let { runCatching { OutputClass.valueOf(it) }.getOrNull() }
+        if (before == now) return
+        val edit = prefs.edit()
+        if (before != null) edit.putString(HiFiAudio.KEY_PROFILE_PREFIX + before.name, liveSettings().encode())
+        ProfileSettings.decode(prefs.getString(HiFiAudio.KEY_PROFILE_PREFIX + now.name, null))?.let {
+            edit.putBoolean(HiFiAudio.KEY_REPLAYGAIN, it.replayGain)
+                .putString(HiFiAudio.KEY_RG_MODE, if (it.replayGainAlbum) "album" else "track")
+                .putBoolean(HiFiAudio.KEY_RG_BOOST, it.replayGainBoost)
+                .putString(HiFiAudio.KEY_EQ_BANDS, it.eqBands)
+                .putBoolean(HiFiAudio.KEY_EQ_ENABLED, it.eqEnabled)
+        }
+        edit.putString(HiFiAudio.KEY_PROFILE_ACTIVE, now.name).apply()
     }
 
     private fun needsProcessor() =
         prefs.getBoolean(HiFiAudio.KEY_EQ_ENABLED, false) || HiFiAudio.isReplayGainBoostEnabled(this)
 
     private val deviceCallback = object : AudioDeviceCallback() {
-        override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) = applyPreferredDevice()
-        override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) = applyPreferredDevice()
+        override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) { applyPreferredDevice(); switchProfileIfNeeded() }
+        override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) { applyPreferredDevice(); switchProfileIfNeeded() }
     }
 
     companion object{
@@ -103,6 +143,7 @@ class MusicService : MediaSessionService(){
         prefs.registerOnSharedPreferenceChangeListener(hifiPrefsListener)
         audioManager.registerAudioDeviceCallback(deviceCallback, null)
         applyPreferredDevice()
+        switchProfileIfNeeded()
         applyVolume()
     }
 
