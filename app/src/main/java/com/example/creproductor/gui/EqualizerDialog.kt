@@ -218,7 +218,8 @@ private fun EqCurve(
 ) {
     val density = LocalDensity.current
     val haptic = LocalHapticFeedback.current
-    val measurer = rememberTextMeasurer()
+    // Se miden ~20 textos distintos por fotograma: con la caché por defecto (8) se volvían a maquetar todos cada vez.
+    val measurer = rememberTextMeasurer(cacheSize = 64)
     val primary = MaterialTheme.colorScheme.primary
     val grid = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
     val gridStrong = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.28f)
@@ -304,7 +305,8 @@ private fun EqCurve(
         // Curva: respuesta real del filtro en 160 puntos logarítmicos
         val n = 160
         val xs = FloatArray(n) { padL + it * plotW / (n - 1) }
-        val ys = FloatArray(n) { i -> gy(PeakingFilter.responseDb(bands, xToF(xs[i])).coerceIn(-12f, 12f)) }
+        val db = PeakingFilter.responseCurveDb(bands, FloatArray(n) { xToF(xs[it]) })
+        val ys = FloatArray(n) { gy(db[it].coerceIn(-12f, 12f)) }
         val y0 = gy(0f)
         val line = Path().apply { moveTo(xs[0], ys[0]); for (i in 1 until n) lineTo(xs[i], ys[i]) }
         val fill = Path().apply {

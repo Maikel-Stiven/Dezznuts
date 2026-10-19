@@ -125,3 +125,18 @@ class EqResponseTest {
         assertEquals(PeakingFilter.responseDb(bands, 2000f).toDouble(), 20 * kotlin.math.log10(rms / ref), 0.1)
     }
 }
+
+class EqCurvePerformanceTest {
+    @Test fun lasCurvaEnBloqueDaLoMismoYCuestaMenos() {
+        val bands = EqBands.DEFAULT.mapIndexed { i, b -> b.copy(gainDb = (i - 2) * 2.5f, q = 0.8f + i * 0.3f) }
+        val freqs = FloatArray(160) { (20 * Math.pow(1000.0, it / 159.0)).toFloat() }
+        val batch = PeakingFilter.responseCurveDb(bands, freqs)
+        freqs.forEachIndexed { i, f -> assertEquals(PeakingFilter.responseDb(bands, f), batch[i], 0.0001f) }
+
+        repeat(200) { PeakingFilter.responseCurveDb(bands, freqs) }            // calentamiento
+        val t0 = System.nanoTime(); repeat(500) { PeakingFilter.responseCurveDb(bands, freqs) }
+        val perFrameUs = (System.nanoTime() - t0) / 500 / 1000
+        println("Curva del EQ (160 puntos, 5 bandas): $perFrameUs µs por fotograma")
+        org.junit.Assert.assertTrue("demasiado lento: $perFrameUs µs", perFrameUs < 2000)   // cabe de sobra en 16 ms
+    }
+}

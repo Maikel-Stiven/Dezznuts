@@ -54,6 +54,13 @@ La posición de reproducción es el único dato que cambia continuamente (cada 5
 - **Medición (2 512 canciones, emulador API 35):** construir la cola al tocar una canción: 16–18 ms; tras entrar una canción nueva solo se resuelve esa (2 ms) y la cola vuelve a construirse en 16 ms. La recarga silenciosa tarda 40 ms.
 - **Límite:** no se pudo reproducir la lentitud original en el emulador (el almacenamiento es rápido); la causa se deduce del coste medido y de que la caché se vaciaba. Conviene confirmarlo en el móvil donde se vio.
 
+### 7. Revisión tras integrar ecualizador premium, bit-perfect, fundidos y editor
+- **Curva del ecualizador:** `PeakingFilter.responseCurveDb` calcula los coeficientes una vez por banda y el seno/coseno de cada frecuencia una vez para todas las bandas (antes, por punto y por banda). 160 puntos × 5 bandas: **18 µs por fotograma** (un test lo vigila y comprueba que da lo mismo que el cálculo punto a punto).
+- **Textos del lienzo:** `rememberTextMeasurer(cacheSize = 64)`; la caché por defecto (8) se quedaba corta con ~20 textos distintos por fotograma y los volvía a maquetar cada vez.
+- **Limpiador de títulos:** las expresiones regulares se compilan una vez (antes, cinco por llamada; con miles de canciones sin etiquetas, "Corregir artistas desconocidos" las compilaba decenas de miles de veces).
+- **Bit-perfect apagado (lo habitual):** `applyBitPerfect` sale antes de consultar dispositivos al sistema; antes hacía esa consulta en cada cambio de pista.
+- **Prueba de resistencia del conjunto** (emulador API 35, 2 min, EQ y subida de ReplayGain activos): memoria estable en ~165 MB, 37 hilos, sin errores.
+
 ## Optimizaciones previas ya presentes en la rama
 
 | Qué | Efecto |

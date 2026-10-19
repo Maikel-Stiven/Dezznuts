@@ -148,19 +148,33 @@ object PeakingFilter {
         )
     }
 
-    /** Respuesta en dB de la cascada de bandas a `freqHz` (módulo de H(e^jw)); es lo que dibuja la curva. */
-    fun responseDb(bands: List<EqBand>, freqHz: Float, sampleRate: Int = 48_000): Float {
-        val w = 2 * PI * min(freqHz, sampleRate * 0.49f) / sampleRate
-        val c1 = cos(w); val s1 = sin(w); val c2 = cos(2 * w); val s2 = sin(2 * w)
-        var db = 0.0
-        for (band in bands) {
-            if (abs(band.gainDb) < 0.05f) continue
-            val k = coeffs(band, sampleRate)
-            // H = (b0 + b1 z⁻¹ + b2 z⁻²) / (1 + a1 z⁻¹ + a2 z⁻²) con z⁻ⁿ = cos(nw) − j·sin(nw)
-            val nr = k[0] + k[1] * c1 + k[2] * c2; val ni = -(k[1] * s1 + k[2] * s2)
-            val dr = 1 + k[3] * c1 + k[4] * c2;    val di = -(k[3] * s1 + k[4] * s2)
-            db += 10 * kotlin.math.log10((nr * nr + ni * ni) / (dr * dr + di * di))
+    /** Respuesta en dB de la cascada de bandas a `freqHz` (módulo de H(e^jw)). */
+    fun responseDb(bands: List<EqBand>, freqHz: Float, sampleRate: Int = 48_000): Float =
+        responseCurveDb(bands, floatArrayOf(freqHz), sampleRate)[0]
+
+    /**
+     * Respuesta en dB en muchas frecuencias a la vez; es lo que dibuja la curva en cada fotograma. Los coeficientes
+     * se calculan **una vez por banda** (no por punto) y el seno/coseno de cada frecuencia una vez para todas las
+     * bandas: con 160 puntos y 5 bandas son unas 10 veces menos funciones trigonométricas.
+     */
+    fun responseCurveDb(bands: List<EqBand>, freqs: FloatArray, sampleRate: Int = 48_000): FloatArray {
+        val out = FloatArray(freqs.size)
+        val active = bands.filter { abs(it.gainDb) >= 0.05f }
+        if (active.isEmpty()) return out
+        val coeffs = active.map { coeffs(it, sampleRate) }
+        for (i in freqs.indices) {
+            val w = 2 * PI * min(freqs[i], sampleRate * 0.49f) / sampleRate
+            val c1 = cos(w); val s1 = sin(w)
+            val c2 = c1 * c1 - s1 * s1; val s2 = 2 * s1 * c1          // cos(2w), sin(2w) sin llamar otra vez
+            var db = 0.0
+            for (k in coeffs) {
+                // H = (b0 + b1 z⁻¹ + b2 z⁻²) / (1 + a1 z⁻¹ + a2 z⁻²) con z⁻ⁿ = cos(nw) − j·sin(nw)
+                val nr = k[0] + k[1] * c1 + k[2] * c2; val ni = -(k[1] * s1 + k[2] * s2)
+                val dr = 1 + k[3] * c1 + k[4] * c2;    val di = -(k[3] * s1 + k[4] * s2)
+                db += 10 * kotlin.math.log10((nr * nr + ni * ni) / (dr * dr + di * di))
+            }
+            out[i] = db.toFloat()
         }
-        return db.toFloat()
+        return out
     }
 }

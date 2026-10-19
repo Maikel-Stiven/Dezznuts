@@ -457,6 +457,8 @@ class MusicService : MediaSessionService(){
      */
     private fun applyBitPerfect() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
+        // Apagado (lo habitual): sin consultar dispositivos al sistema en cada cambio de pista.
+        if (!HiFiAudio.isBitPerfectEnabled(this)) { clearBitPerfect(); return }
         val usb = usbDevice()
         var target: MixerFormat? = null
         var chosen: AudioMixerAttributes? = null
