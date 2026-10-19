@@ -30,8 +30,25 @@ object FlacTags {
             if (type == 4 && length <= MAX_COMMENT_BLOCK) {
                 return parseComments(ByteArray(length).also { data.readFully(it) }, key)
             }
-            data.skipNBytes(length.toLong())   // STREAMINFO, SEEKTABLE, PICTURE…: se salta sin leerlo
+            skipFully(data, length.toLong())   // STREAMINFO, SEEKTABLE, PICTURE…: se salta sin leerlo
             if (last) return null
+        }
+    }
+
+    /**
+     * Equivalente a `InputStream.skipNBytes` (Java 12), que no existe en Android 9 ni en minSdk 24.
+     * Salta exactamente [n] bytes y lanza `EOFException` si el flujo termina antes.
+     */
+    private fun skipFully(data: DataInputStream, n: Long) {
+        var left = n
+        while (left > 0) {
+            val skipped = data.skip(left)
+            if (skipped > 0) {
+                left -= skipped
+            } else {
+                if (data.read() == -1) throw java.io.EOFException()
+                left--
+            }
         }
     }
 
