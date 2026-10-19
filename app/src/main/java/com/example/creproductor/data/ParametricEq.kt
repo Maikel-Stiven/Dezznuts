@@ -49,40 +49,52 @@ object EqBands {
 
 class ParametricEq(private val sampleRate: Int, private val channels: Int) {
 
+    private companion object { const val MAX_BANDS = 16 }
+
+
     private class Coeffs(val b0: Double, val b1: Double, val b2: Double, val a1: Double, val a2: Double)
 
     /** Estado (Direct Form I) de un filtro para un canal. */
     private class State { var x1 = 0.0; var x2 = 0.0; var y1 = 0.0; var y2 = 0.0 }
 
-    /** Coeficientes inmutables publicados de una vez: el hilo de audio nunca ve una banda a medias. */
-    @Volatile private var filters: Array<Coeffs> = emptyArray()
+    /**
+     * Una entrada por banda (`null` = banda plana, se omite). Se publica de una vez (inmutable + `@Volatile`) y los
+     * estados tienen tamaño fijo: así el hilo de audio nunca ve una combinación de tamaños distintos mientras la
+     * interfaz cambia las bandas.
+     */
+    @Volatile private var filters: Array<Coeffs?> = emptyArray()
     @Volatile private var preamp = 1.0f
-    private var states: Array<Array<State>> = emptyArray()   // [banda][canal]
+    private val states = Array(MAX_BANDS) { Array(channels) { State() } }   // [banda][canal]
 
     /** Aplica las bandas (las de ganancia ≈ 0 se omiten) y fija el preamp automático = −(mayor subida). */
     fun setBands(bands: List<EqBand>) {
-        val active = bands.filter { abs(it.gainDb) >= 0.05f }
-        filters = active.map { coeffs(it) }.toTypedArray()
-        preamp = 10f.pow(-max(0f, active.maxOfOrNull { it.gainDb } ?: 0f) / 20f)
-        if (states.size != active.size) states = Array(active.size) { Array(channels) { State() } }
+        val list = bands.take(MAX_BANDS)
+        val prev = filters
+        val next = Array(list.size) { i -> if (abs(list[i].gainDb) >= 0.05f) coeffs(list[i]) else null }
+        // Una banda que pasa de plana a activa arranca con el estado limpio (sin restos de antes).
+        for (i in next.indices) if (next[i] != null && (i >= prev.size || prev[i] == null)) resetBand(i)
+        filters = next
+        preamp = 10f.pow(-max(0f, list.maxOfOrNull { if (abs(it.gainDb) >= 0.05f) it.gainDb else 0f } ?: 0f) / 20f)
     }
 
     /** Ganancia lineal extra (p. ej. la subida de ReplayGain), aplicada junto al preamp. */
     @Volatile var extraGain = 1.0f
 
-    fun reset() { states.forEach { band -> band.forEach { s -> s.x1 = 0.0; s.x2 = 0.0; s.y1 = 0.0; s.y2 = 0.0 } } }
+    private fun resetBand(b: Int) { states[b].forEach { s -> s.x1 = 0.0; s.x2 = 0.0; s.y1 = 0.0; s.y2 = 0.0 } }
+
+    fun reset() { for (b in states.indices) resetBand(b) }
 
     /** Procesa en el sitio `frames` fotogramas intercalados (L R L R…). */
     fun process(buf: FloatArray, frames: Int) {
         val fs = filters
         val gain = preamp * extraGain
-        if (fs.isEmpty() && gain == 1f) return
+        if (gain == 1f && fs.all { it == null }) return
         for (f in 0 until frames) {
             for (c in 0 until channels) {
                 val i = f * channels + c
                 var x = buf[i].toDouble()
                 for (b in fs.indices) {
-                    val k = fs[b]
+                    val k = fs[b] ?: continue
                     val s = states[b][c]
                     val y = k.b0 * x + k.b1 * s.x1 + k.b2 * s.x2 - k.a1 * s.y1 - k.a2 * s.y2
                     s.x2 = s.x1; s.x1 = x; s.y2 = s.y1; s.y1 = y

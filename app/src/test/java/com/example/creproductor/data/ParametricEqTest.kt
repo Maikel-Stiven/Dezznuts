@@ -51,3 +51,40 @@ class ParametricEqTest {
         assertEquals(12f, EqBands.decode("1000:99:1").first().gainDb, 0f)
     }
 }
+
+class ParametricEqRobustnessTest {
+    /** El hilo de audio procesa mientras la interfaz cambia las bandas (activar/desactivar bandas incluido). */
+    @Test fun cambiarBandasMientrasSeProcesaNoFalla() {
+        val eq = ParametricEq(48_000, 2).apply { setBands(EqBands.DEFAULT) }
+        val error = java.util.concurrent.atomic.AtomicReference<Throwable?>(null)
+        val stop = java.util.concurrent.atomic.AtomicBoolean(false)
+        val ui = Thread {
+            var n = 0
+            while (!stop.get()) {
+                // alterna entre 0, 3 y 5 bandas activas
+                val active = intArrayOf(0, 3, 5)[n++ % 3]
+                eq.setBands(EqBands.DEFAULT.mapIndexed { i, b -> if (i < active) b.copy(gainDb = 4f) else b })
+            }
+        }
+        val audio = Thread {
+            try {
+                val buf = FloatArray(2 * 480) { 0.1f }
+                repeat(20_000) { eq.process(buf, 480) }
+            } catch (t: Throwable) { error.set(t) }
+        }
+        ui.start(); audio.start(); audio.join(); stop.set(true); ui.join()
+        assertEquals(null, error.get())
+    }
+
+    /** Presupuesto de tiempo real: 1 s de audio estéreo a 96 kHz con 5 bandas debe procesarse en mucho menos de 1 s. */
+    @Test fun procesaMuchoMasRapidoQueTiempoReal() {
+        val eq = ParametricEq(96_000, 2).apply { setBands(EqBands.DEFAULT.map { it.copy(gainDb = 3f) }) }
+        val buf = FloatArray(2 * 96_000) { (it % 100) / 1000f }
+        eq.process(buf, 96_000) // calentamiento de la JVM
+        val t0 = System.nanoTime()
+        repeat(5) { eq.process(buf, 96_000) }
+        val msPerSecondOfAudio = (System.nanoTime() - t0) / 5 / 1_000_000
+        println("EQ 5 bandas, 96 kHz estéreo: $msPerSecondOfAudio ms por segundo de audio")
+        org.junit.Assert.assertTrue("demasiado lento: $msPerSecondOfAudio ms", msPerSecondOfAudio < 250)
+    }
+}

@@ -56,6 +56,7 @@ class MusicService : MediaSessionService(){
     /** Ecualizador paramétrico + subida de ReplayGain del reproductor actual (ver [ParametricEqProcessor]). */
     private var eqProcessor = ParametricEqProcessor(enabledAtBuild = false)
     private var processorActive = false
+    private var lastRoute: String? = null
 
     private val audioManager by lazy { getSystemService(AUDIO_SERVICE) as AudioManager }
 
@@ -234,7 +235,11 @@ class MusicService : MediaSessionService(){
                     trackRate = audioTrackConfig.sampleRate,
                     deviceRate = HiFiAudio.deviceSampleRate(this@MusicService)
                 )
-                prefs.edit().putString(HiFiAudio.KEY_REAL_ROUTE, route).apply()
+                // Se crea un AudioTrack por pista: solo se escribe (y se avisa a la interfaz) si la ruta cambió.
+                if (route != lastRoute) {
+                    lastRoute = route
+                    prefs.edit().putString(HiFiAudio.KEY_REAL_ROUTE, route).apply()
+                }
             }
         })
         player.addListener(object : Player.Listener {

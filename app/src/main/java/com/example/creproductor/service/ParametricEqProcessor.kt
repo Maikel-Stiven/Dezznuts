@@ -60,21 +60,24 @@ class ParametricEqProcessor(private val enabledAtBuild: Boolean) : BaseAudioProc
         if (scratch.size < samples) scratch = FloatArray(samples)
         val order = inputBuffer.order()
         inputBuffer.order(ByteOrder.LITTLE_ENDIAN)
-        for (i in 0 until samples) {
-            scratch[i] = when (enc) {
-                C.ENCODING_PCM_16BIT -> inputBuffer.short / 32768f
-                C.ENCODING_PCM_24BIT -> {
-                    val v = (inputBuffer.get().toInt() and 0xFF) or ((inputBuffer.get().toInt() and 0xFF) shl 8) or (inputBuffer.get().toInt() shl 16)
-                    v / 8388608f
-                }
-                C.ENCODING_PCM_32BIT -> inputBuffer.int / 2147483648f
-                else -> inputBuffer.float
+        // Un bucle por formato (y no un `when` por muestra): a 96 kHz estéreo son 192 000 muestras por segundo.
+        when (enc) {
+            C.ENCODING_PCM_16BIT -> for (i in 0 until samples) scratch[i] = inputBuffer.short / 32768f
+            C.ENCODING_PCM_24BIT -> for (i in 0 until samples) {
+                val v = (inputBuffer.get().toInt() and 0xFF) or ((inputBuffer.get().toInt() and 0xFF) shl 8) or (inputBuffer.get().toInt() shl 16)
+                scratch[i] = v / 8388608f
+            }
+            C.ENCODING_PCM_32BIT -> for (i in 0 until samples) scratch[i] = inputBuffer.int / 2147483648f
+            else -> {
+                inputBuffer.asFloatBuffer().get(scratch, 0, samples)   // ya es float: copia en bloque
+                inputBuffer.position(inputBuffer.position() + samples * 4)
             }
         }
         inputBuffer.order(order)
         e.process(scratch, frames)
         val out = replaceOutputBuffer(samples * 4).order(ByteOrder.nativeOrder())
-        for (i in 0 until samples) out.putFloat(scratch[i])
+        out.asFloatBuffer().put(scratch, 0, samples)                   // volcado en bloque, no muestra a muestra
+        out.position(samples * 4)
         out.flip()
     }
 
