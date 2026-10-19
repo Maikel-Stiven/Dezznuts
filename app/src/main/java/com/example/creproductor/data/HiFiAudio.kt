@@ -53,6 +53,9 @@ object HiFiAudio {
     const val KEY_EQ_ENABLED = "eq_enabled"
     const val KEY_EQ_BANDS = "eq_bands_v2"
 
+    /** Duración del fundido de entrada y salida en ms (0 = apagado). */
+    const val KEY_FADE_MS = "hifi_fade_ms"
+
     /** Perfiles por salida: activos, clase de salida a la que pertenecen los ajustes actuales y un perfil por clase. */
     const val KEY_PROFILES = "hifi_profiles"
     const val KEY_PROFILE_ACTIVE = "hifi_profile_active"
@@ -156,5 +159,10 @@ object HiFiAudio {
     fun isProfilesEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_PROFILES, false)
     fun setProfilesEnabled(context: Context, enabled: Boolean) {
         prefs(context).edit().putBoolean(KEY_PROFILES, enabled).apply()
+    }
+
+    fun fadeMs(context: Context): Int = prefs(context).getInt(KEY_FADE_MS, 0)
+    fun setFadeMs(context: Context, ms: Int) {
+        prefs(context).edit().putInt(KEY_FADE_MS, ms).apply()
     }
 }

@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.creproductor.data.Fade
 import com.example.creproductor.data.HiFiAudio
 
 /**
@@ -59,6 +60,7 @@ fun HiFiAudioDialog(
     var replayGain by remember { mutableStateOf(HiFiAudio.isReplayGainEnabled(context)) }
     var rgAlbum by remember { mutableStateOf(HiFiAudio.isReplayGainAlbumMode(context)) }
     var rgBoost by remember { mutableStateOf(HiFiAudio.isReplayGainBoostEnabled(context)) }
+    var fadeMs by remember { mutableStateOf(HiFiAudio.fadeMs(context)) }
     var profiles by remember { mutableStateOf(HiFiAudio.isProfilesEnabled(context)) }
     var preferUsb by remember { mutableStateOf(HiFiAudio.isPreferUsbEnabled(context)) }
     val outputs = remember { HiFiAudio.outputDevices(context) }
@@ -149,6 +151,20 @@ fun HiFiAudioDialog(
                         HiFiAudio.setPreferUsbEnabled(context, enabled)
                     }
                 )
+
+                Column {
+                    Text("Fundido de entrada y salida", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Sube el volumen al empezar una pista o reanudar y lo baja al final de la pista y al pausar. " +
+                            "En discos sin cortes (gapless) conviene dejarlo apagado.",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    TextButton(onClick = {
+                        val options = Fade.OPTIONS_MS
+                        fadeMs = options[(options.indexOf(fadeMs) + 1) % options.size]
+                        HiFiAudio.setFadeMs(context, fadeMs)
+                    }) { Text("Duración: ${Fade.label(fadeMs)}") }
+                }
 
                 AudioOption(
                     title = "Perfiles por salida",
