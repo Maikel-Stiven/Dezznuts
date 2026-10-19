@@ -211,15 +211,15 @@ class MainActivity : ComponentActivity() {
 
                                         if (isPlayerFullScreenVisible && currentSong != null) {
                                             val activeSongsQueue = currentQueue.ifEmpty { state.songs }
-                                            // Solo aquí se lee la posición: leerla en la raíz recomponía
-                                            // toda la pantalla cada 500 ms aunque el reproductor estuviera cerrado.
+                                            // Solo aquí se suscribe a la posición, y se entrega como lambda: la lee
+                                            // únicamente la barra de progreso, así el resto del reproductor no se recompone cada 500 ms.
                                             val currentPositionMs by viewModel.currentPositionMs.collectAsStateWithLifecycle()
 
                                             FullScreenPlayer(
                                                 song = currentSong!!,
                                                 songs = activeSongsQueue,
                                                 isPlaying = isPlaying,
-                                                currentPositionMs = currentPositionMs,
+                                                currentPositionMs = { currentPositionMs },
                                                 repeatMode = repeatMode,
                                                 isShuffleEnabled = isShuffleEnabled,
                                                 onToggleShuffle = { viewModel.toggleShuffle() },

@@ -369,14 +369,14 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
      * extraíble, archivos que solo expone el proveedor), se vuelve al
      * `content://`, que siempre funciona.
      */
-    private fun playbackUri(song: Song): Uri {
+    private fun playbackUri(song: Song): Uri = playbackUriCache.getOrPut(song.id) {
         val path = song.path
-        if (path.isNotEmpty()) {
-            val file = File(path)
-            if (file.canRead()) return Uri.fromFile(file)
-        }
-        return song.contentUri
+        val file = if (path.isNotEmpty()) File(path) else null
+        if (file != null && file.canRead()) Uri.fromFile(file) else song.contentUri
     }
+
+    /** `id → URI` ya resuelto: evita un `canRead()` (acceso a disco) por canción en cada cambio de cola. */
+    private val playbackUriCache = HashMap<Long, Uri>()
 
     fun seekTo(positionMs: Long){
         // Marca el inicio de la medición para la traza de PlaybackDiagnostics.
@@ -411,6 +411,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         val updated = songs.map { song ->
             if (savedFavIds.contains(song.id)) song.copy(isFavorite = true) else song
         }
+        playbackUriCache.clear() // la biblioteca cambió: las rutas pueden haber cambiado
         _uiState.value = UiState.Success(updated)
         restoreDashboardLists(updated)
     }
@@ -555,6 +556,8 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     private fun syncFavoritesFromPrefs(){
         val currentState = _uiState.value as? UiState.Success ?: return
         val favIds = getSavedFavoritesIds()
+        // toggleFavorite ya actualizó el estado antes de guardar: evita remapear toda la biblioteca otra vez.
+        if (currentState.songs.none { it.isFavorite != favIds.contains(it.id) }) return
         val updatedSongs = currentState.songs.map { it.copy(isFavorite = favIds.contains(it.id)) }
         _uiState.value = UiState.Success(updatedSongs)
 

@@ -107,7 +107,7 @@ fun FullScreenPlayer(
     song: Song,
     songs: List<Song>,
     isPlaying: Boolean,
-    currentPositionMs: Long,
+    currentPositionMs: () -> Long,
     repeatMode: RepeatMode = RepeatMode.OFF,
     isShuffleEnabled: Boolean = false,
     onToggleShuffle: () -> Unit = {},
@@ -127,10 +127,6 @@ fun FullScreenPlayer(
     BackHandler {
         onDismiss()
     }
-
-    var isDraggingSlider by remember { mutableStateOf(false) }
-    var sliderPositionMs by remember { mutableFloatStateOf(0f) }
-    val currentSliderValue = if (isDraggingSlider) sliderPositionMs else currentPositionMs.toFloat()
 
     var showQueueBottomSheet by remember { mutableStateOf(false) }
 
@@ -320,7 +316,7 @@ fun FullScreenPlayer(
                     //Botón de anterior actualizado
                     IconButton(
                         onClick = {
-                            if (currentPositionMs > 5000L) {
+                            if (currentPositionMs() > 5000L) {
                                 onSeekTo(0L)
                             } else {
                                 onPreviousClick()
@@ -445,60 +441,7 @@ fun FullScreenPlayer(
 
                     //Slider del tiempo + timestamps
 
-                    val sliderInteractionSource = remember { MutableInteractionSource() }
-
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Slider(
-                            value = currentSliderValue.coerceIn(0f, song.duration.toFloat()),
-                            onValueChange = {
-                                isDraggingSlider = true
-                                sliderPositionMs = it
-                            },
-                            onValueChangeFinished = {
-                                isDraggingSlider = false
-                                onSeekTo(sliderPositionMs.toLong())
-                            },
-                            valueRange = 0f..(if (song.duration > 0) song.duration.toFloat() else 1f),
-                            interactionSource = sliderInteractionSource,
-                            thumb = {
-                                Box(
-                                    modifier = Modifier
-                                        .size(14.dp)
-                                        .background(
-                                            color = MaterialTheme.colorScheme.primary,
-                                            shape = CircleShape
-                                        )
-                                )
-                            },
-                            track = { sliderState ->
-                                SliderDefaults.Track(
-                                    sliderState = sliderState,
-                                    modifier = Modifier.height(4.dp),
-                                    colors = SliderDefaults.colors(
-                                        activeTickColor = MaterialTheme.colorScheme.primary,
-                                        inactiveTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                                    )
-                                )
-                            }
-                        )
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = formatTime(currentSliderValue.toLong()),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = formatTime(song.duration),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                    PlayerSeekBar(positionMs = currentPositionMs, durationMs = song.duration, onSeekTo = onSeekTo)
                 }
             }
         }
@@ -801,4 +744,72 @@ private fun formatTime(ms: Long): String{
     val  minutes = TimeUnit.MILLISECONDS.toMinutes(ms)
     val seconds = TimeUnit.MILLISECONDS.toSeconds(ms) % 60
     return String.format(java.util.Locale.getDefault(),"%02d:%02d", minutes, seconds)
+}
+
+/**
+ * Barra de progreso + tiempos. Es el **único** lugar que lee la posición (que cambia cada
+ * 500 ms): al recibirla como lambda, solo esta función se recompone y no todo el reproductor
+ * (carrusel, cabecera, botones).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PlayerSeekBar(positionMs: () -> Long, durationMs: Long, onSeekTo: (Long) -> Unit) {
+    var isDragging by remember { mutableStateOf(false) }
+    var dragMs by remember { mutableFloatStateOf(0f) }
+    val value = (if (isDragging) dragMs else positionMs().toFloat()).coerceIn(0f, durationMs.toFloat())
+
+    val sliderInteractionSource = remember { MutableInteractionSource() }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Slider(
+            value = value,
+            onValueChange = {
+                isDragging = true
+                dragMs = it
+            },
+            onValueChangeFinished = {
+                isDragging = false
+                onSeekTo(dragMs.toLong())
+            },
+            valueRange = 0f..(if (durationMs > 0) durationMs.toFloat() else 1f),
+            interactionSource = sliderInteractionSource,
+            thumb = {
+                Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = CircleShape
+                        )
+                )
+            },
+            track = { sliderState ->
+                SliderDefaults.Track(
+                    sliderState = sliderState,
+                    modifier = Modifier.height(4.dp),
+                    colors = SliderDefaults.colors(
+                        activeTickColor = MaterialTheme.colorScheme.primary,
+                        inactiveTrackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                    )
+                )
+            }
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = formatTime(value.toLong()),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = formatTime(durationMs),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
 }
