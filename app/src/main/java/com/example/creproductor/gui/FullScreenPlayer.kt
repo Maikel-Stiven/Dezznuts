@@ -89,6 +89,8 @@ import com.example.creproductor.data.RepeatMode
 import com.example.creproductor.data.Song
 import java.util.concurrent.TimeUnit
 import kotlin.math.absoluteValue
+import kotlinx.coroutines.Dispatchers
+
 /**
  * Reproductor a pantalla completa, superpuesto sobre el resto de la app.
  *
@@ -130,6 +132,15 @@ fun FullScreenPlayer(
 
     var showQueueBottomSheet by remember { mutableStateOf(false) }
 
+    var lastClickTime by remember { mutableStateOf(0L) }
+    fun safeClick(action: () -> Unit){
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastClickTime > 300){
+            lastClickTime = currentTime
+            action()
+        }
+
+    }
 
     val (repeatIcon, repeatTint, modelLabel) = when (repeatMode) {
         RepeatMode.OFF -> Triple(
@@ -271,9 +282,14 @@ fun FullScreenPlayer(
 
                 ) {
                     if (currentPagerSong?.albumArtUri != null) {
+
+                        val context = LocalContext.current
+
                         AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
+                            model = ImageRequest.Builder(context)
                                 .data(currentPagerSong.albumArtUri)
+                                .fetcherDispatcher(Dispatchers.IO)
+                                .decoderDispatcher(Dispatchers.IO)
                                 .crossfade(true)
                                 .build(),
                             contentDescription = "Portada",
@@ -316,10 +332,13 @@ fun FullScreenPlayer(
                     //Botón de anterior actualizado
                     IconButton(
                         onClick = {
-                            if (currentPositionMs() > 5000L) {
-                                onSeekTo(0L)
-                            } else {
-                                onPreviousClick()
+
+                            safeClick {
+                                if (currentPositionMs() > 5000L) {
+                                    onSeekTo(0L)
+                                } else {
+                                    onPreviousClick()
+                                }
                             }
                         },
                         modifier = Modifier.size(48.dp)
@@ -348,7 +367,7 @@ fun FullScreenPlayer(
                     }
 
                     IconButton(
-                        onClick = onNextClick,
+                        onClick = {safeClick { onNextClick() }},
                         modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
@@ -654,7 +673,12 @@ fun FullScreenPlayer(
                             ) {
                                 if (queueSong.albumArtUri != null) {
                                     AsyncImage(
-                                        model = queueSong.albumArtUri,
+                                        model = ImageRequest.Builder(LocalContext.current)
+                                            .data(queueSong.albumArtUri)
+                                            .fetcherDispatcher(Dispatchers.IO)
+                                            .decoderDispatcher(Dispatchers.IO)
+                                            .crossfade(true)
+                                            .build(),
                                         contentDescription = null,
                                         modifier = Modifier.fillMaxSize(),
                                         contentScale = ContentScale.Crop

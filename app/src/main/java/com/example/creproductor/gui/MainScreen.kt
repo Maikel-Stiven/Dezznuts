@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
@@ -23,17 +25,19 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.creproductor.SongListScreen
 import com.example.creproductor.data.Playlist
 import com.example.creproductor.data.Song
+import kotlinx.coroutines.launch
 
 enum class AppTab(val title: String){
     QUICK_SELECT("Selección rápida"),
@@ -49,12 +53,18 @@ enum class AppTab(val title: String){
 @Composable
 fun MainScreen(
     viewModel: MusicViewModel,
-    onSongClick: (Song) -> Unit,
     onOpenEqualizer: () -> Unit,
     onOpenScanner: () -> Unit,
-    onOpenDrawer: () -> Unit = {}
+    onOpenDrawer: () -> Unit = {},
+    onPageChanged: (Int) -> Unit = {}
 ){
-    var selectedTabIndex by remember{ mutableIntStateOf(0) }
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { AppTab.entries.size})
+    val coroutineScope = rememberCoroutineScope ()
+
+    LaunchedEffect(pagerState.currentPage) {
+        onPageChanged(pagerState.currentPage)
+    }
+
     var showMenu by remember { mutableStateOf(false) }
     var isSearchActive by remember { mutableStateOf(false) }
     var selectedAlbumName by remember { mutableStateOf<String?>(null) }
@@ -72,18 +82,18 @@ fun MainScreen(
     var showAddSongsDialog by remember { mutableStateOf(false) }
     var selectedPlaylist by remember { mutableStateOf<Playlist?>(null) }
 
-    val playlist by viewModel.playlists.collectAsStateWithLifecycle()
-    val favoriteSongs by viewModel.favoriteSongs.collectAsStateWithLifecycle()
-    val recentSongs by viewModel.recentPlayedSongs.collectAsStateWithLifecycle()
+    val playlist by viewModel.playlists.collectAsState()
+    val favoriteSongs by viewModel.favoriteSongs.collectAsState()
+    val recentSongs by viewModel.recentPlayedSongs.collectAsState()
 
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
-    val filteredSongs by viewModel.filteredSongs.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val filteredSongs by viewModel.filteredSongs.collectAsState()
     val songs = (uiState as? UiState.Success)?.songs ?: emptyList()
-    val  searchHistory by viewModel.searchHistory.collectAsStateWithLifecycle()
+    val  searchHistory by viewModel.searchHistory.collectAsState()
 
-    val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
-    val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
+    val currentSong by viewModel.currentSong.collectAsState()
+    val isPlaying by viewModel.isPlaying.collectAsState()
 
 
     val artisListState = rememberLazyListState()
@@ -208,12 +218,7 @@ fun MainScreen(
         )
     } else if (selectedPlaylist != null){
         val activePlaylist = playlist.find { it.id == selectedPlaylist!!.id } ?: selectedPlaylist!!
-        // Con un Set la pertenencia es O(1); `remember` evita refiltrar toda la biblioteca en cada
-        // recomposición mientras la lista no cambie.
-        val playlistSongs = remember(songs, activePlaylist.songIds) {
-            val ids = activePlaylist.songIds.toHashSet()
-            songs.filter { it.id in ids }
-        }
+        val playlistSongs = songs.filter { activePlaylist.songIds.contains(it.id) }
 
         PlaylistScreenDetail(
             playlist = activePlaylist,
@@ -340,79 +345,86 @@ fun MainScreen(
                             .padding(innerPadding)
                     ) {
                         PrimaryScrollableTabRow(
-                            selectedTabIndex = selectedTabIndex,
+                            selectedTabIndex = pagerState.currentPage,
                             edgePadding = 16.dp,
                             containerColor = MaterialTheme.colorScheme.background,
                             contentColor = MaterialTheme.colorScheme.primary
                         ) {
                             AppTab.entries.forEachIndexed { index, tab ->
                                 Tab(
-                                    selected = selectedTabIndex == index,
-                                    onClick = {selectedTabIndex = index},
+                                   selected = pagerState.currentPage == index,
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            pagerState.animateScrollToPage(index)
+                                        }
+                                    },
                                     text = {Text(tab.title)}
                                 )
                             }
                         }
-                        Box(modifier = Modifier.weight(1f)) {
-                            when (AppTab.entries[selectedTabIndex]){
-                                AppTab.QUICK_SELECT -> QuickSelectionScreen(
-                                    viewModel = viewModel,
-                                    onSongClick = { song, queue -> viewModel.playSong(song, customQueue = queue)},
-                                    onSeeAllCategoryClick = {type, categorySongs ->
-                                        selectedQuickSelectType = type
-                                        selectedQuickSelectSongs = categorySongs
-                                    }
-                                )
-                                AppTab.SONGS -> SongListScreen(
-                                    songs = filteredSongs,
-                                    currentSongId = currentSong?.id,
-                                    isPlaying = isPlaying,
-                                    onSongClick = {song ->
-                                        viewModel.playSong(song, customQueue = filteredSongs)
-                                    },
-                                    onEditSong = {}
-                                )
-                                AppTab.ALBUMS -> AlbumsGridScreen(
-                                    songs = songs,
-                                    gridState = albumsGridState,
-                                    onAlbumClick = {albumName, albumSongs ->
-                                        selectedAlbumName = albumName
-                                        selectedAlbumsSongs = albumSongs
-                                    }
-                                )
-                                AppTab.ARTISTS -> ArtistsListScreen(
-                                    songs = songs,
-                                    listState = artisListState,
-                                    onArtistClick = {artistName, artistSongs ->
-                                        selectedArtistName = artistName
-                                        selectedArtistSongs = artistSongs
-                                    }
-                                    )
-                                AppTab.GENRES -> GenresGridScreen(
-                                    songs = songs,
-                                    gridState = genresGridstate,
-                                    onGenreClick = {genreName, genreSongs ->
-                                        selectedGenreName = genreName
-                                        selectedGenreSongs = genreSongs
-                                    }
-                                )
-                                AppTab.PLAYLISTS -> PlaylistScreen(
-                                    playlist = playlist,
-                                    allSongs = songs,
-                                    onCreatePlaylistClick = { showCreatedPlaylistDialog = true},
-                                    onRestorePlaylistClick = {/*agregar lógica*/},
-                                    onPlaylistClick = {playlist -> selectedPlaylist = playlist}
-                                )
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.weight(1f)
+                        ) { page ->
+                             when (AppTab.entries[page]){
+                                 AppTab.QUICK_SELECT -> QuickSelectionScreen(
+                                     viewModel = viewModel,
+                                     onSongClick = { song, queue -> viewModel.playSong(song, customQueue = queue)},
+                                     onSeeAllCategoryClick = {type, categorySongs ->
+                                         selectedQuickSelectType = type
+                                         selectedQuickSelectSongs = categorySongs
+                                     }
+                                 )
+                                 AppTab.SONGS -> SongListScreen(
+                                     songs = filteredSongs,
+                                     currentSongId = currentSong?.id,
+                                     isPlaying = isPlaying,
+                                     onSongClick = {song ->
+                                         viewModel.playSong(song, customQueue = filteredSongs)
+                                     },
+                                     onEditSong = {}
+                                 )
+                                 AppTab.ALBUMS -> AlbumsGridScreen(
+                                     songs = songs,
+                                     gridState = albumsGridState,
+                                     onAlbumClick = {albumName, albumSongs ->
+                                         selectedAlbumName = albumName
+                                         selectedAlbumsSongs = albumSongs
+                                     }
+                                 )
+                                 AppTab.ARTISTS -> ArtistsListScreen(
+                                     songs = songs,
+                                     listState = artisListState,
+                                     onArtistClick = {artistName, artistSongs ->
+                                         selectedArtistName = artistName
+                                         selectedArtistSongs = artistSongs
+                                     }
+                                     )
+                                 AppTab.GENRES -> GenresGridScreen(
+                                     songs = songs,
+                                     gridState = genresGridstate,
+                                     onGenreClick = {genreName, genreSongs ->
+                                         selectedGenreName = genreName
+                                         selectedGenreSongs = genreSongs
+                                     }
+                                 )
+                                 AppTab.PLAYLISTS -> PlaylistScreen(
+                                     playlist = playlist,
+                                     allSongs = songs,
+                                     onCreatePlaylistClick = { showCreatedPlaylistDialog = true},
+                                     onRestorePlaylistClick = {/*agregar lógica*/},
+                                     onPlaylistClick = {playlist -> selectedPlaylist = playlist}
+                                 )
 
-                                AppTab.FOLDERS -> FoldersListScreen(
-                                    songs = songs,
-                                    onFolderClick = {folderName, folderSongs ->
-                                        selectedFolderName = folderName
-                                        selectedFolderSongs = folderSongs
-                                    }
-                                )
-                            }
-                        }
+                                 AppTab.FOLDERS -> FoldersListScreen(
+                                     songs = songs,
+                                     onFolderClick = {folderName, folderSongs ->
+                                         selectedFolderName = folderName
+                                         selectedFolderSongs = folderSongs
+                                     }
+                                 )
+                             }
+                         }
                     }
                 }
             }

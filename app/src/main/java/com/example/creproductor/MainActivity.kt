@@ -58,16 +58,6 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: MusicViewModel by viewModels()
 
-    override fun onStart() {
-        super.onStart()
-        viewModel.setUiVisible(true)
-    }
-
-    override fun onStop() {
-        viewModel.setUiVisible(false)
-        super.onStop()
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -98,6 +88,7 @@ class MainActivity : ComponentActivity() {
                     var isPlayerFullScreenVisible by remember { mutableStateOf(false) }
                     var showClearImageCacheDialog by remember { mutableStateOf(false) }
                     var showHiFiAudioDialog by remember { mutableStateOf(false) }
+                    var isFirstPage by remember { mutableStateOf(true) }
 
                     val requiredPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         Manifest.permission.READ_MEDIA_AUDIO
@@ -159,7 +150,7 @@ class MainActivity : ComponentActivity() {
 
                                 ModalNavigationDrawer(
                                     drawerState = drawerState,
-                                    gesturesEnabled = !isPlayerFullScreenVisible,
+                                    gesturesEnabled = !isPlayerFullScreenVisible && (drawerState.isOpen || isFirstPage),
                                     drawerContent = {
                                         AppDrawerContent(
                                             onMenuItem= { menuItem ->
@@ -184,11 +175,13 @@ class MainActivity : ComponentActivity() {
                                             Box(modifier = Modifier.weight(1f)) {
                                                 MainScreen(
                                                     viewModel = viewModel,
-                                                    onSongClick = { song -> viewModel.playSong(song) },
                                                     onOpenEqualizer = { /* TODO */ },
                                                     onOpenScanner = { /* TODO */ },
                                                     onOpenDrawer = {
                                                         scope.launch { drawerState.open() }
+                                                    },
+                                                    onPageChanged = {page ->
+                                                        isFirstPage = (page == 0)
                                                     }
                                                 )
                                             }

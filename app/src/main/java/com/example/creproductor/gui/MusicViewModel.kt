@@ -10,6 +10,7 @@ import android.database.ContentObserver
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.provider.MediaStore
 import android.util.Log
 import androidx.core.content.ContextCompat
@@ -30,7 +31,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -42,6 +42,8 @@ import com.example.creproductor.data.RepeatMode
 import com.example.creproductor.data.SongOrganizer
 import com.example.creproductor.data.next
 import com.example.creproductor.service.PlaybackDiagnostics
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 
 sealed interface UiState {
@@ -56,6 +58,10 @@ enum class SongFilter{
     FAVORITES,
     RECENT
 }
+
+/** Tamaño de la primera publicación de la biblioteca y factor de crecimiento de las siguientes. */
+private const val FIRST_PUBLISH_SIZE = 100
+private const val PUBLISH_GROWTH = 4
 
 class MusicViewModel (application: Application) : AndroidViewModel(application) {
 
@@ -74,9 +80,6 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
 
 
     private var mediaController: MediaController? = null
-    /** `true` mientras la actividad está en primer plano (la fija MainActivity en onStart/onStop). */
-    private val _uiVisible = MutableStateFlow(true)
-
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
 
@@ -221,14 +224,11 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                     }
 
                     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                        val stopHere = reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO &&
-                            _repeatMode.value == RepeatMode.STOP_AFTER_CURRENT
-                        if (stopHere) {
-                            // Queda en la canción siguiente, parada al inicio (seekTo(0L)
-                            // actúa sobre el item actual; seekTo(0, 0L) saltaba al primero de la cola).
-                            controller.pause()
-                            controller.seekTo(0L)
-                        }
+                      if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO && _repeatMode.value == RepeatMode.STOP_AFTER_CURRENT) {
+                          controller.pause()
+                          controller.seekTo(0, 0L)
+                          return
+                      }
                         mediaItem?.mediaId?.let { idStr ->
 
                             val allSongs = (_uiState.value as?  UiState.Success)?.songs ?: emptyList()
@@ -236,12 +236,10 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
 
                             val foundSong = activeQueue.find { it.id.toString() == idStr }
                                 ?: (_uiState.value as? UiState.Success)?.songs?.find { it.id.toString() == idStr }
+
                             if (foundSong !== null){
                                 _currentSong.value = foundSong
-                                // playSong() ya contó esta reproducción: PLAYLIST_CHANGED la duplicaría.
-                                if (!stopHere && reason != Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) {
-                                    registerSongPlay(foundSong)
-                                }
+                                registerSongPlay(foundSong)
                             }
                         }
                     }
@@ -264,36 +262,18 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         )
     }
 
-    /**
-     * Avisa de que la UI se muestra u oculta. Al ocultarse se guarda la posición actual (así
-     * se restaura bien al reabrir) y el sondeo de [startPositionTracker] se suspende.
-     */
-    fun setUiVisible(visible: Boolean) {
-        if (!visible) {
-            mediaController?.let {
-                _currentPositionMs.value = it.currentPosition
-                prefs.edit { putLong("last_position_ms", it.currentPosition) }
-            }
-        }
-        _uiVisible.value = visible
-    }
-
-    /**
-     * Sondea la posición cada 500 ms, pero solo mientras suena **y** la UI es visible: en pausa o
-     * con la pantalla apagada / la app en segundo plano el bucle queda suspendido y no despierta
-     * la CPU. `collectLatest` cancela el sondeo en cuanto cambia cualquiera de las dos condiciones.
-     * No se sincroniza al pausar para no pisar la posición
-     * restaurada de la sesión anterior (ver restoreDashboardLists).
-     */
     private fun startPositionTracker(){
         viewModelScope.launch {
-            combine(_isPlaying, _uiVisible) { playing, visible -> playing && visible }
-                .collectLatest { active ->
-                while (active){
-                    mediaController?.let { _currentPositionMs.value = it.currentPosition }
-                    delay(500L)
+            while (true){
+                mediaController?.let{ controller ->
+                    if (controller.isPlaying){
+                        _currentPositionMs.value = controller.currentPosition
+                        prefs.edit{putLong("last_position_ms", controller.currentPosition)}
+                    }
                 }
+                delay(1000L)
             }
+
         }
     }
 
@@ -303,8 +283,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     }
 
     fun addSearchHistory(query: String){
-        // "|" es el separador del historial guardado: se sustituye para no partir la búsqueda en dos.
-        val cleanQuery = query.replace('|', ' ').trim()
+        val cleanQuery = query.trim()
         if (cleanQuery.isBlank()) return
         val currentList = _searchHistory.value.toMutableList()
         currentList.remove(cleanQuery)
@@ -388,54 +367,80 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     fun loadSongs(silent: Boolean = false){
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
+            // Traza de carga: `adb logcat -s DezzLoad` (ver también DezzSeek).
+            val t0 = SystemClock.elapsedRealtime()
+            var publishes = 0
             if (!silent) _uiState.value = UiState.Loading
             val accumulatedSongs = mutableListOf<Song>()
 
+            // Cada publicación repinta toda la interfaz y rehace los agrupados, así
+            // que se publica en tramos que crecen x4 (100, 400, 1600…): se ve algo
+            // enseguida y el total de repintados es logarítmico, no n/100.
+            var nextPublishAt = FIRST_PUBLISH_SIZE
             scanner.scanAudioFiles(chunkSize = 100).collect { chunk ->
                 accumulatedSongs.addAll(chunk)
                 // En una recarga silenciosa se publica al final: publicar por
                 // trozos haría que la lista encoja y vuelva a crecer.
-                if (!silent) publishSongs(accumulatedSongs)
+                if (!silent && accumulatedSongs.size >= nextPublishAt) {
+                    nextPublishAt *= PUBLISH_GROWTH
+                    publishSongs(accumulatedSongs.toList())
+                    if (++publishes == 1) {
+                        Log.i("DezzLoad", "[+${SystemClock.elapsedRealtime() - t0} ms] primera lista publicada (${accumulatedSongs.size} canciones)")
+                    }
+                }
             }
 
             if (accumulatedSongs.isEmpty()){
                 _uiState.value = UiState.Empty
-            } else if (silent) {
+            } else if (silent || (_uiState.value as? UiState.Success)?.songs?.size != accumulatedSongs.size) {
                 publishSongs(accumulatedSongs)
+                publishes++
             }
+            Log.i("DezzLoad", "[+${SystemClock.elapsedRealtime() - t0} ms] carga terminada: ${accumulatedSongs.size} canciones, $publishes publicaciones, silent=$silent")
         }
     }
 
     private fun publishSongs(songs: List<Song>){
-        val savedFavIds = getSavedFavoritesIds()
-        val updated = songs.map { song ->
-            if (savedFavIds.contains(song.id)) song.copy(isFavorite = true) else song
+        viewModelScope.launch(Dispatchers.Default) {
+            val savedFavIds = getSavedFavoritesIds()
+            val updated = songs.map { song ->
+                if (savedFavIds.contains(song.id)) song.copy(isFavorite = true) else song
+            }
+            withContext(Dispatchers.Main){
+                playbackUriCache.clear() // la biblioteca cambió: las rutas pueden haber cambiado (en Main, donde se usa)
+                _uiState.value = UiState.Success(updated)
+                restoreDashboardLists(updated)
+            }
         }
-        playbackUriCache.clear() // la biblioteca cambió: las rutas pueden haber cambiado
-        _uiState.value = UiState.Success(updated)
-        restoreDashboardLists(updated)
     }
 
     private fun registerSongPlay(song: Song){
-        val currentCount = playCountMap.getOrDefault(song.id, 0) + 1
-        playCountMap[song.id] = currentCount
-        savePlayCounts()
 
-        val allSongs = (_uiState.value as? UiState.Success)?.songs ?: return
+        viewModelScope.launch (Dispatchers.Default){
+            val currentCount = playCountMap.getOrDefault(song.id, 0) + 1
+            playCountMap[song.id] = currentCount
+            savePlayCounts()
 
-        _mostPlayedSongs.value = allSongs
-            .filter { (playCountMap[it.id] ?: 0) > 0 }
-            .sortedByDescending { playCountMap[it.id] ?: 0 }
-            .take(30)
+            val allSongs = (_uiState.value as? UiState.Success)?.songs ?: return@launch
 
-        val updatedRecent = (listOf(song) + _recentPlayedSongs.value)
-            .distinctBy{it.id}
-            .take(30)
+            val mostPlayed = allSongs
+                .filter { (playCountMap[it.id] ?: 0) > 0 }
+                .sortedByDescending { playCountMap[it.id] ?: 0 }
+                .take(30)
 
-        _recentPlayedSongs.value = updatedRecent
-        saveRecentIds(updatedRecent.map {it.id})
+            val currentRecentSnapshot = _recentPlayedSongs.value.toList()
+            val updatedRecent = (listOf(song) + _recentPlayedSongs.value)
+                .distinctBy{it.id}
+                .take(30)
 
-        prefs.edit { putLong("last_song_id", song.id) }
+            withContext(Dispatchers.Main){
+                _mostPlayedSongs.value = mostPlayed
+                _recentPlayedSongs.value = updatedRecent
+            }
+
+            saveRecentIds(updatedRecent.map {it.id})
+            prefs.edit { putLong("last_song_id", song.id) }
+        }
     }
 
     fun playQueue(songs: List<Song>, startIndex: Int = 0){
@@ -449,18 +454,32 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         val queueToUse= if (!customQueue.isNullOrEmpty()) customQueue else (_uiState.value as? UiState.Success)?.songs ?: listOf(song)
 
         _currentQueue.value = queueToUse
-        _currentSong.value = song
+        saveCurrentQueueIds(queueToUse.map { it.id })
         registerSongPlay(song)
 
-        mediaController?.let { controller ->
+        val controller = mediaController ?: return
+        val targetIndex = queueToUse.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
 
-            val targetIndex = queueToUse.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+        if (controller.mediaItemCount == queueToUse.size){
+            controller.seekTo(targetIndex, 0L)
+        }else{
+            viewModelScope.launch(Dispatchers.Default) {
 
-            val mediaItems = buildMediaItems(queueToUse)
+                val targetIndex = queueToUse.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
 
-            controller.setMediaItems(mediaItems, targetIndex, 0L)
-            controller.prepare()
-            controller.play()
+                val mediaItems = queueToUse.map { item ->
+                    MediaItem.Builder()
+                        .setMediaId(item.id.toString())
+                        .setUri(if (item.path.isNotEmpty()) Uri.fromFile(File(item.path)) else item.contentUri)
+                        .build()
+                }
+
+                withContext(Dispatchers.Main){
+                    controller.setMediaItems(mediaItems, targetIndex, 0L)
+                    controller.prepare()
+                    controller.play()
+                }
+            }
         }
     }
 
@@ -472,20 +491,28 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                 if (controller.mediaItemCount == 0 || controller.currentMediaItem == null){
                     val song = _currentSong.value ?: return
                     val queueToUse = _currentQueue.value.ifEmpty { (_uiState.value as? UiState.Success)?.songs ?: listOf() }
-                    val targetIndex = queueToUse.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
 
-                    val mediaItems = buildMediaItems(queueToUse)
+                    viewModelScope.launch(Dispatchers.Default) {
+                        val targetIndex = queueToUse.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+                        val savedPosition = _currentPositionMs.value
+                        val mediaItems = buildMediaItems(queueToUse)
 
-                    val savedPosition = _currentPositionMs.value
-                    controller.setMediaItems(mediaItems, targetIndex, savedPosition)
-                    controller.prepare()
+                        withContext(Dispatchers.Main){
+                            controller.setMediaItems(mediaItems, targetIndex, savedPosition)
+                            controller.prepare()
+                            controller.play()
+                        }
+                    }
                 }else if (controller.playbackState == Player.STATE_ENDED){
                     controller.seekTo(0, 0L)
                     controller.prepare()
+                    controller.play()
                 }else if (controller.playbackState == Player.STATE_IDLE){
                     controller.prepare()
+                    controller.play()
+                }else{
+                    controller.play()
                 }
-                controller.play()
             }
         }
     }
@@ -533,7 +560,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                 coverUrlOrUri = coverUriOrUrl
             )
             if (success){
-                loadSongs(silent = true)
+                loadSongs()
             } else {
                 Toast.makeText(getApplication(), "No se pudieron guardar los tags", Toast.LENGTH_LONG).show()
             }
@@ -568,13 +595,6 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         mediaController?.let { controller ->
             if (controller.hasNextMediaItem()){
                 controller.seekToNextMediaItem()
-            }else{
-                val current = _currentSong.value ?: return
-                val list = _currentQueue.value.ifEmpty { (_uiState.value as? UiState.Success)?.songs ?: return }
-                val currentIndex= list.indexOfFirst { it.id == current.id }
-                if (currentIndex != -1 && currentIndex < list.size - 1){
-                    playSong(list[currentIndex + 1], customQueue = list)
-                }
             }
         }
     }
@@ -583,13 +603,6 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         mediaController?.let { controller ->
             if (controller.hasPreviousMediaItem()){
                 controller.seekToPreviousMediaItem()
-            }else{
-                val current = _currentSong.value ?: return
-                val list = _currentQueue.value.ifEmpty { (_uiState.value as? UiState.Success)?.songs ?: return }
-                val currentIndex = list.indexOfFirst { it.id ==  current.id }
-                if (currentIndex > 0){
-                    playSong(list[currentIndex - 1], customQueue = list)
-                }
             }
         }
     }
@@ -619,6 +632,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     fun removeFromQueue(song: Song){
         val updateQueue = _currentQueue.value.filter { it.id  != song.id }
         _currentQueue.value = updateQueue
+        saveCurrentQueueIds(updateQueue.map { it.id })
 
         mediaController?.let { controller ->
             val indexToRemove = (0 until controller.mediaItemCount).firstOrNull {index ->
@@ -637,8 +651,21 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
             val movedItem = currentList.removeAt(fromIndex)
             currentList.add(toIndex, movedItem)
             _currentQueue.value = currentList
+            saveCurrentQueueIds(currentList.map { it.id })
 
             mediaController?.moveMediaItem(fromIndex, toIndex)
+        }
+    }
+
+    private fun getSavedQueueIds(): List<Long> {
+        val str = prefs.getString("last_queue_ids", "") ?: ""
+        if (str.isBlank()) return emptyList()
+        return str.split(",").mapNotNull { it.trim().toLongOrNull() }
+    }
+
+    private fun saveCurrentQueueIds(queueIds: List<Long>) {
+        viewModelScope.launch(Dispatchers.IO){
+            prefs.edit { putString("last_queue_ids", queueIds.joinToString(",")) }
         }
     }
 
@@ -737,13 +764,23 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         val songMap = allSongs.associateBy { it.id }
         _recentPlayedSongs.value = recentIds.mapNotNull { songMap[it] }.take(30)
 
+        if (_currentSong.value == null) {
+            val savedQueueIds = getSavedQueueIds()
+            if (savedQueueIds.isNotEmpty()) {
+                val restoredQueue = savedQueueIds.mapNotNull { songMap[it] }
+                if (restoredQueue.isNotEmpty()){
+                    _currentQueue.value = restoredQueue
+                }
+            }
+        }
         val lastSongId = prefs.getLong("last_song_id", -1L)
         if (lastSongId != -1L && _currentSong.value == null){
             songMap[lastSongId]?.let { lastSong ->
                 _currentSong.value = lastSong
-                _currentPositionMs.value = prefs.getLong("last_position_ms", 0L)
+                _currentPositionMs.value = 0L
             }
         }
     }
+
 }
 

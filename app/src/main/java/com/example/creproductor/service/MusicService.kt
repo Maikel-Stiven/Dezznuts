@@ -107,13 +107,13 @@ class MusicService : MediaSessionService(){
     private fun buildLoadControl(): DefaultLoadControl {
         return DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                /* minBufferMs= */ 50_000,
-                /* maxBufferMs= */ 50_000,
-                /* bufferForPlaybackMs= */ 1_000,
-                /* bufferForPlaybackAfterRebufferMs= */ 2_000
+                /* minBufferMs= */ 15_000,
+                /* maxBufferMs= */ 30_000,
+                /* bufferForPlaybackMs= */ 250,
+                /* bufferForPlaybackAfterRebufferMs= */ 1_000
             )
             .setBackBuffer(
-                /* backBufferDurationMs= */ 30_000,
+                /* backBufferDurationMs= */ 15_000,
                 /* retainBackBufferFromKeyframe= */ true
             )
             .build()
