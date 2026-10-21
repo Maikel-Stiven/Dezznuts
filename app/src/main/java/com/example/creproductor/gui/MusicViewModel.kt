@@ -5,6 +5,9 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
+import com.example.creproductor.data.LibraryBackup
+import com.example.creproductor.data.M3u
+import com.example.creproductor.data.SongMatcher
 import android.widget.Toast
 import android.database.ContentObserver
 import android.os.Bundle
@@ -85,6 +88,27 @@ enum class SongFilter{
     HIRES
 }
 
+/** Orden de la pestaña "Canciones". Los textos se comparan con [java.text.Collator]: sin distinguir mayúsculas ni tildes. */
+enum class SongSort(val label: String) {
+    TITLE("Título"),
+    ARTIST("Artista"),
+    ALBUM("Álbum"),
+    DURATION("Duración"),
+    RECENT("Recién agregadas");
+
+    fun comparator(): Comparator<Song> {
+        val text = java.text.Collator.getInstance().apply { strength = java.text.Collator.PRIMARY }
+        return when (this) {
+            TITLE -> compareBy(text) { it.title }
+            ARTIST -> compareBy<Song, String>(text) { it.artist }.thenBy(text) { it.title }
+            ALBUM -> compareBy<Song, String>(text) { it.album }.thenBy { if (it.trackNumber > 0) it.trackNumber else Int.MAX_VALUE }
+            DURATION -> compareByDescending { it.duration }
+            // El id de MediaStore crece con cada archivo nuevo: es el mismo criterio que "Recién agregadas".
+            RECENT -> compareByDescending { it.id }
+        }
+    }
+}
+
 /** Tamaño de la primera publicación de la biblioteca y factor de crecimiento de las siguientes. */
 private const val FIRST_PUBLISH_SIZE = 100
 private const val PUBLISH_GROWTH = 4
@@ -131,6 +155,12 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     /** Filtro activo de la pestaña "Canciones" (todas / favoritas / recientes). */
     private val _currentFilter = MutableStateFlow(SongFilter.ALL)
     val currentFilter: StateFlow<SongFilter> = _currentFilter.asStateFlow()
+
+    /** Orden activo de la pestaña "Canciones" (se recuerda entre sesiones). */
+    private val _currentSort = MutableStateFlow(
+        runCatching { SongSort.valueOf(prefs.getString("song_sort", null) ?: "") }.getOrDefault(SongSort.TITLE)
+    )
+    val currentSort: StateFlow<SongSort> = _currentSort.asStateFlow()
 
     /** Texto de búsqueda actual. */
     private val _searchQuery = MutableStateFlow("")
@@ -180,9 +210,10 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     val filteredSongs: StateFlow<List<Song>> = combine(
         uiState,
         _currentFilter,
-        _searchQuery
+        _searchQuery,
+        _currentSort
     ){
-        state, filter, query ->
+        state, filter, query, sort ->
         if (state !is UiState.Success) return@combine emptyList()
 
         state.songs.filter { song ->
@@ -195,7 +226,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
             }
             val matchesQuery = SongOrganizer.matchesQuery(song.title, song.artist, song.album, query)
             matchesFilter && matchesQuery
-        }
+        }.sortedWith(sort.comparator())
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
 
 
@@ -212,6 +243,22 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         saveCurrentQueueIds(_currentQueue.value.map { it.id })
         controller.addMediaItems(buildMediaItems(listOf(song)))
         Toast.makeText(getApplication(), "Agregada a la cola", Toast.LENGTH_SHORT).show()
+    }
+
+    /**
+     * Pone la canción justo después de la que suena; si no hay nada sonando, la reproduce.
+     * ponytail: con el aleatorio activo Media3 la coloca en un punto al azar del orden aleatorio; para respetarlo
+     * haría falta un ShuffleOrder propio en el servicio.
+     */
+    fun playNextInQueue(song: Song) {
+        val controller = mediaController
+        if (controller == null || controller.mediaItemCount == 0) { playSong(song, customQueue = listOf(song)); return }
+        val queue = _currentQueue.value.ifEmpty { (_uiState.value as? UiState.Success)?.songs ?: emptyList() }
+        val at = (controller.currentMediaItemIndex + 1).coerceAtMost(queue.size)
+        _currentQueue.value = queue.subList(0, at) + song + queue.subList(at, queue.size)
+        saveCurrentQueueIds(_currentQueue.value.map { it.id })
+        controller.addMediaItems(at, buildMediaItems(listOf(song)))
+        Toast.makeText(getApplication(), "Suena a continuación", Toast.LENGTH_SHORT).show()
     }
 
     /** Borra el archivo (Android < 11; en 11+ lo hace el sistema con su propia confirmación) y recarga la biblioteca. */
@@ -494,6 +541,11 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         _currentFilter.value = filter
     }
 
+    fun setSort(sort: SongSort){
+        _currentSort.value = sort
+        prefs.edit { putString("song_sort", sort.name) }
+    }
+
     fun setSearchQuery(query: String){
         _searchQuery.value = query
     }
@@ -699,8 +751,13 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         val controller = mediaController ?: return
         val targetIndex = queueToUse.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
 
-        if (controller.mediaItemCount == queueToUse.size){
+        // Solo se reutiliza la cola cargada si es la misma (mismas pistas en el mismo orden); con el mismo
+        // tamaño pero otras canciones sonaría la pista equivocada.
+        val sameQueue = controller.mediaItemCount == queueToUse.size &&
+            queueToUse.indices.all { controller.getMediaItemAt(it).mediaId == queueToUse[it].id.toString() }
+        if (sameQueue){
             controller.seekTo(targetIndex, 0L)
+            controller.play()
         }else{
             viewModelScope.launch(Dispatchers.Default) {
                 // Misma ruta que togglePlayPause: caché de URI y respaldo a content:// si la ruta no es legible.
@@ -971,6 +1028,86 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         }
         _playlists.value = updated
         savePlaylists(updated)
+    }
+
+    // ---- Copia de seguridad y listas M3U (archivos elegidos por el usuario con el selector del sistema) ----
+
+    private val librarySongs get() = (_uiState.value as? UiState.Success)?.songs.orEmpty()
+
+    private suspend fun readText(uri: Uri): String? = withContext(Dispatchers.IO) {
+        runCatching { getApplication<Application>().contentResolver.openInputStream(uri)!!.bufferedReader().use { it.readText() } }.getOrNull()
+    }
+
+    private suspend fun writeText(uri: Uri, text: String): Boolean = withContext(Dispatchers.IO) {
+        runCatching { getApplication<Application>().contentResolver.openOutputStream(uri, "wt")!!.bufferedWriter().use { it.write(text) } }.isSuccess
+    }
+
+    private fun toast(text: String) = Toast.makeText(getApplication(), text, Toast.LENGTH_LONG).show()
+
+    fun exportBackup(uri: Uri) {
+        val byId = librarySongs.associateBy { it.id }
+        val backup = LibraryBackup(
+            favorites = getSavedFavoritesIds().mapNotNull { byId[it]?.path },
+            playCounts = playCountMap.toMap().mapNotNull { (id, n) -> byId[id]?.path?.let { it to n } }.toMap(),
+            playlists = _playlists.value.map { p -> p.name to p.songIds.mapNotNull { byId[it]?.path } }
+        )
+        viewModelScope.launch {
+            toast(if (writeText(uri, backup.encode()))
+                "Copia guardada: ${backup.playlists.size} listas y ${backup.favorites.size} favoritas"
+            else "No se pudo guardar la copia")
+        }
+    }
+
+    /** Suma la copia a lo que ya hay: favoritas unidas, reproducciones al máximo y listas fusionadas por nombre. */
+    fun importBackup(uri: Uri) {
+        viewModelScope.launch {
+            val backup = readText(uri)?.let(LibraryBackup::decode)
+                ?: return@launch toast("Ese archivo no es una copia de DEZZNUTS")
+            val songs = librarySongs
+            val matcher = SongMatcher(songs) { it.path }
+
+            val favIds = matcher.match(backup.favorites).map { it.id }
+            saveFavoriteIds(getSavedFavoritesIds() + favIds)   // el listener de preferencias repinta los corazones
+
+            backup.playCounts.forEach { (path, n) ->
+                matcher.find(path)?.let { playCountMap[it.id] = maxOf(playCountMap[it.id] ?: 0, n) }
+            }
+            savePlayCounts()
+            restoreDashboardLists(songs)
+
+            var lists = _playlists.value
+            backup.playlists.forEach { (name, paths) -> lists = mergePlaylist(lists, name, matcher.match(paths).map { it.id }) }
+            _playlists.value = lists
+            savePlaylists(lists)
+            toast("Copia restaurada: ${backup.playlists.size} listas y ${favIds.size} favoritas")
+        }
+    }
+
+    private fun mergePlaylist(lists: List<Playlist>, name: String, ids: List<Long>): List<Playlist> {
+        val existing = lists.firstOrNull { it.name == name }
+            ?: return lists + Playlist(name = name, songIds = ids.distinct())
+        return lists.map { if (it.id == existing.id) it.copy(songIds = (it.songIds + ids).distinct()) else it }
+    }
+
+    fun exportPlaylistM3u(playlistId: String, uri: Uri) {
+        val playlist = _playlists.value.firstOrNull { it.id == playlistId } ?: return
+        val byId = librarySongs.associateBy { it.id }
+        val songs = playlist.songIds.mapNotNull { byId[it] }
+        viewModelScope.launch {
+            toast(if (writeText(uri, M3u.write(songs))) "\"${playlist.name}\" exportada (${songs.size} canciones)" else "No se pudo exportar la lista")
+        }
+    }
+
+    fun importM3u(uri: Uri, name: String) {
+        viewModelScope.launch {
+            val paths = readText(uri)?.let(M3u::parse).orEmpty()
+            val ids = SongMatcher(librarySongs) { it.path }.match(paths).map { it.id }
+            if (ids.isEmpty()) return@launch toast("No se encontró en tu biblioteca ninguna canción de esa lista")
+            val lists = mergePlaylist(_playlists.value, name, ids)
+            _playlists.value = lists
+            savePlaylists(lists)
+            toast("\"$name\": ${ids.size} de ${paths.size} canciones encontradas")
+        }
     }
 
     private fun savePlaylists(list: List<Playlist>){

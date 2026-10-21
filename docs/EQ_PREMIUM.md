@@ -9,7 +9,7 @@ Pantalla completa para el ecualizador paramétrico: se maneja **sobre la curva**
 - **Presets:** Plano, Graves, Voces, Brillo y Loudness; "Personalizado" aparece solo cuando los ajustes no coinciden con ninguno.
 - **Interruptor Activo/Apagado** (A/B): apagado el procesador no toca la señal.
 - **Lecturas** de banda, frecuencia, ganancia y Q, y un deslizador para el Q de la banda elegida.
-- **Accesos:** icono de ecualizador en la cabecera del reproductor y entrada del menú lateral.
+- **Accesos:** icono de ecualizador en la cabecera del reproductor y Ajustes → Audio → Ecualizador.
 
 ## Técnica y optimización
 - Un solo `Canvas`, sin composables por nodo; la curva se recalcula solo cuando cambian las bandas.
