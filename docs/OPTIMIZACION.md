@@ -91,3 +91,51 @@ La posición de reproducción es el único dato que cambia continuamente (cada 5
 - **Posición de reproducción:** el sondeo solo corre mientras suena (en pausa no despierta) y se guarda en disco al pausar y cada 10 s, no cada segundo ni en cada *seek*.
 - **Interfaz:** `MainScreen` recoge los flujos con `collectAsStateWithLifecycle` (nada en segundo plano); `formatDuration` sin `String.format` (se llamaba por fila); conteo de álbumes por artista con `remember`.
 - No medido en dispositivo: son recortes de trabajo evidentes, falta confirmar la mejora en un móvil real.
+
+## 9. Pasada de rendimiento para equipos modestos (rama `perf/rendimiento`)
+
+Objetivo: que la app corra bien en equipos de **2 núcleos y 2–4 GB de RAM**, sin tocar la ruta de audio (la
+calidad de reproducción no cambia: todo esto es interfaz y red).
+
+**Cómo se midió.** Emulador Android 15 con **2 núcleos y 2 GB**, APK *release* (minificado) firmado, biblioteca de
+~2 060 canciones (40 artistas, 15 álbumes, 8 géneros) y una pista de 30 min con carátula. Mismo guion antes y
+después (CPU leída de `/proc/<pid>/stat` durante 20 s; memoria con `dumpsys meminfo`; fotogramas con
+`dumpsys gfxinfo`). El emulador dibuja por software, así que **los porcentajes absolutos exageran** lo que pasaría con
+una GPU real; la *proporción* entre antes y después sí es comparable.
+
+### Resultado (mismo emulador, 2 núcleos)
+| Escenario (CPU del proceso, % de un núcleo) | Antes | Ahora |
+|---|---|---|
+| Reproductor completo abierto y sonando | 76,5 % | **6,0 %** |
+| Lista visible con una canción sonando | 29,7 % | **3,5 %** |
+| App en segundo plano sonando | 3,2 % | 3,1 % |
+| Memoria (PSS) al abrir la pestaña Artistas | +24 MB | **+14 MB** |
+
+### Qué se cambió (y por qué)
+1. **La lista bajo el reproductor no anima.** La pantalla principal seguía compuesta debajo del reproductor a pantalla
+   completa; su icono de barras de ecualizador (animación infinita) forzaba 60 fotogramas por segundo en toda la
+   ventana aunque nadie lo veía. `LocalAnimationsEnabled` lo apaga cuando algo lo tapa.
+2. **Icono de barras:** tres animaciones infinitas a 60 fps → un único reloj a ~15 fps.
+3. **Fondo "cristal" más barato:** 2 capas en vez de 3, la saturación se hornea una vez en el bitmap de 24 px (antes un
+   filtro de color por capa y fotograma) y se actualiza a ~15 fps.
+4. **Regla única de efectos** (`rememberVisualEffectsEnabled`): en equipos de 2 núcleos o poca RAM, con ahorro de
+   batería o con las animaciones del sistema apagadas, el fondo y las barras quedan **fijos** (mismo aspecto, cero
+   fotogramas extra).
+5. **Fotos de artistas:** las consultas a Deezer ya no se lanzan todas a la vez (`Semaphore(2)`): menos conexiones HTTPS
+   simultáneas y las filas que se salen de pantalla cancelan su espera.
+6. **Claves de listas** (auditoría de las 21 listas perezosas): el detalle de una playlist llevaba el índice en la clave y
+   recreaba todas las filas siguientes al quitar una canción; el historial de búsqueda no tenía clave.
+7. **Calidad (Lossless / Hi-Res) como cinta en la portada** de cada fila, en vez de un distintivo junto al título.
+
+### Probado y descartado (no mejoraba, se revirtió)
+| Idea | Medida | Veredicto |
+|---|---|---|
+| Baseline profile propio (`HSPL com/example/**`) | arranque en frío 305/298 → 295/284 ms (ruido ±15 ms) | revertido: dentro del ruido |
+| Conectar con el servicio de reproducción tras el primer fotograma | arranque sin compilar 319 → 367 ms | revertido: empeora |
+
+### Pendiente / límites conocidos
+- Cambiar de pestaña por primera vez tiene un pico de 100–200 ms en el primer fotograma (Canciones y Artistas). Se
+  comprobó que **no** es la red ni el JIT (persiste con el código compilado por completo y sin cargar fotos); es el
+  primer dibujo de la lista en el emulador. No se midió en un teléfono real.
+- Arranque en frío ~300 ms (compilado) / ~320–530 ms (recién instalado, sin compilar) en el emulador de 2 núcleos.
+- Todo medido en emulador; conviene confirmar en un teléfono de gama baja real.
