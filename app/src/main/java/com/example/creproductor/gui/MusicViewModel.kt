@@ -29,7 +29,10 @@ import com.example.creproductor.data.TagSuggestion
 import com.example.creproductor.data.TagSuggestions
 import com.example.creproductor.data.HiFiAudio
 import com.example.creproductor.data.QualityTier
+import com.example.creproductor.data.FileScanner
 import com.example.creproductor.data.MediaStoreScanner
+import com.example.creproductor.data.ScanProgress
+import com.example.creproductor.data.ScanSettings
 import com.example.creproductor.data.Song
 import com.example.creproductor.data.SongCoverCache
 import com.example.creproductor.data.trackPlaybackPosition
@@ -231,6 +234,29 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
             SessionCommand(MusicService.ACTION_SLEEP_TIMER, Bundle.EMPTY),
             Bundle().apply { putInt(MusicService.EXTRA_MINUTES, minutes) }
         )
+    }
+
+    /** Escaneo manual de carpetas ("Escanear archivos"): `null` = sin escaneo en curso ni resultado que mostrar. */
+    private val _scanProgress = MutableStateFlow<ScanProgress?>(null)
+    val scanProgress: StateFlow<ScanProgress?> = _scanProgress.asStateFlow()
+    private var scanJob: Job? = null
+
+    fun startScan(roots: List<java.io.File>, settings: ScanSettings) {
+        if (scanJob?.isActive == true || roots.isEmpty()) return
+        settings.save(getApplication())
+        scanJob = viewModelScope.launch {
+            FileScanner.scan(getApplication(), roots, settings).collect { _scanProgress.value = it }
+            loadSongs(silent = true)   // aplica también los filtros nuevos a la biblioteca
+        }
+    }
+
+    fun cancelScan() { scanJob?.cancel(); _scanProgress.value = null }
+
+    /** Cierra el resultado del escaneo (y guarda los filtros aunque no se haya escaneado). */
+    fun dismissScan(settings: ScanSettings) {
+        if (scanJob?.isActive == true) return
+        if (settings != ScanSettings.read(getApplication())) { settings.save(getApplication()); loadSongs(silent = true) }
+        _scanProgress.value = null
     }
 
     private var loadJob: Job? = null

@@ -60,6 +60,7 @@ import com.example.creproductor.gui.QualityBadge
 import com.example.creproductor.gui.MainScreen
 import com.example.creproductor.gui.MusicViewModel
 import com.example.creproductor.gui.NavRequest
+import com.example.creproductor.gui.ScanScreen
 import com.example.creproductor.gui.SleepTimerDialog
 import com.example.creproductor.gui.SongMenuActions
 import com.example.creproductor.gui.SongMenuSheet
@@ -124,6 +125,7 @@ class MainActivity : ComponentActivity() {
                     var showDuplicatesDialog by remember { mutableStateOf(false) }
                     var showFixArtistsDialog by remember { mutableStateOf(false) }
                     var showAboutDialog by remember { mutableStateOf(false) }
+                    var showScanScreen by remember { mutableStateOf(false) }
                     var showSleepTimerDialog by remember { mutableStateOf(false) }
                     val versionName = remember {
                         runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull() ?: "—"
@@ -221,7 +223,7 @@ class MainActivity : ComponentActivity() {
                                                     is DrawerMenuItem.Equalizer -> { showEqualizerDialog = true }
                                                     is DrawerMenuItem.SearchDuplicates -> { showDuplicatesDialog = true }
                                                     is DrawerMenuItem.FixUnknownArtists -> { showFixArtistsDialog = true }
-                                                    is DrawerMenuItem.ScanFiles -> { /*Falta lógica del escaner de archivos*/}
+                                                    is DrawerMenuItem.ScanFiles -> { showScanScreen = true }
                                                     is DrawerMenuItem.AudioCutter -> {/*Falta lógica del cortador de audio*/}
                                                     is DrawerMenuItem.SleepTimer -> { showSleepTimerDialog = true }
                                                     is DrawerMenuItem.ClearImageCache -> { showClearImageCacheDialog = true }
@@ -248,7 +250,7 @@ class MainActivity : ComponentActivity() {
                                                 MainScreen(
                                                     viewModel = viewModel,
                                                     onOpenEqualizer = { showEqualizerDialog = true },
-                                                    onOpenScanner = { /* TODO */ },
+                                                    onOpenScanner = { showScanScreen = true },
                                                     onEditSong = editSong,
                                                     onOpenDrawer = {
                                                         scope.launch { drawerState.open() }
@@ -345,6 +347,16 @@ class MainActivity : ComponentActivity() {
                                     songToEdit = null
                                     requestWrite(listOf(song)) { viewModel.updatedSongTags(song, title, artist, album, coverUriOrUrl) }
                                 }
+                            )
+                        }
+
+                        if (showScanScreen) {
+                            val scanProgress by viewModel.scanProgress.collectAsStateWithLifecycle()
+                            ScanScreen(
+                                progress = scanProgress,
+                                onStart = { roots, settings -> viewModel.startScan(roots, settings) },
+                                onCancel = { viewModel.cancelScan() },
+                                onClose = { settings -> viewModel.dismissScan(settings); showScanScreen = false }
                             )
                         }
 
