@@ -36,7 +36,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.DragHandle
-import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -250,13 +249,6 @@ fun FullScreenPlayer(
                 }
 
                 Row {
-                    IconButton(onClick = { showLyrics = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Lyrics,
-                            contentDescription = "Letras",
-                            modifier = Modifier.size(26.dp)
-                        )
-                    }
                     IconButton(onClick = onOpenEqualizer) {
                         Icon(
                             imageVector = Icons.Default.Tune,
@@ -274,12 +266,16 @@ fun FullScreenPlayer(
                 }
             }
 
-            //
-
+            PlayerTabs(showLyrics) { showLyrics = it }
 
             //Carrusel del reproductor/Vista
 
-            HorizontalPager(
+            if (showLyrics) LyricsPane(
+                song = song,
+                currentPositionMs = currentPositionMs,
+                onSeekTo = onSeekTo,
+                modifier = Modifier.weight(1f)
+            ) else HorizontalPager(
                 state = pagerState,
                 contentPadding = PaddingValues(horizontal = 32.dp),
                 pageSpacing = 12.dp,
@@ -332,6 +328,10 @@ fun FullScreenPlayer(
                             modifier = Modifier.size(120.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
+                    // Calidad y formato sobre la portada (en vez de saturar el panel de abajo).
+                    if (page == pagerState.currentPage) {
+                        CoverChips(song, audioInfo, Modifier.align(Alignment.BottomStart).padding(10.dp))
                     }
                 }
             }
@@ -473,23 +473,6 @@ fun FullScreenPlayer(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            if (audioInfo.isNotBlank()) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                                    modifier = Modifier.padding(top = 4.dp)
-                                ) {
-                                    QualityBadge(song.quality)
-                                    Text(
-                                        text = audioInfo.replace(" → ", "\n"),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        textAlign = TextAlign.Center,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                            }
                         }
 
                         IconButton(onClick = {
@@ -514,7 +497,6 @@ fun FullScreenPlayer(
         }
         }
     }
-    if (showLyrics) LyricsSheet(song, currentPositionMs, onSeekTo) { showLyrics = false }
     if (showTrackInfo) TrackInfoDialog(song, audioInfo, onEdit = { onEditSong(song) }) { showTrackInfo = false }
     if (showQueueBottomSheet){
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -904,7 +886,7 @@ private fun PlayerSeekBar(positionMs: () -> Long, durationMs: Long, onSeekTo: (L
 private fun CoverBackdrop(song: Song, playing: Boolean) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val painter = coil.compose.rememberAsyncImagePainter(
-        remember(song.id) { ImageRequest.Builder(context).data(song.coverModel).size(32).build() }
+        remember(song.id) { ImageRequest.Builder(context).data(song.coverModel).size(24).build() }
     )
     val canAnimate = remember {
         val lowRam = (context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager).isLowRamDevice
@@ -928,7 +910,7 @@ private fun CoverBackdrop(song: Song, playing: Boolean) {
     }
 
     val bg = MaterialTheme.colorScheme.background
-    val vivid = remember { androidx.compose.ui.graphics.ColorFilter.colorMatrix(androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(1.5f) }) }
+    val vivid = remember { androidx.compose.ui.graphics.ColorFilter.colorMatrix(androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(1.35f) }) }
     fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t
 
     Box(Modifier.fillMaxSize()) {
@@ -964,8 +946,82 @@ private fun CoverBackdrop(song: Song, playing: Boolean) {
         // Oscurece para que texto y controles se lean con cualquier carátula (más fuerte abajo, donde van los controles).
         Box(
             Modifier.fillMaxSize().background(
-                androidx.compose.ui.graphics.Brush.verticalGradient(listOf(bg.copy(alpha = 0.45f), bg.copy(alpha = 0.88f)))
+                androidx.compose.ui.graphics.Brush.verticalGradient(listOf(bg.copy(alpha = 0.22f), bg.copy(alpha = 0.6f)))
             )
         )
+    }
+}
+
+
+/** Selector "Canción | Letra" bajo el encabezado: pastilla de cristal, como el de la referencia. */
+@Composable
+private fun PlayerTabs(showLyrics: Boolean, onSelect: (Boolean) -> Unit) {
+    Row(
+        Modifier
+            .clip(RoundedCornerShape(50))
+            .background(Color.White.copy(alpha = 0.10f))
+            .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(50))
+            .padding(3.dp)
+    ) {
+        listOf(false to "Canción", true to "Letra").forEach { (lyrics, label) ->
+            val selected = showLyrics == lyrics
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                color = if (selected) Color.White else Color.White.copy(alpha = 0.6f),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(if (selected) Color.White.copy(alpha = 0.22f) else Color.Transparent)
+                    .clickable { onSelect(lyrics) }
+                    .padding(horizontal = 22.dp, vertical = 7.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Calidad y formato de la pista sobre la portada: "Hi-Res" / "Lossless", el códec con su profundidad y frecuencia
+ * (o el bitrate si tiene pérdida) y, si aplica, Bit-perfect u Offload. El detalle completo sigue en "Información
+ * técnica" (⋮).
+ */
+@Composable
+private fun CoverChips(song: Song, audioInfo: String, modifier: Modifier = Modifier) {
+    val parts = audioInfo.substringBefore(" → ").split(" · ").filter { it.isNotBlank() }
+    val format = if (song.quality == com.example.creproductor.data.QualityTier.LOSSY)
+        parts.filter { it == parts.firstOrNull() || it.endsWith("kbps") }
+    else parts.filterNot { it.endsWith("kbps") }
+    val route = audioInfo.substringAfter(" → ", "").let { r ->
+        when {
+            r.startsWith("Bit-perfect") -> "Bit-perfect"
+            r.startsWith("Offload") -> "Offload"
+            else -> ""
+        }
+    }
+    val labels = listOfNotNull(
+        when (song.quality) {
+            com.example.creproductor.data.QualityTier.HIRES -> "Hi-Res"
+            com.example.creproductor.data.QualityTier.LOSSLESS -> "Lossless"
+            else -> null
+        },
+        format.joinToString(" · ").ifEmpty { null },
+        route.ifEmpty { null }
+    )
+    if (labels.isEmpty()) return
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        labels.forEachIndexed { i, text ->
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = if (i == 0 && song.quality != com.example.creproductor.data.QualityTier.LOSSY) FontWeight.Bold else FontWeight.Medium,
+                color = Color.White,
+                maxLines = 1,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.Black.copy(alpha = 0.45f))
+                    .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(50))
+                    .padding(horizontal = 9.dp, vertical = 3.dp)
+            )
+        }
     }
 }
