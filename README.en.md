@@ -18,14 +18,14 @@
 
 Features other players lock behind a paywall (auto-tagging, audio cutter, equalizer, sleep timer…), offered freely, "just for the love of it".
 
-> ⚠️ **Status: early alpha (`0.0.1`).** The core player works and the project builds (unit tests + CI). Some menu entries are UI only, with no logic yet; see [Known issues](#-known-issues).
+> ⚠️ **Status: alpha.** The player and its tools work and the project builds (unit tests + CI); it still needs wider testing on real phones. See [Known issues](#-known-issues).
 
 ## 📸 Screenshots
 
 <div align="center">
-<img src="docs/screenshots/01-inicio.png" alt="Quick selection" width="22%" />
-<img src="docs/screenshots/02-canciones.png" alt="Songs" width="22%" />
-<img src="docs/screenshots/03-menu.png" alt="Side menu" width="22%" />
+<img src="docs/screenshots/01-inicio.png" alt="Home" width="22%" />
+<img src="docs/screenshots/02-canciones.png" alt="Library" width="22%" />
+<img src="docs/screenshots/03-ajustes.png" alt="Settings" width="22%" />
 <img src="docs/screenshots/04-reproductor.png" alt="Player" width="22%" />
 </div>
 
@@ -37,26 +37,22 @@ A native Android app written in **Kotlin + Jetpack Compose** that scans the musi
 
 | Area | Detail |
 |------|--------|
-| **Local scan** | Reads device music via `MediaStore`, in chunks of 100 so the UI never blocks. |
-| **Background playback** | `MusicService` (Media3 `MediaSessionService`) with notification controls. |
-| **Full-screen player** | Swipeable cover carousel, seek bar, previous/next, play/pause, mini-player. |
-| **Repeat & shuffle** | `OFF` → `ALL` → `ONE` → `STOP_AFTER_CURRENT`; real shuffle. |
-| **Queue** | Reorder by dragging, remove songs. |
-| **Library** | Songs, Albums, Artists, Genres, Folders, Playlists, quick lists (recent, most played, favorites). |
-| **Search** | With history; album and artist results are navigable. |
-| **ID3 tags** | Edit title, artist, album and cover (**jaudiotagger**); "Auto-web" lookup via iTunes. |
-| **Artist photos** | From the Deezer API, cached locally. |
-| **Hi/Res audio** | Optional 32-bit float output and audio offload (both off by default). |
-| **Material 3 dark theme** | Custom palette. |
-
-**🟡 Partial:** the ⋮ song/playlist menus and "Restore playlist" are UI only.
-**🔴 Planned:** Equalizer, manual rescan, duplicate finder, audio cutter, sleep timer, About, Send feedback.
+| **Navigation** | Bottom bar Home · Library · Search · Settings; detail screens stack, so Back returns to the previous one. |
+| **Design** | Own identity (warm black + caramel, **Manrope** font); player and mini-player take the **cover's dominant color**. |
+| **Player** | Cover, title & favorite, seek bar, controls, synced **lyrics** (LRCLIB), animated cover backdrop. Swipe the mini-player up to open, drag down to close, swipe sideways to skip. |
+| **Library** | Songs (filters + **sorting**), Albums, Artists, Playlists, Genres, Folders; Home with recent, most played, favorites and moods. |
+| **Queue** | **Play next**, add to queue, drag to reorder, remove. |
+| **Playlists** | Covers, restore deleted ones, **M3U import/export**. |
+| **Backup** | Favorites, play counts and playlists to a file, matched **by path** so they survive reinstalls and phone changes. |
+| **Audio** | Parametric EQ with presets and per-output profiles, ReplayGain, fades, float output, offload, USB bit-perfect, sleep timer. |
+| **Tools** | Tag editor (**jaudiotagger**), bulk "unknown artist" fix, audio cutter, duplicate & WhatsApp-audio finder. |
+| **Low-end friendly** | Animations off automatically on 2-core / low-RAM phones or battery saver. |
 
 For deep details (Hi/Res audio, seek latency, architecture) see [`README.md`](README.md) and [`RESUMEN_PROYECTO.md`](RESUMEN_PROYECTO.md) (Spanish).
 
 ## 🧱 Tech stack
 
-Kotlin `2.2.10` · Jetpack Compose (BOM `2026.02.01`) + Material 3 · AndroidX Media3 `1.4.1` · Coil `2.7.0` · jaudiotagger `3.0.1` · AGP `9.4.1` / Gradle `9.8.1` · `minSdk` 24 / `targetSdk` 37 · `SharedPreferences` · JUnit 4 (24 tests) + GitHub Actions.
+Kotlin `2.2.10` · Jetpack Compose (BOM `2026.02.01`) + Material 3 · AndroidX Media3 `1.9.1` · Coil `2.7.0` · jaudiotagger `3.0.1` · AGP `9.4.1` / Gradle `9.8.1` · `minSdk` 24 / `targetSdk` 37 · `SharedPreferences` + text backup · app id `io.github.maikelstiven.dezznuts` · JUnit 4 (105 tests) + GitHub Actions.
 
 ## 🔧 Build
 
@@ -79,14 +75,14 @@ Requires a recent Android Studio (or JDK 17+) and Android SDK API 37.
 
 ## 🐞 Known issues
 
-- ⋮ menus and "Restore playlist" have no logic yet.
-- Persistence still uses `SharedPreferences` (Room/DataStore migration pending).
+- With **shuffle on**, "Play next" lands at a random spot of the shuffled order (Media3 owns that order).
+- **Skip silence** and **playback speed** are left out on purpose: the hi-fi audio chain drops those 16-bit-only processors.
 - Genre is only read on Android 11+.
-- Tag editing may fail on some devices due to scoped-storage restrictions.
+- UI strings are hard-coded (not in `strings.xml`), so the app can't be translated yet.
 
 ## 🗺️ Roadmap
 
-1. Manual rescan · 2. Equalizer & sleep timer · 3. Audio cutter & duplicate finder · 4. Finish ⋮ menus · 5. Migrate to Room/DataStore.
+See [`docs/HOJA_DE_RUTA.md`](docs/HOJA_DE_RUTA.md) (Spanish): what's done and what comes next, by stage.
 
 ## 🤝 Contributing
 

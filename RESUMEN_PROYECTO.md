@@ -43,7 +43,7 @@ Arquitectura **MVVM** sencilla apoyada en Compose y un servicio de reproducción
 
 - **`MusicViewModel`** es el cerebro. Mantiene todo el estado como `StateFlow` (biblioteca, canción actual, cola, filtros, búsqueda, favoritos, listas, historial) y controla el `MediaController` de Media3. Persiste datos en `SharedPreferences` (`dezznuts_prefs`).
 - **`MusicService`** extiende `MediaSessionService`. Crea el `ExoPlayer`, la `MediaSession` y la notificación (con botones personalizados de *Favorito* y *Cerrar*). Declara el permiso de reproducción y `handleAudioBecomingNoisy` (se pausa al desconectar audífonos).
-- **`MainActivity`** pide el permiso de audio, arma el `ModalNavigationDrawer`, el `MainScreen` y superpone el `FullScreenPlayer` y el `EditTagDialog`.
+- **`MainActivity`** pide el permiso de audio, arma la barra inferior (Inicio · Biblioteca · Buscar · Ajustes), el `MainScreen` y superpone el `FullScreenPlayer` y el `EditTagDialog`.
 - **`PlaylistSerializer`** (`data/`): convierte las listas de reproducción a/desde texto para `SharedPreferences`. **Codifica los campos** (URL-encoding) para que un nombre con `;`, `|` o `,` no corrompa los datos. Lo usa `MusicViewModel` en `savePlaylists`/`loadPlaylist`.
 - **`SongOrganizer`** (`data/`): agrupaciones (álbum/artista/género/carpeta) y búsqueda como **funciones puras y genéricas**. Lo usan `GridScreens`, `ArtistInterfaceScreen` y el `filteredSongs` del ViewModel; al ser puras, están cubiertas por pruebas.
 
@@ -67,7 +67,7 @@ Con `targetSdk 37` la app se dibuja **edge-to-edge**, es decir, por debajo de la
 El reproductor es **Media3 ExoPlayer**. La decodificación (FLAC/ALAC/WAV) la hace el códec del
 sistema y es exacta; la app **no aplica ningún DSP ni efecto** por defecto. El único punto donde la
 app puede ganar fidelidad real es la entrega del PCM al DAC, y se controla desde
-`service/HiFiRenderersFactory.kt` (menú lateral → **Audio Hi/Res**):
+`service/HiFiRenderersFactory.kt` (Ajustes → **Audio Hi/Res**):
 
 - `setEnableAudioFloatOutput(true)` → salida en punto flotante de 32 bits. ExoPlayer solo la usa
   cuando el archivo es de alta resolución (24/32 bits), así que en 16 bits no cambia nada.
@@ -209,7 +209,7 @@ etiqueta `DezzSeek`.
 | `MusicViewModel.kt` | Estado central de la app | ✅ |
 | `MainScreen.kt` | Scaffold, pestañas y navegación interna | ✅ |
 | `FullScreenPlayer.kt` | Reproductor completo + cola arrastrable + shuffle real | ✅ |
-| `AppDrawerContent.kt` | Menú lateral | ✅ (ítems sin lógica) |
+| `SettingsScreen.kt` | Pantalla de Ajustes (sustituye al menú lateral) | ✅ |
 | `SearchScreen.kt` | Búsqueda con historial y sub-pestañas | ✅ |
 | `GridScreens.kt` | Grillas de álbumes/géneros y lista de artistas | ✅ |
 | `QuickSelectionScreen.kt` / `QuickSelectionDetailScreen.kt` | Filas rápidas y su detalle | ✅ |
