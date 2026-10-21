@@ -602,6 +602,18 @@ class MusicService : MediaSessionService(){
 
     override fun onTaskRemoved(rootIntent: Intent?){
         val player = mediaSession?.player
+        if (player != null) {
+            // Evento que sí llega al deslizar la app fuera de recientes: aquí se guarda la posición.
+            // commit() a propósito: es una sola escritura y debe quedar en disco antes de que el
+            // sistema pueda matar el proceso; no está en un camino caliente.
+            player.currentMediaItem?.mediaId?.toLongOrNull()?.let { id ->
+                val position = if (player.playbackState == Player.STATE_ENDED) 0L else player.currentPosition
+                prefs.edit()
+                    .putLong("last_position_ms", position)
+                    .putLong("last_song_id", id)
+                    .commit()
+            }
+        }
         if (player != null && !player.playWhenReady){
             stopSelf()
         }

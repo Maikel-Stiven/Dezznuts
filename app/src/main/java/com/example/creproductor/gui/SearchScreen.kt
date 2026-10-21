@@ -1,6 +1,7 @@
 package com.example.creproductor.gui
 
 import androidx.activity.compose.BackHandler
+import com.example.creproductor.data.coverModel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -41,7 +42,10 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,6 +70,12 @@ enum class SearchSubTab(val title: String){
     PLAYLISTS("Listas de reproducción"),
     FOLDERS("Carpetas")
 }
+private class SearchMatches(
+    val songs: List<Song> = emptyList(),
+    val albums: List<Song> = emptyList(),
+    val artists: List<Song> = emptyList()
+)
+
 @Composable
 fun SearchOverlayScreen(
     onEditSong: (Song) -> Unit = {},
@@ -96,39 +106,36 @@ fun SearchOverlayScreen(
             onCloseSearch()
         }
     }
-    val matchingSongs = remember (searchQuery, allSongs) {
-        if (searchQuery.isBlank()) emptyList()
-        else allSongs.filter { song ->
-            song.title.contains(searchQuery, ignoreCase = true) ||
-            song.artist.contains(searchQuery, ignoreCase = true) ||
-            song.album.contains(searchQuery, ignoreCase = true)
-        }.sortedWith(
-            compareBy <Song> { it.album }
-                .thenBy { if (it.trackNumber > 0) it.trackNumber else Int.MAX_VALUE }
-                .thenBy { it.title }
-        )
+    // Las tres búsquedas recorren toda la biblioteca en cada tecla: se hacen fuera del hilo principal.
+    val matches by produceState(SearchMatches(), searchQuery, allSongs) {
+        value = if (searchQuery.isBlank()) SearchMatches() else withContext(Dispatchers.Default) {
+            SearchMatches(
+                songs = allSongs.filter { song ->
+                    song.title.contains(searchQuery, ignoreCase = true) ||
+                    song.artist.contains(searchQuery, ignoreCase = true) ||
+                    song.album.contains(searchQuery, ignoreCase = true)
+                }.sortedWith(
+                    compareBy <Song> { it.album }
+                        .thenBy { if (it.trackNumber > 0) it.trackNumber else Int.MAX_VALUE }
+                        .thenBy { it.title }
+                ),
+                albums = allSongs.filter { song ->
+                    song.album.isNotBlank() &&
+                            !song.album.equals("<unknown>", ignoreCase = true) &&
+                            (song.album.contains(searchQuery, ignoreCase = true) ||
+                                    song.artist.contains(searchQuery, ignoreCase = true))
+                }.distinctBy { it.album.lowercase().trim() },
+                artists = allSongs.filter { song ->
+                    song.artist.isNotBlank() &&
+                            !song.artist.equals("<unknown>", ignoreCase = true) &&
+                            song.artist.contains(searchQuery, ignoreCase = true)
+                }.distinctBy { it.artist.lowercase().trim() }
+            )
+        }
     }
-
-    val matchingAlbums = remember (searchQuery, allSongs){
-        if (searchQuery.isBlank()) emptyList()
-        else allSongs
-            .filter { song ->
-                song.album.isNotBlank() &&
-                        !song.album.equals("<unknown>", ignoreCase = true) &&
-                        (song.album.contains(searchQuery, ignoreCase = true) ||
-                                song.artist.contains(searchQuery, ignoreCase = true))
-
-        }.distinctBy { it.album.lowercase().trim() }
-    }
-
-    val  matchingArtists = remember (searchQuery, allSongs){
-        if (searchQuery.isBlank()) emptyList()
-        else allSongs.filter { song ->
-            song.artist.isNotBlank() &&
-                    !song.artist.equals("<unknown>", ignoreCase = true) &&
-                    song.artist.contains(searchQuery, ignoreCase = true)
-        }.distinctBy { it.artist.lowercase().trim() }
-    }
+    val matchingSongs = matches.songs
+    val matchingAlbums = matches.albums
+    val matchingArtists = matches.artists
 
     // La búsqueda se dibuja por encima del Scaffold, así que necesita su propia
     // zona segura para no quedar bajo la barra de estado (notch / reloj).
@@ -368,7 +375,7 @@ fun SearchOverlayScreen(
                             subtitle = "$artistAlbumsCount álbumes •  $artistSongsCounts canciones",
                             // Foto real del artista (Deezer) cacheada desde aquí; si no se
                             // consigue, se cae a la portada de una de sus canciones.
-                            imageModel = rememberArtistPhoto(song.artist, song.albumArtUri),
+                            imageModel = rememberArtistPhoto(song.artist, song.coverModel),
                             onClick = {
 
                                 if (searchQuery.isNotBlank()){
@@ -409,7 +416,7 @@ private fun  AlbumGridCard(
         ){
             if (song.albumArtUri != null){
                 AsyncImage(
-                    model = song.albumArtUri,
+                    model = song.coverModel,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop

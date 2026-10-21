@@ -2,6 +2,7 @@ package com.example.creproductor.data
 
 import android.content.ContentUris
 import android.content.Context
+import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import java.io.File
@@ -12,6 +13,12 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 
 private const val TECH_COLUMNS_SDK = 36
+
+/**
+ * Ruta que MediaProvider sirve como imagen de carátula. `Audio.Albums.EXTERNAL_CONTENT_URI` apunta a
+ * la tabla de álbumes (una fila, no un fichero): Coil recibía "no such column: _data" y no cargaba nada.
+ */
+private val ALBUM_ART_BASE = Uri.parse("content://media/external/audio/albumart")
 
 // Lo que hay que leer del disco (cabecera FLAC/WAV y hoja CUE) no cambia entre recargas de la biblioteca: se
 // recuerda por canción para que las recargas silenciosas (MediaStore avisa por cada archivo nuevo) no vuelvan a abrir
@@ -116,10 +123,7 @@ class MediaStoreScanner (private  val context: Context) {
                 )
 
                 val albumArtUri = if (albumId >= 0){
-                    ContentUris.withAppendedId(
-                        MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,
-                        albumId
-                    )
+                    ContentUris.withAppendedId(ALBUM_ART_BASE, albumId)
                 }else null
 
                 val song = Song(

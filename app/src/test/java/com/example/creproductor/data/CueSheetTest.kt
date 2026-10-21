@@ -1,5 +1,6 @@
 package com.example.creproductor.data
 
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -64,5 +65,25 @@ class FlacTagsTest {
     @Test fun devuelveNullSiNoEstaONoEsFlac() {
         assertNull(FlacTags.read(flac("TITLE=x"), "CUESHEET"))
         assertNull(FlacTags.read(java.io.ByteArrayInputStream("RIFFxxxxxxxx".toByteArray()), "CUESHEET"))
+    }
+
+    @Test fun extraeLaImagenDelBloquePicture() {
+        fun be32(n: Int) = byteArrayOf((n shr 24).toByte(), (n shr 16).toByte(), (n shr 8).toByte(), n.toByte())
+        val imagen = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 1, 2, 3, 4)
+        val mime = "image/jpeg".toByteArray()
+        val desc = "portada".toByteArray()
+        val body = be32(3) + be32(mime.size) + mime + be32(desc.size) + desc +
+            be32(1440) + be32(1440) + be32(24) + be32(0) + be32(imagen.size) + imagen
+        val h = 0x80 or 6
+        val block = byteArrayOf(h.toByte(), (body.size shr 16).toByte(), (body.size shr 8).toByte(), body.size.toByte()) + body
+        val flac = java.io.ByteArrayInputStream(
+            "fLaC".toByteArray() + byteArrayOf(0, 0, 0, 34) + ByteArray(34) + block
+        )
+        assertArrayEquals(imagen, FlacTags.picture(flac))
+    }
+
+    @Test fun sinBloquePictureDevuelveNull() {
+        assertNull(FlacTags.picture(flac("TITLE=x")))
+        assertNull(FlacTags.picture(java.io.ByteArrayInputStream("RIFFxxxxxxxx".toByteArray())))
     }
 }

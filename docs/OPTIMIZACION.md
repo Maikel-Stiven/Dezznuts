@@ -13,7 +13,7 @@ MusicViewModel ── StateFlow ──► MainActivity ──► FullScreenPlaye
                                                    └─ PlayerSeekBar (barra + tiempos)
 ```
 
-La posición de reproducción es el único dato que cambia continuamente (cada 500 ms), así que es donde más cuesta un error de diseño.
+La posición de reproducción es el único dato que cambia continuamente (cada 500 ms, y solo mientras la barra está en pantalla), así que es donde más cuesta un error de diseño.
 
 ## Cambios en esta rama
 
@@ -65,8 +65,8 @@ La posición de reproducción es el único dato que cambia continuamente (cada 5
 
 | Qué | Efecto |
 |---|---|
-| El sondeo de posición solo corre mientras **suena y la app es visible** (`collectLatest` sobre `isPlaying` + `uiVisible`) | En pausa o en segundo plano: 0 despertares de CPU (medido: de 2/s a 0 en emulador) |
-| La posición se guarda al ocultar la UI | Se restaura bien al reabrir sin sondear en segundo plano |
+| El sondeo de posición solo corre mientras **la barra la observa y suena** (`subscriptionCount` + `collectLatest` sobre `isPlaying`) | En pausa o con la pantalla del reproductor cerrada: 0 ticks; con ella abierta, 500 ms |
+| La posición se persiste en **eventos del reproductor** (pausa, fin, cambio de pista) y en `onTaskRemoved` | Sin escrituras periódicas; se restaura bien al reabrir |
 | `collectAsStateWithLifecycle` en lugar de `collectAsState` | La UI deja de recolectar flujos cuando no es visible |
 | Pertenencia a listas con `Set` y `remember` (`MainScreen`, `PlaylistScreen`) | De O(canciones × canciones de la lista) a O(canciones) |
 | Se quitó la dependencia `media3-ui` (sin uso) | APK release −0,65 MB |
@@ -83,3 +83,11 @@ La posición de reproducción es el único dato que cambia continuamente (cada 5
 
 - `registerSongPlay` reordena toda la biblioteca para "Más reproducidas" en cada cambio de pista; solo importa con bibliotecas de varios miles de canciones.
 - `savePlayCounts` reescribe todo el mapa en cada reproducción; podría hacerse con *debounce* si el coste llegara a notarse.
+
+### 8. Menos trabajo en el hilo principal y menos RAM (equipos modestos)
+- **Agrupados de pestañas** (álbumes, artistas, géneros, carpetas) y **búsqueda**: se calculan en `Dispatchers.Default`; antes bloqueaban la interfaz al abrir la pestaña o teclear.
+- **`filteredSongs` y `favoriteSongs`**: `flowOn(Dispatchers.Default)`.
+- **Portadas (Coil):** caché en memoria al 10 % de la RAM (5 % en equipos de poca RAM) en vez del 25 %, y RGB565.
+- **Posición de reproducción:** el sondeo solo corre mientras suena (en pausa no despierta) y se guarda en disco al pausar y cada 10 s, no cada segundo ni en cada *seek*.
+- **Interfaz:** `MainScreen` recoge los flujos con `collectAsStateWithLifecycle` (nada en segundo plano); `formatDuration` sin `String.format` (se llamaba por fila); conteo de álbumes por artista con `remember`.
+- No medido en dispositivo: son recortes de trabajo evidentes, falta confirmar la mejora en un móvil real.

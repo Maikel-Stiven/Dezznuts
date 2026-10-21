@@ -41,7 +41,11 @@ import com.example.creproductor.data.ArtistImageFetcher
 import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.disk.DiskCache
+import coil.memory.MemoryCache
 import com.example.creproductor.data.Song
+import com.example.creproductor.data.SongCover
+import com.example.creproductor.data.SongCoverFetcher
+import com.example.creproductor.data.coverModel
 import com.example.creproductor.gui.AppDrawerContent
 import com.example.creproductor.gui.ClearImageCacheDialog
 import com.example.creproductor.gui.DrawerMenuItem
@@ -68,7 +72,19 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Las portadas son miniaturas: Coil reserva por defecto el 25 % de la RAM de la app para ellas, demasiado en
+        // móviles justos. 10 % (5 % en equipos de poca RAM) y RGB565 (la mitad de bytes por píxel) bastan.
+        val lowRam = (getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager).isLowRamDevice
         val imageLoader = ImageLoader.Builder(this)
+            .memoryCache { MemoryCache.Builder(this).maxSizePercent(if (lowRam) 0.05 else 0.10).build() }
+            .allowRgb565(true)
+            .crossfade(false)
+            .components {
+                // Carátulas: MediaStore o, si el proveedor no las indexa, la embebida del archivo.
+                add(SongCoverFetcher.Factory(applicationContext))
+                // Sin clave Coil no usa la caché en memoria para este modelo y re-lee/re-decodifica al volver a la fila.
+                add(coil.key.Keyer<SongCover> { cover, _ -> cover.cacheKey })
+            }
             .diskCache {
                 DiskCache.Builder()
                     .directory(cacheDir.resolve(ArtistImageFetcher.IMAGE_CACHE_DIR))
@@ -360,7 +376,7 @@ fun formatDuration(durationMs: Long): String{
     val totalSeconds = durationMs / 1000
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
-    return String.format("%d:%02d", minutes, seconds)
+    return if (seconds < 10) "$minutes:0$seconds" else "$minutes:$seconds"
 }
 
 @Composable
@@ -392,7 +408,7 @@ fun SongItem(
             ) {
                 if (song.albumArtUri != null) {
                     AsyncImage(
-                        model = song.albumArtUri,
+                        model = song.coverModel,
                         contentDescription = "Portada",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
@@ -491,7 +507,7 @@ fun BottomPlayerBar(
             ) {
                 if (song.albumArtUri != null) {
                     AsyncImage(
-                        model = song.albumArtUri,
+                        model = song.coverModel,
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
