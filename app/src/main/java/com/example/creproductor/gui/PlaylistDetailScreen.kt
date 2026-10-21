@@ -300,7 +300,7 @@ fun PlaylistScreenDetail(
                             )
                         }
                     }
-                   itemsIndexed(visibleSongs, key = {index, song -> "playlist_song_${song.id}_$index"}) {_, song ->
+                   itemsIndexed(visibleSongs, key = { _, song -> "playlist_song_${song.id}" }) {_, song ->
                        val isSelected = song.id == currentSongId
 
                        PlaylistTrackItem(

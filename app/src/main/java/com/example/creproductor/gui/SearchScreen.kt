@@ -202,7 +202,7 @@ fun SearchOverlayScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(top = 8.dp)
             ) {
-                items(searchHistory){ item ->
+                items(searchHistory, key = { it }){ item ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()

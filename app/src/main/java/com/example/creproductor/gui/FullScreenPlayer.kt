@@ -892,13 +892,7 @@ private fun CoverBackdrop(song: Song, playing: Boolean) {
     val painter = coil.compose.rememberAsyncImagePainter(
         remember(song.id) { ImageRequest.Builder(context).data(song.coverModel).size(24).transformations(SaturateTransformation(1.35f)).build() }
     )
-    // Equipos modestos (poca RAM o solo 2 núcleos), ahorro de batería o animaciones del sistema apagadas: fondo fijo.
-    val canAnimate = remember {
-        val lowRam = (context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager).isLowRamDevice
-        val animationsOn = android.provider.Settings.Global.getFloat(context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
-        val powerSave = (context.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager).isPowerSaveMode
-        !lowRam && Runtime.getRuntime().availableProcessors() > 2 && animationsOn && !powerSave
-    }
+    val canAnimate = rememberVisualEffectsEnabled()
     val t = remember { androidx.compose.runtime.mutableFloatStateOf(0.5f) }
     LaunchedEffect(canAnimate && playing) {
         if (!(canAnimate && playing)) return@LaunchedEffect
