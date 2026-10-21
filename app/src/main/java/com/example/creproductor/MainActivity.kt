@@ -48,6 +48,7 @@ import com.example.creproductor.data.SongCoverFetcher
 import com.example.creproductor.data.coverModel
 import com.example.creproductor.gui.AboutDialog
 import com.example.creproductor.gui.AppDrawerContent
+import com.example.creproductor.gui.AudioCutterDialog
 import com.example.creproductor.gui.ClearImageCacheDialog
 import com.example.creproductor.gui.DrawerMenuItem
 import com.example.creproductor.gui.EditTagDialog
@@ -126,6 +127,13 @@ class MainActivity : ComponentActivity() {
                     var showFixArtistsDialog by remember { mutableStateOf(false) }
                     var showAboutDialog by remember { mutableStateOf(false) }
                     var showScanScreen by remember { mutableStateOf(false) }
+                    var songToCut by remember { mutableStateOf<Song?>(null) }
+                    // Android 9 o menos: guardar en la carpeta pública de Música exige el permiso de escritura.
+                    var pendingCut by remember { mutableStateOf<(() -> Unit)?>(null) }
+                    val writePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+                        if (ok) pendingCut?.invoke() else Toast.makeText(this@MainActivity, "Sin permiso no se puede guardar el corte", Toast.LENGTH_LONG).show()
+                        pendingCut = null
+                    }
                     var showSleepTimerDialog by remember { mutableStateOf(false) }
                     val versionName = remember {
                         runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull() ?: "—"
@@ -148,6 +156,12 @@ class MainActivity : ComponentActivity() {
                     var songMenuFor by remember { mutableStateOf<Song?>(null) }
                     var songInfoFor by remember { mutableStateOf<Song?>(null) }
                     val editSong: (Song) -> Unit = { song -> songMenuFor = song }
+                    fun openCutter(song: Song) {
+                        // Las pistas de una hoja CUE son un tramo de un archivo largo: se cortaría el archivo entero.
+                        if (song.cueStartMs >= 0) { Toast.makeText(this@MainActivity, "Las pistas de una hoja CUE no se pueden cortar", Toast.LENGTH_LONG).show(); return }
+                        viewModel.pauseIfPlaying()
+                        songToCut = song
+                    }
                     // Confirmación del sistema para borrar archivos (Android 11+); al terminar se recarga la biblioteca.
                     val deleteLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
                         viewModel.loadSongs(silent = true)
@@ -224,7 +238,11 @@ class MainActivity : ComponentActivity() {
                                                     is DrawerMenuItem.SearchDuplicates -> { showDuplicatesDialog = true }
                                                     is DrawerMenuItem.FixUnknownArtists -> { showFixArtistsDialog = true }
                                                     is DrawerMenuItem.ScanFiles -> { showScanScreen = true }
-                                                    is DrawerMenuItem.AudioCutter -> {/*Falta lógica del cortador de audio*/}
+                                                    is DrawerMenuItem.AudioCutter -> {
+                                                        val playing = currentSong
+                                                        if (playing != null) openCutter(playing)
+                                                        else Toast.makeText(this@MainActivity, "Elige una canción desde su menú ⋮ → Cortador de audio", Toast.LENGTH_LONG).show()
+                                                    }
                                                     is DrawerMenuItem.SleepTimer -> { showSleepTimerDialog = true }
                                                     is DrawerMenuItem.ClearImageCache -> { showClearImageCacheDialog = true }
                                                     is DrawerMenuItem.HiFiAudio -> { showHiFiAudioDialog = true }
@@ -324,7 +342,7 @@ class MainActivity : ComponentActivity() {
                                     onGoToArtist = { isPlayerFullScreenVisible = false; viewModel.requestNav(NavRequest.Artist(song.artist)) },
                                     onEditTags = { songToEdit = song },
                                     onAbout = { songInfoFor = song },
-                                    onAudioCutter = { Toast.makeText(this@MainActivity, "El cortador de audio llegará pronto", Toast.LENGTH_SHORT).show() },
+                                    onAudioCutter = { openCutter(song) },
                                     onDelete = {
                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                                             val request = MediaStore.createDeleteRequest(contentResolver, listOf(song.contentUri))
@@ -347,6 +365,23 @@ class MainActivity : ComponentActivity() {
                                     songToEdit = null
                                     requestWrite(listOf(song)) { viewModel.updatedSongTags(song, title, artist, album, coverUriOrUrl) }
                                 }
+                            )
+                        }
+
+                        songToCut?.let { song ->
+                            val cutting by viewModel.cutting.collectAsStateWithLifecycle()
+                            AudioCutterDialog(
+                                song = song,
+                                cutting = cutting,
+                                onCut = { start, end ->
+                                    val run = { viewModel.cutAudio(song, start, end) { songToCut = null } }
+                                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+                                        checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                        pendingCut = run
+                                        writePermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                                    } else run()
+                                },
+                                onDismiss = { songToCut = null }
                             )
                         }
 

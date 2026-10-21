@@ -23,6 +23,7 @@ import androidx.media3.common.Tracks
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionToken
+import com.example.creproductor.data.AudioCutter
 import com.example.creproductor.data.AudioQuality
 import com.example.creproductor.data.AudioTagWriter
 import com.example.creproductor.data.TagSuggestion
@@ -263,6 +264,28 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         if (settings != ScanSettings.read(getApplication())) { settings.save(getApplication()); loadSongs(silent = true) }
         _scanProgress.value = null
     }
+
+    /** Recorte de audio en curso (el diálogo del cortador se bloquea mientras tanto). */
+    private val _cutting = MutableStateFlow(false)
+    val cutting: StateFlow<Boolean> = _cutting.asStateFlow()
+
+    fun cutAudio(song: Song, startMs: Long, endMs: Long, onDone: () -> Unit) {
+        if (_cutting.value) return
+        viewModelScope.launch {
+            _cutting.value = true
+            val result = withContext(Dispatchers.IO) { AudioCutter.cut(getApplication(), song, startMs, endMs) }
+            _cutting.value = false
+            Toast.makeText(
+                getApplication(),
+                if (result != null) "Guardado: ${result.displayName} (Música/DEZZNUTS)" else "No se pudo cortar este archivo",
+                Toast.LENGTH_LONG
+            ).show()
+            if (result != null) { onDone(); loadSongs(silent = true) }
+        }
+    }
+
+    /** Pausa si suena (el cortador se abre con la música en silencio para poder previsualizar). */
+    fun pauseIfPlaying() { mediaController?.takeIf { it.isPlaying }?.pause() }
 
     private var loadJob: Job? = null
     private var observerJob: Job? = null
