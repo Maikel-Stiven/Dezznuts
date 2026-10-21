@@ -37,15 +37,20 @@ object EqBands {
         "Graves" to listOf(EqBand(60f, 6f, 0.9f), EqBand(230f, 3f, 1f), EqBand(910f, 0f, 1f), EqBand(3600f, 0f, 1f), EqBand(14000f, 0f, 1f)),
         "Voces" to listOf(EqBand(60f, -2f, 1f), EqBand(230f, -1f, 1f), EqBand(910f, 3f, 1.1f), EqBand(3600f, 4f, 1.2f), EqBand(14000f, 1f, 1f)),
         "Brillo" to listOf(EqBand(60f, 0f, 1f), EqBand(230f, 0f, 1f), EqBand(910f, 1f, 1f), EqBand(3600f, 3f, 1f), EqBand(14000f, 6f, 0.8f)),
-        "Loudness" to listOf(EqBand(60f, 5f, 0.9f), EqBand(230f, 1f, 1f), EqBand(910f, -2f, 1f), EqBand(3600f, 1f, 1f), EqBand(14000f, 5f, 0.9f))
+        "Loudness" to listOf(EqBand(60f, 5f, 0.9f), EqBand(230f, 1f, 1f), EqBand(910f, -2f, 1f), EqBand(3600f, 1f, 1f), EqBand(14000f, 5f, 0.9f)),
+        "Rock" to listOf(EqBand(60f, 4f, 0.9f), EqBand(230f, 2f, 1f), EqBand(910f, -2f, 1f), EqBand(3600f, 3f, 1f), EqBand(14000f, 4f, 0.9f)),
+        "Dance" to listOf(EqBand(60f, 6f, 0.8f), EqBand(230f, 3f, 1f), EqBand(910f, -1f, 1f), EqBand(3600f, 2f, 1f), EqBand(14000f, 3f, 0.9f)),
+        "Instrumental" to listOf(EqBand(60f, 1f, 1f), EqBand(230f, 0f, 1f), EqBand(910f, 1f, 1f), EqBand(3600f, 2f, 1.1f), EqBand(14000f, 2f, 0.9f))
     )
 
-    /** Nombre del preset que coincide con `bands`, o `null` si son ajustes propios ("Personalizado"). */
-    fun presetNameOf(bands: List<EqBand>): String? = PRESETS.firstOrNull { (_, p) ->
+    /** ¿Mismas bandas (con la tolerancia con la que se guardan)? */
+    fun sameBands(p: List<EqBand>, bands: List<EqBand>): Boolean =
         p.size == bands.size && p.zip(bands).all { (a, b) ->
             abs(a.freqHz - b.freqHz) < 1f && abs(a.gainDb - b.gainDb) < 0.05f && abs(a.q - b.q) < 0.05f
         }
-    }?.first
+
+    /** Nombre del preset que coincide con `bands`, o `null` si son ajustes propios ("Personalizado"). */
+    fun presetNameOf(bands: List<EqBand>): String? = PRESETS.firstOrNull { (_, p) -> sameBands(p, bands) }?.first
 
     /** `"60:0.0:1.0;230:3.5:1.2;…"`. */
     fun encode(bands: List<EqBand>): String = bands.joinToString(";") { "${it.freqHz}:${it.gainDb}:${it.q}" }
@@ -61,6 +66,38 @@ object EqBands {
         }
         return parsed.ifEmpty { DEFAULT }
     }
+}
+
+/**
+ * Presets propios del usuario ("Saved"): hasta [MAX], cada uno con nombre y bandas. Se guardan como texto
+ * (`nombre|bandas` por línea); el nombre no puede llevar `|` ni saltos de línea.
+ */
+object SavedEqPresets {
+    const val MAX = 5
+    const val MAX_NAME = 16
+
+    fun cleanName(raw: String): String = raw.filterNot { it == '|' || it == '\n' || it == '\r' }.trim().take(MAX_NAME)
+
+    fun encode(list: List<Pair<String, List<EqBand>>>): String =
+        list.joinToString("\n") { (name, bands) -> "$name|${EqBands.encode(bands)}" }
+
+    fun decode(raw: String?): List<Pair<String, List<EqBand>>> =
+        raw.orEmpty().lines().mapNotNull { line ->
+            val name = cleanName(line.substringBefore('|', ""))
+            val bands = line.substringAfter('|', "")
+            if (name.isEmpty() || bands.isEmpty()) null else name to EqBands.decode(bands)
+        }.take(MAX)
+
+    /** Añade (o reemplaza el del mismo nombre). `null` si el nombre queda vacío o ya hay [MAX] y es uno nuevo. */
+    fun add(list: List<Pair<String, List<EqBand>>>, name: String, bands: List<EqBand>): List<Pair<String, List<EqBand>>>? {
+        val clean = cleanName(name)
+        if (clean.isEmpty()) return null
+        val exists = list.any { it.first.equals(clean, ignoreCase = true) }
+        if (!exists && list.size >= MAX) return null
+        return list.filterNot { it.first.equals(clean, ignoreCase = true) } + (clean to bands)
+    }
+
+    fun remove(list: List<Pair<String, List<EqBand>>>, name: String) = list.filterNot { it.first == name }
 }
 
 class ParametricEq(private val sampleRate: Int, private val channels: Int) {
