@@ -109,7 +109,6 @@ una GPU real; la *proporción* entre antes y después sí es comparable.
 | Reproductor completo abierto y sonando | 76,5 % | **6,0 %** |
 | Lista visible con una canción sonando | 29,7 % | **3,5 %** |
 | App en segundo plano sonando | 3,2 % | 3,1 % |
-| Memoria (PSS) al abrir la pestaña Artistas | +24 MB | **+14 MB** |
 
 ### Qué se cambió (y por qué)
 1. **La lista bajo el reproductor no anima.** La pantalla principal seguía compuesta debajo del reproductor a pantalla
@@ -121,21 +120,23 @@ una GPU real; la *proporción* entre antes y después sí es comparable.
 4. **Regla única de efectos** (`rememberVisualEffectsEnabled`): en equipos de 2 núcleos o poca RAM, con ahorro de
    batería o con las animaciones del sistema apagadas, el fondo y las barras quedan **fijos** (mismo aspecto, cero
    fotogramas extra).
-5. **Fotos de artistas:** las consultas a Deezer ya no se lanzan todas a la vez (`Semaphore(2)`): menos conexiones HTTPS
-   simultáneas y las filas que se salen de pantalla cancelan su espera.
-6. **Claves de listas** (auditoría de las 21 listas perezosas): el detalle de una playlist llevaba el índice en la clave y
+5. **Claves de listas** (auditoría de las 21 listas perezosas): el detalle de una playlist llevaba el índice en la clave y
    recreaba todas las filas siguientes al quitar una canción; el historial de búsqueda no tenía clave.
-7. **Calidad (Lossless / Hi-Res) como cinta en la portada** de cada fila, en vez de un distintivo junto al título.
+6. **Calidad (Lossless / Hi-Res) como cinta en la portada** de cada fila, en vez de un distintivo junto al título.
 
 ### Probado y descartado (no mejoraba, se revirtió)
 | Idea | Medida | Veredicto |
 |---|---|---|
 | Baseline profile propio (`HSPL com/example/**`) | arranque en frío 305/298 → 295/284 ms (ruido ±15 ms) | revertido: dentro del ruido |
 | Conectar con el servicio de reproducción tras el primer fotograma | arranque sin compilar 319 → 367 ms | revertido: empeora |
+| Limitar a 2 las consultas simultáneas de fotos de artistas (`Semaphore(2)`) | PSS al abrir Artistas, 3 ejecuciones cada una en 2 núcleos: sin límite 79/72/80 MB, con límite 82/82/78 MB | revertido: dentro del ruido (una primera medición con una sola muestra en 4 núcleos sugería −10 MB y no se sostuvo) |
 
 ### Pendiente / límites conocidos
 - Cambiar de pestaña por primera vez tiene un pico de 100–200 ms en el primer fotograma (Canciones y Artistas). Se
   comprobó que **no** es la red ni el JIT (persiste con el código compilado por completo y sin cargar fotos); es el
   primer dibujo de la lista en el emulador. No se midió en un teléfono real.
 - Arranque en frío ~300 ms (compilado) / ~320–530 ms (recién instalado, sin compilar) en el emulador de 2 núcleos.
+- Al abrir la pestaña Artistas la memoria sube ~25–30 MB en el emulador (fotos de internet + texturas del dibujo por
+  software, que en un teléfono real irían a la memoria de gráficos). Limitar las consultas no lo cambió; queda por
+  investigar con un teléfono real.
 - Todo medido en emulador; conviene confirmar en un teléfono de gama baja real.
