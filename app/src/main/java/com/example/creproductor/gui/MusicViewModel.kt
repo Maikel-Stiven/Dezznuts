@@ -31,6 +31,7 @@ import com.example.creproductor.data.HiFiAudio
 import com.example.creproductor.data.QualityTier
 import com.example.creproductor.data.MediaStoreScanner
 import com.example.creproductor.data.Song
+import com.example.creproductor.data.SongCoverCache
 import com.example.creproductor.data.trackPlaybackPosition
 import com.example.creproductor.service.MusicService
 import kotlinx.coroutines.Job
@@ -706,6 +707,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                 coverUrlOrUri = coverUriOrUrl
             )
             if (success){
+                SongCoverCache.invalidate(getApplication(), song)
                 loadSongs(silent = true)
             } else {
                 Toast.makeText(getApplication(), "No se pudieron guardar los tags", Toast.LENGTH_LONG).show()

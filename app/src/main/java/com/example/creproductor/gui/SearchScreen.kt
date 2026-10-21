@@ -1,6 +1,7 @@
 package com.example.creproductor.gui
 
 import androidx.activity.compose.BackHandler
+import com.example.creproductor.data.coverModel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -374,7 +375,7 @@ fun SearchOverlayScreen(
                             subtitle = "$artistAlbumsCount álbumes •  $artistSongsCounts canciones",
                             // Foto real del artista (Deezer) cacheada desde aquí; si no se
                             // consigue, se cae a la portada de una de sus canciones.
-                            imageModel = rememberArtistPhoto(song.artist, song.albumArtUri),
+                            imageModel = rememberArtistPhoto(song.artist, song.coverModel),
                             onClick = {
 
                                 if (searchQuery.isNotBlank()){
@@ -415,7 +416,7 @@ private fun  AlbumGridCard(
         ){
             if (song.albumArtUri != null){
                 AsyncImage(
-                    model = song.albumArtUri,
+                    model = song.coverModel,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop

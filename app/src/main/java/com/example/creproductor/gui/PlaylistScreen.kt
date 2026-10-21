@@ -1,6 +1,7 @@
 package com.example.creproductor.gui
 
 import androidx.compose.foundation.background
+import com.example.creproductor.data.coverModel
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -131,7 +132,7 @@ fun PlaylistScreen(
                         // corta en cuanto aparece, en vez de filtrar toda la biblioteca en cada recomposición.
                         val firstCover = remember(playlist.songIds, allSongs) {
                             val ids = playlist.songIds.toHashSet()
-                            allSongs.firstOrNull { it.id in ids && it.albumArtUri != null }?.albumArtUri
+                            allSongs.firstOrNull { it.id in ids && it.albumArtUri != null }?.coverModel
                         }
                         val displayCover = playlist.coverUri ?: firstCover
 

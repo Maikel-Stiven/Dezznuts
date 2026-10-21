@@ -43,6 +43,9 @@ import coil.compose.AsyncImage
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import com.example.creproductor.data.Song
+import com.example.creproductor.data.SongCover
+import com.example.creproductor.data.SongCoverFetcher
+import com.example.creproductor.data.coverModel
 import com.example.creproductor.gui.AppDrawerContent
 import com.example.creproductor.gui.ClearImageCacheDialog
 import com.example.creproductor.gui.DrawerMenuItem
@@ -76,6 +79,12 @@ class MainActivity : ComponentActivity() {
             .memoryCache { MemoryCache.Builder(this).maxSizePercent(if (lowRam) 0.05 else 0.10).build() }
             .allowRgb565(true)
             .crossfade(false)
+            .components {
+                // Carátulas: MediaStore o, si el proveedor no las indexa, la embebida del archivo.
+                add(SongCoverFetcher.Factory(applicationContext))
+                // Sin clave Coil no usa la caché en memoria para este modelo y re-lee/re-decodifica al volver a la fila.
+                add(coil.key.Keyer<SongCover> { cover, _ -> cover.cacheKey })
+            }
             .diskCache {
                 DiskCache.Builder()
                     .directory(cacheDir.resolve(ArtistImageFetcher.IMAGE_CACHE_DIR))
@@ -399,7 +408,7 @@ fun SongItem(
             ) {
                 if (song.albumArtUri != null) {
                     AsyncImage(
-                        model = song.albumArtUri,
+                        model = song.coverModel,
                         contentDescription = "Portada",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
@@ -498,7 +507,7 @@ fun BottomPlayerBar(
             ) {
                 if (song.albumArtUri != null) {
                     AsyncImage(
-                        model = song.albumArtUri,
+                        model = song.coverModel,
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop

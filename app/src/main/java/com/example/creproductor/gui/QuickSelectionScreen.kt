@@ -1,6 +1,7 @@
 package com.example.creproductor.gui
 
 import androidx.compose.foundation.background
+import com.example.creproductor.data.coverModel
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -160,7 +161,7 @@ fun MediaCard(
       ) {
           if (song.albumArtUri != null) {
               AsyncImage(
-                  model = song.albumArtUri,
+                  model = song.coverModel,
                   contentDescription = null,
                   modifier = Modifier.fillMaxSize(),
                   contentScale = ContentScale.Crop

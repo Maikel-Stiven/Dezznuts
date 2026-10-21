@@ -1,6 +1,7 @@
 package com.example.creproductor.gui
 
 import androidx.compose.foundation.background
+import com.example.creproductor.data.coverModel
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -228,7 +229,7 @@ fun AddSongsToPlaylistDialog(
                         ){
                             if (song.albumArtUri != null){
                                 AsyncImage(
-                                    model = song.albumArtUri,
+                                    model = song.coverModel,
                                     contentDescription = null,
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Crop
