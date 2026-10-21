@@ -358,6 +358,7 @@ class MainActivity : ComponentActivity() {
                                 playlists = playlists,
                                 onDismiss = { songMenuFor = null },
                                 actions = SongMenuActions(
+                                    onPlayNext = { viewModel.playNextInQueue(song) },
                                     onAddToQueue = { viewModel.addToQueue(song) },
                                     onAddToPlaylist = { id -> viewModel.addSongToPlaylist(id, song) },
                                     onGoToAlbum = { isPlayerFullScreenVisible = false; viewModel.requestNav(NavRequest.Album(song.album)) },

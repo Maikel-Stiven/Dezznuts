@@ -11,6 +11,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
@@ -37,6 +39,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.creproductor.SongListScreen
@@ -99,6 +102,7 @@ fun MainScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val currentFilter by viewModel.currentFilter.collectAsStateWithLifecycle()
+    val currentSort by viewModel.currentSort.collectAsStateWithLifecycle()
     val filteredSongs by viewModel.filteredSongs.collectAsStateWithLifecycle()
     val songs = (uiState as? UiState.Success)?.songs ?: emptyList()
     val  searchHistory by viewModel.searchHistory.collectAsStateWithLifecycle()
@@ -172,7 +176,7 @@ fun MainScreen(
             onShuffleClick = {
                 if (selectedAlbumsSongs.isNotEmpty()){
                     val shuffledList = selectedAlbumsSongs.shuffled()
-                    viewModel.playSong(selectedAlbumsSongs.first(), customQueue = shuffledList)
+                    viewModel.playSong(shuffledList.first(), customQueue = shuffledList)
                 }
             },
             onBackClick = {selectedAlbumName = null}
@@ -424,18 +428,36 @@ fun MainScreen(
                                      }
                                  )
                                  AppTab.SONGS -> Column(modifier = Modifier.fillMaxSize()) {
-                                     Row(
-                                         modifier = Modifier
-                                             .horizontalScroll(rememberScrollState())
-                                             .padding(horizontal = 12.dp),
-                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                     ) {
-                                         SONG_FILTER_CHIPS.forEach { (filter, label) ->
-                                             FilterChip(
-                                                 selected = currentFilter == filter,
-                                                 onClick = { viewModel.setFilter(filter) },
-                                                 label = { Text(label) }
-                                             )
+                                     Row(verticalAlignment = Alignment.CenterVertically) {
+                                         Row(
+                                             modifier = Modifier
+                                                 .weight(1f)
+                                                 .horizontalScroll(rememberScrollState())
+                                                 .padding(start = 12.dp),
+                                             horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                         ) {
+                                             SONG_FILTER_CHIPS.forEach { (filter, label) ->
+                                                 FilterChip(
+                                                     selected = currentFilter == filter,
+                                                     onClick = { viewModel.setFilter(filter) },
+                                                     label = { Text(label) }
+                                                 )
+                                             }
+                                         }
+                                         Box {
+                                             var showSortMenu by remember { mutableStateOf(false) }
+                                             IconButton(onClick = { showSortMenu = true }) {
+                                                 Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Ordenar: ${currentSort.label}")
+                                             }
+                                             DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
+                                                 SongSort.entries.forEach { sort ->
+                                                     DropdownMenuItem(
+                                                         text = { Text(sort.label) },
+                                                         trailingIcon = { if (sort == currentSort) Icon(Icons.Default.Check, contentDescription = null) },
+                                                         onClick = { showSortMenu = false; viewModel.setSort(sort) }
+                                                     )
+                                                 }
+                                             }
                                          }
                                      }
                                      SongListScreen(
