@@ -87,6 +87,7 @@ enum class SongFilter{
 /** Tamaño de la primera publicación de la biblioteca y factor de crecimiento de las siguientes. */
 private const val FIRST_PUBLISH_SIZE = 100
 private const val PUBLISH_GROWTH = 4
+private const val MAX_DELETED_PLAYLISTS = 10
 
 class MusicViewModel (application: Application) : AndroidViewModel(application) {
 
@@ -161,6 +162,10 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     /** Modo de repetición actual (ver [RepeatMode]). */
     private val _repeatMode = MutableStateFlow(RepeatMode.OFF)
     val repeatMode: StateFlow<RepeatMode> = _repeatMode.asStateFlow()
+
+    /** Listas borradas que se pueden restaurar (las más recientes primero, hasta [MAX_DELETED_PLAYLISTS]). */
+    private val _deletedPlaylists = MutableStateFlow<List<Playlist>>(emptyList())
+    val deletedPlaylists: StateFlow<List<Playlist>> = _deletedPlaylists.asStateFlow()
 
     /** Listas de reproducción creadas por el usuario. */
     private val _playlists = MutableStateFlow<List<Playlist>>(emptyList())
@@ -902,7 +907,23 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         savePlaylists(updated)
     }
 
+    private fun saveDeleted(list: List<Playlist>) {
+        _deletedPlaylists.value = list
+        prefs.edit { putString("deleted_playlists", PlaylistSerializer.encode(list)) }
+    }
+
+    fun restorePlaylist(playlistId: String) {
+        val playlist = _deletedPlaylists.value.firstOrNull { it.id == playlistId } ?: return
+        saveDeleted(_deletedPlaylists.value.filter { it.id != playlistId })
+        val updated = _playlists.value + playlist
+        _playlists.value = updated
+        savePlaylists(updated)
+    }
+
     fun deletePlaylist(playlistId: String){
+        _playlists.value.firstOrNull { it.id == playlistId }?.let { gone ->
+            saveDeleted((listOf(gone) + _deletedPlaylists.value).take(MAX_DELETED_PLAYLISTS))
+        }
         val updated = _playlists.value.filter { it.id != playlistId }
         _playlists.value = updated
         savePlaylists(updated)
@@ -934,6 +955,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     }
 
     private fun loadPlaylist(){
+        _deletedPlaylists.value = PlaylistSerializer.decode(prefs.getString("deleted_playlists", "") ?: "")
         val str = prefs.getString("saved_playlist", "") ?: ""
         _playlists.value = PlaylistSerializer.decode(str)
     }

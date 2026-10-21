@@ -86,6 +86,8 @@ fun MainScreen(
 
     var showCreatedPlaylistDialog by remember { mutableStateOf(false) }
     var showAddSongsDialog by remember { mutableStateOf(false) }
+    var showRestoreDialog by remember { mutableStateOf(false) }
+    var playlistForOptions by remember { mutableStateOf<Playlist?>(null) }
     var selectedPlaylist by remember { mutableStateOf<Playlist?>(null) }
 
     val playlist by viewModel.playlists.collectAsStateWithLifecycle()
@@ -276,7 +278,7 @@ fun MainScreen(
                 }
             },
             onAddSongsClick = {showAddSongsDialog = true},
-            onRestoreClick = {/*falta lógica*/},
+            onRestoreClick = { showRestoreDialog = true },
             onBackClick = {selectedPlaylist = null},
             onRemoveSongFromPlaylist = { song ->
                 viewModel.removeSongFromPlaylist(activePlaylist.id, song.id)
@@ -467,7 +469,8 @@ fun MainScreen(
                                      playlist = playlist,
                                      allSongs = songs,
                                      onCreatePlaylistClick = { showCreatedPlaylistDialog = true},
-                                     onRestorePlaylistClick = {/*agregar lógica*/},
+                                     onRestorePlaylistClick = { showRestoreDialog = true },
+                                     onPlaylistOptionsClick = { playlistForOptions = it },
                                      onPlaylistClick = {playlist -> selectedPlaylist = playlist}
                                  )
 
@@ -484,6 +487,15 @@ fun MainScreen(
                 }
             }
         }
+    }
+
+    playlistForOptions?.let { p ->
+        PlaylistOptionsDialog(p, onDelete = { viewModel.deletePlaylist(p.id) }, onDismiss = { playlistForOptions = null })
+    }
+
+    if (showRestoreDialog){
+        val deleted by viewModel.deletedPlaylists.collectAsStateWithLifecycle()
+        RestorePlaylistsDialog(deleted, onRestore = { viewModel.restorePlaylist(it) }, onDismiss = { showRestoreDialog = false })
     }
 
     if (showCreatedPlaylistDialog){
