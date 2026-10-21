@@ -90,7 +90,7 @@ fun PlaylistScreen(
 
                 Button(
                     onClick = onCreatePlaylistClick,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = MaterialTheme.shapes.medium,
                     modifier = Modifier.fillMaxWidth(0.8f)
                 ) {
                     Text("Crear lista de reproducción")
@@ -100,7 +100,7 @@ fun PlaylistScreen(
 
                 OutlinedButton(
                     onClick = onRestorePlaylistClick,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = MaterialTheme.shapes.medium,
                     modifier = Modifier.fillMaxWidth(0.8f)
                 ) {
                     Icon(
@@ -155,7 +155,7 @@ fun PlaylistScreen(
                                 modifier = Modifier
                                     .size(56.dp)
                                     .aspectRatio(1f)
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .clip(MaterialTheme.shapes.small)
                                     .background(MaterialTheme.colorScheme.surfaceVariant),
                                 contentAlignment = Alignment.Center
                             ){

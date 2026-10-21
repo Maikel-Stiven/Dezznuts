@@ -244,7 +244,7 @@ private const val KEY_EQ_SAVED = "eq_saved_presets"
 private fun Readout(label: String, value: String, modifier: Modifier = Modifier) {
     Column(
         modifier
-            .clip(RoundedCornerShape(14.dp))
+            .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             .padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
@@ -318,7 +318,7 @@ private fun EqCurve(
         Modifier
             .fillMaxWidth()
             .height(300.dp)
-            .clip(RoundedCornerShape(24.dp))
+            .clip(MaterialTheme.shapes.large)
             .background(bg)
             .onSizeChanged { size = it }
             .semantics { contentDescription = "Curva del ecualizador: arrastra los puntos para cambiar frecuencia y ganancia" }

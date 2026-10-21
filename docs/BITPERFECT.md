@@ -1,6 +1,6 @@
 # Bit-perfect con DAC USB (rama `bitperfect`)
 
-Función opt-in (apagada por defecto): menú lateral → *Audio Hi/Res* → **Bit-perfect con DAC USB**.
+Función opt-in (apagada por defecto): Ajustes → *Audio Hi/Res* → **Bit-perfect con DAC USB**.
 
 ## Qué hace
 En Android 14+ (API 34) un DAC USB puede ofrecer un **mezclador bit-perfect** (`AudioMixerAttributes`): el sistema deja de

@@ -152,7 +152,7 @@ fun QuickSelectDetailScreen(
                         Button(
                             onClick = onPlayAllClick,
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(10.dp)
+                            shape = MaterialTheme.shapes.small
                         ) {
                             Icon(
                                 imageVector = Icons.Default.PlayArrow,
@@ -166,7 +166,7 @@ fun QuickSelectDetailScreen(
                         OutlinedButton(
                             onClick = onShuffleClick,
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(10.dp),
+                            shape = MaterialTheme.shapes.small,
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = MaterialTheme.colorScheme.primary
                             )
@@ -323,7 +323,7 @@ private fun QuickSelectTrackItem(
         Box(
             modifier = Modifier
                 .size(48.dp)
-                .clip(RoundedCornerShape(6.dp))
+                .clip(MaterialTheme.shapes.extraSmall)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ){

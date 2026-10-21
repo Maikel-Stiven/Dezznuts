@@ -85,7 +85,7 @@ fun CreationPlaylist(
                     modifier = Modifier
                         .width(180.dp)
                         .aspectRatio(1f)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(MaterialTheme.shapes.medium)
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                         .clickable {
                             photoPickerLauncher.launch(

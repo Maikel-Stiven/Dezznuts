@@ -9,6 +9,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.DeleteForever
@@ -40,6 +41,7 @@ import com.example.creproductor.data.Song
 
 /** Acciones del menú (⋮) de una canción, tal como las define la maqueta. */
 class SongMenuActions(
+    val onPlayNext: () -> Unit,
     val onAddToQueue: () -> Unit,
     val onAddToPlaylist: (playlistId: String) -> Unit,
     val onGoToAlbum: () -> Unit,
@@ -97,7 +99,8 @@ fun SongMenuSheet(
                     MenuRow(Icons.AutoMirrored.Filled.QueueMusic, p.name, { onDismiss(); actions.onAddToPlaylist(p.id) })
                 }
             } else {
-                MenuRow(Icons.AutoMirrored.Filled.QueueMusic, "Agregar a cola de reproducción actual", run(actions.onAddToQueue))
+                MenuRow(Icons.Default.SkipNext, "Reproducir a continuación", run(actions.onPlayNext))
+                MenuRow(Icons.AutoMirrored.Filled.QueueMusic, "Agregar al final de la cola", run(actions.onAddToQueue))
                 MenuRow(Icons.AutoMirrored.Filled.PlaylistAdd, "Agregar a una playlist", { pickingPlaylist = true })
                 MenuRow(Icons.Default.Album, "Ir al álbum", run(actions.onGoToAlbum))
                 MenuRow(Icons.Default.Person, "Ir al artista", run(actions.onGoToArtist))

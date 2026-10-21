@@ -204,7 +204,7 @@ fun ArtistDetailScreen (
                         Button(
                             onClick = onPlayAllClick,
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(10.dp)
+                            shape = MaterialTheme.shapes.small
                         ) {
                             Icon(
                                 imageVector = Icons.Default.PlayArrow,
@@ -217,7 +217,7 @@ fun ArtistDetailScreen (
                         OutlinedButton(
                             onClick = onShuffleClick,
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(10.dp),
+                            shape = MaterialTheme.shapes.small,
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = MaterialTheme.colorScheme.primary
                             )
@@ -262,7 +262,7 @@ fun ArtistDetailScreen (
                                         modifier = Modifier
                                             .size(125.dp)
                                             .aspectRatio(1f)
-                                            .clip(RoundedCornerShape(8.dp))
+                                            .clip(MaterialTheme.shapes.small)
                                             .background(MaterialTheme.colorScheme.surfaceVariant),
                                         contentAlignment = Alignment.Center
                                     ){
@@ -360,7 +360,7 @@ private fun ArtistTrackItem(
         Box(
             Modifier
                 .size(48.dp)
-                .clip(RoundedCornerShape(6.dp))
+                .clip(MaterialTheme.shapes.extraSmall)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ){

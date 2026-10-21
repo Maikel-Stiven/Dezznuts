@@ -158,7 +158,7 @@ fun PlaylistScreenDetail(
                             modifier = Modifier
                                 .size(180.dp)
                                 .aspectRatio(1f)
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(MaterialTheme.shapes.small)
                                 .background(MaterialTheme.colorScheme.surfaceVariant),
                             contentAlignment = Alignment.Center
                         ){
@@ -208,7 +208,7 @@ fun PlaylistScreenDetail(
                                 Button(
                                     onClick = onPlayAllClick,
                                     modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(10.dp)
+                                    shape = MaterialTheme.shapes.small
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.PlayArrow,
@@ -222,7 +222,7 @@ fun PlaylistScreenDetail(
                                 OutlinedButton(
                                     onClick = onShuffleClick,
                                     modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(10.dp),
+                                    shape = MaterialTheme.shapes.small,
                                     colors = ButtonDefaults.outlinedButtonColors(
                                         contentColor = MaterialTheme.colorScheme.primary
                                     )
@@ -247,7 +247,7 @@ fun PlaylistScreenDetail(
 
                             Button(
                                 onClick = onAddSongsClick,
-                                shape = RoundedCornerShape(12.dp),
+                                shape = MaterialTheme.shapes.medium,
                                 modifier = Modifier.fillMaxWidth(0.85f)
                             ) {
                                 Text("Añadir canciones +")
@@ -257,7 +257,7 @@ fun PlaylistScreenDetail(
 
                             OutlinedButton(
                                 onClick = onRestoreClick,
-                                shape = RoundedCornerShape(12.dp),
+                                shape = MaterialTheme.shapes.medium,
                                 modifier = Modifier.fillMaxWidth(0.85f)
                             ) {
                                 Icon(
@@ -357,7 +357,7 @@ private fun  PlaylistTrackItem(
         Box(
             modifier = Modifier
                 .size(48.dp)
-                .clip(RoundedCornerShape(6.dp))
+                .clip(MaterialTheme.shapes.extraSmall)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ){

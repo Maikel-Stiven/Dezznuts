@@ -226,7 +226,7 @@ fun GenresGridScreen(
                         .fillMaxWidth()
                         .aspectRatio(1f)
                         .clickable{onGenreClick(genreName, genreSongs )},
-                    shape = RoundedCornerShape(12.dp),
+                    shape = MaterialTheme.shapes.medium,
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     )
