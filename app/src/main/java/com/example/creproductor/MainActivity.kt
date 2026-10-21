@@ -46,6 +46,7 @@ import com.example.creproductor.data.Song
 import com.example.creproductor.data.SongCover
 import com.example.creproductor.data.SongCoverFetcher
 import com.example.creproductor.data.coverModel
+import com.example.creproductor.gui.AboutDialog
 import com.example.creproductor.gui.AppDrawerContent
 import com.example.creproductor.gui.ClearImageCacheDialog
 import com.example.creproductor.gui.DrawerMenuItem
@@ -68,6 +69,8 @@ import kotlinx.coroutines.launch
 import coil.Coil
 import com.example.creproductor.gui.PlayingEqualizerIcon
 
+
+private const val FEEDBACK_URL = "https://github.com/Maikel-Stiven/Dezznuts/issues/new"
 
 class MainActivity : ComponentActivity() {
 
@@ -119,6 +122,10 @@ class MainActivity : ComponentActivity() {
                     var showEqualizerDialog by remember { mutableStateOf(false) }
                     var showDuplicatesDialog by remember { mutableStateOf(false) }
                     var showFixArtistsDialog by remember { mutableStateOf(false) }
+                    var showAboutDialog by remember { mutableStateOf(false) }
+                    val versionName = remember {
+                        runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull() ?: "—"
+                    }
                     // Escribir etiquetas en archivos de audio exige el permiso del sistema (Android 11+): se pide para
                     // las canciones afectadas y, si el usuario acepta, se ejecuta la acción pendiente.
                     var pendingWrite by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -206,6 +213,7 @@ class MainActivity : ComponentActivity() {
                                     gesturesEnabled = !isPlayerFullScreenVisible && (drawerState.isOpen || isFirstPage),
                                     drawerContent = {
                                         AppDrawerContent(
+                                            versionName = versionName,
                                             onMenuItem= { menuItem ->
                                                 when(menuItem) {
                                                     is DrawerMenuItem.Equalizer -> { showEqualizerDialog = true }
@@ -216,7 +224,14 @@ class MainActivity : ComponentActivity() {
                                                     is DrawerMenuItem.SleepTimer -> {/*Falta lógica del temporizador*/}
                                                     is DrawerMenuItem.ClearImageCache -> { showClearImageCacheDialog = true }
                                                     is DrawerMenuItem.HiFiAudio -> { showHiFiAudioDialog = true }
-                                                    else -> {/*no sé, aún no pienso en otras funciones que le aporten al usuario*/}
+                                                    is DrawerMenuItem.About -> { showAboutDialog = true }
+                                                    is DrawerMenuItem.SendFeedback -> {
+                                                        // Los comentarios van a los "issues" del repositorio.
+                                                        runCatching {
+                                                            startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(FEEDBACK_URL)))
+                                                        }.onFailure { Toast.makeText(this@MainActivity, "No hay navegador para abrir el enlace", Toast.LENGTH_LONG).show() }
+                                                    }
+                                                    else -> {}
                                                 }
                                             },
                                             onCloseDrawer = {
@@ -330,6 +345,8 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
+
+                        if (showAboutDialog) AboutDialog(versionName) { showAboutDialog = false }
 
                         if (showClearImageCacheDialog) {
                             ClearImageCacheDialog(onDismiss = { showClearImageCacheDialog = false })
