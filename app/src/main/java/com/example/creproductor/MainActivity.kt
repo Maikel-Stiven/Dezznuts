@@ -55,11 +55,14 @@ import com.example.creproductor.data.SongCover
 import com.example.creproductor.data.SongCoverFetcher
 import com.example.creproductor.data.coverModel
 import com.example.creproductor.gui.AboutDialog
-import com.example.creproductor.gui.AppDrawerContent
+import com.example.creproductor.gui.AppAction
+import com.example.creproductor.gui.AppSection
+import com.example.creproductor.gui.SettingsScreen
+import com.example.creproductor.gui.StatusScreen
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.creproductor.gui.LocalAnimationsEnabled
 import com.example.creproductor.gui.AudioCutterDialog
 import com.example.creproductor.gui.ClearImageCacheDialog
-import com.example.creproductor.gui.DrawerMenuItem
 import com.example.creproductor.gui.EditTagDialog
 import com.example.creproductor.gui.FullScreenPlayer
 import com.example.creproductor.gui.DuplicatesDialog
@@ -193,7 +196,30 @@ class MainActivity : ComponentActivity() {
                     val deleteLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
                         viewModel.loadSongs(silent = true)
                     }
-                    var isFirstPage by remember { mutableStateOf(true) }
+                    var section by rememberSaveable { mutableStateOf(AppSection.HOME) }
+                    fun runAction(action: AppAction) {
+                        when (action) {
+                            AppAction.Equalizer -> showEqualizerDialog = true
+                            AppAction.SearchDuplicates -> showDuplicatesDialog = true
+                            AppAction.FixUnknownArtists -> showFixArtistsDialog = true
+                            AppAction.ScanFiles -> showScanScreen = true
+                            AppAction.AudioCutter -> {
+                                val playing = currentSong
+                                if (playing != null) openCutter(playing)
+                                else Toast.makeText(this@MainActivity, "Elige una canción desde su menú ⋮ → Cortador de audio", Toast.LENGTH_LONG).show()
+                            }
+                            AppAction.SleepTimer -> showSleepTimerDialog = true
+                            AppAction.ClearImageCache -> showClearImageCacheDialog = true
+                            AppAction.HiFiAudio -> showHiFiAudioDialog = true
+                            AppAction.About -> showAboutDialog = true
+                            AppAction.SendFeedback -> {
+                                // Los comentarios van a los "issues" del repositorio.
+                                runCatching {
+                                    startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(FEEDBACK_URL)))
+                                }.onFailure { Toast.makeText(this@MainActivity, "No hay navegador para abrir el enlace", Toast.LENGTH_LONG).show() }
+                            }
+                        }
+                    }
 
                     val requiredPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         Manifest.permission.READ_MEDIA_AUDIO
@@ -215,80 +241,30 @@ class MainActivity : ComponentActivity() {
 
                     Box(modifier = Modifier.fillMaxSize()) {
                         when (val state = uiState) {
-                            is UiState.PermissionRequired -> {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Button(onClick = { permissionLauncher.launch(requiredPermission) }) {
-                                        Text("Conceder acceso")
-                                    }
-                                }
-                            }
-                            is UiState.Loading -> {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularProgressIndicator()
-                                }
-                            }
-                            is UiState.Empty -> {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("No se encontraron archivos de audio locales")
-                                }
-                            }
+                            is UiState.PermissionRequired -> StatusScreen(
+                                title = "Tu música, sin anuncios ni suscripciones",
+                                message = "DEZZNUTS necesita permiso para leer los archivos de audio de este teléfono. No sube nada a internet.",
+                                actionLabel = "Permitir acceso",
+                                onAction = { permissionLauncher.launch(requiredPermission) }
+                            )
+                            is UiState.Loading -> StatusScreen(
+                                title = "Buscando tu música…",
+                                message = "La primera vez puede tardar unos segundos si tienes muchas canciones.",
+                                loading = true
+                            )
+                            is UiState.Empty -> StatusScreen(
+                                title = "No encontramos música",
+                                message = "Copia archivos de audio a las carpetas Música o Descargas y vuelve a buscar.",
+                                actionLabel = "Buscar de nuevo",
+                                onAction = { viewModel.loadSongs() },
+                                secondaryLabel = "Escanear carpetas",
+                                onSecondary = { showScanScreen = true }
+                            )
                             is UiState.Success -> {
-                                val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-                                val scope = rememberCoroutineScope()
-
                                 BackHandler(enabled = isPlayerFullScreenVisible) {
                                     isPlayerFullScreenVisible = false
                                 }
 
-                                BackHandler(enabled = drawerState.isOpen) {
-                                    scope.launch { drawerState.close() }
-                                }
-
-                                ModalNavigationDrawer(
-                                    drawerState = drawerState,
-                                    gesturesEnabled = !isPlayerFullScreenVisible && (drawerState.isOpen || isFirstPage),
-                                    drawerContent = {
-                                        AppDrawerContent(
-                                            versionName = versionName,
-                                            onMenuItem= { menuItem ->
-                                                when(menuItem) {
-                                                    is DrawerMenuItem.Equalizer -> { showEqualizerDialog = true }
-                                                    is DrawerMenuItem.SearchDuplicates -> { showDuplicatesDialog = true }
-                                                    is DrawerMenuItem.FixUnknownArtists -> { showFixArtistsDialog = true }
-                                                    is DrawerMenuItem.ScanFiles -> { showScanScreen = true }
-                                                    is DrawerMenuItem.AudioCutter -> {
-                                                        val playing = currentSong
-                                                        if (playing != null) openCutter(playing)
-                                                        else Toast.makeText(this@MainActivity, "Elige una canción desde su menú ⋮ → Cortador de audio", Toast.LENGTH_LONG).show()
-                                                    }
-                                                    is DrawerMenuItem.SleepTimer -> { showSleepTimerDialog = true }
-                                                    is DrawerMenuItem.ClearImageCache -> { showClearImageCacheDialog = true }
-                                                    is DrawerMenuItem.HiFiAudio -> { showHiFiAudioDialog = true }
-                                                    is DrawerMenuItem.About -> { showAboutDialog = true }
-                                                    is DrawerMenuItem.SendFeedback -> {
-                                                        // Los comentarios van a los "issues" del repositorio.
-                                                        runCatching {
-                                                            startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(FEEDBACK_URL)))
-                                                        }.onFailure { Toast.makeText(this@MainActivity, "No hay navegador para abrir el enlace", Toast.LENGTH_LONG).show() }
-                                                    }
-                                                    else -> {}
-                                                }
-                                            },
-                                            onCloseDrawer = {
-                                                scope.launch { drawerState.close() }
-                                            }
-                                        )
-                                    }
-                                ) {
                                     Box(modifier = Modifier.fillMaxSize()) {
                                         // Lo que queda bajo el reproductor a pantalla completa no anima (no se ve).
                                         CompositionLocalProvider(LocalAnimationsEnabled provides !isPlayerFullScreenVisible) {
@@ -296,14 +272,11 @@ class MainActivity : ComponentActivity() {
                                             Box(modifier = Modifier.weight(1f)) {
                                                 MainScreen(
                                                     viewModel = viewModel,
-                                                    onOpenEqualizer = { showEqualizerDialog = true },
-                                                    onOpenScanner = { showScanScreen = true },
+                                                    section = section,
+                                                    onSectionChange = { section = it },
                                                     onEditSong = editSong,
-                                                    onOpenDrawer = {
-                                                        scope.launch { drawerState.open() }
-                                                    },
-                                                    onPageChanged = {page ->
-                                                        isFirstPage = (page == 0)
+                                                    settingsContent = {
+                                                        SettingsScreen(versionName = versionName, onAction = ::runAction)
                                                     }
                                                 )
                                             }
@@ -324,6 +297,17 @@ class MainActivity : ComponentActivity() {
                                                             onPrevious = { viewModel.playPrevious() }
                                                         )
                                                     }
+                                                }
+                                            }
+
+                                            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
+                                                AppSection.entries.forEach { item ->
+                                                    NavigationBarItem(
+                                                        selected = section == item,
+                                                        onClick = { section = item },
+                                                        icon = { Icon(item.icon, contentDescription = null) },
+                                                        label = { Text(item.title) }
+                                                    )
                                                 }
                                             }
                                         }
@@ -366,7 +350,6 @@ class MainActivity : ComponentActivity() {
                                             }
                                         }
                                     }
-                                }
                             }
                         }
 
@@ -629,8 +612,6 @@ fun BottomPlayerBar(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            // Evita que el mini-reproductor quede bajo la barra de gestos (edge-to-edge).
-            .navigationBarsPadding()
             .padding(horizontal = 8.dp, vertical = 6.dp)
             .pointerInput(Unit) {
                 var dx = 0f; var dy = 0f

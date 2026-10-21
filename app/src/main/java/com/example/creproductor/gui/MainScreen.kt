@@ -13,8 +13,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -44,56 +42,66 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.creproductor.SongListScreen
 import com.example.creproductor.data.Playlist
-import com.example.creproductor.data.Mood
 import com.example.creproductor.data.Song
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.activity.compose.BackHandler
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.runtime.mutableStateListOf
 
+/** Secciones de la barra inferior. */
+enum class AppSection(val title: String, val icon: ImageVector) {
+    HOME("Inicio", Icons.Default.Home),
+    LIBRARY("Biblioteca", Icons.Default.LibraryMusic),
+    SEARCH("Buscar", Icons.Default.Search),
+    SETTINGS("Ajustes", Icons.Default.Settings)
+}
+
+/** Pestañas de la Biblioteca. */
 enum class AppTab(val title: String){
-    QUICK_SELECT("Selección rápida"),
     SONGS("Canciones"),
     ALBUMS("Álbumes"),
     ARTISTS("Artistas"),
+    PLAYLISTS("Listas"),
     GENRES("Géneros"),
-    PLAYLISTS("Listas de reproducción"),
     FOLDERS("Carpetas")
+}
+
+/** Pantallas de detalle apiladas: "atrás" vuelve a la anterior (Artista → Álbum → atrás = Artista). */
+private sealed interface Detail {
+    data class Album(val name: String, val songs: List<Song>) : Detail
+    data class Artist(val name: String, val songs: List<Song>) : Detail
+    data class Genre(val name: String, val songs: List<Song>) : Detail
+    data class Category(val title: String, val songs: List<Song>) : Detail
+    data class PlaylistDetail(val playlist: Playlist) : Detail
 }
 
 @OptIn(ExperimentalMaterial3Api :: class)
 @Composable
 fun MainScreen(
     viewModel: MusicViewModel,
-    onOpenEqualizer: () -> Unit,
-    onOpenScanner: () -> Unit,
-    onEditSong: (Song) -> Unit = {},
-    onOpenDrawer: () -> Unit = {},
-    onPageChanged: (Int) -> Unit = {}
+    section: AppSection,
+    onSectionChange: (AppSection) -> Unit,
+    settingsContent: @Composable () -> Unit,
+    onEditSong: (Song) -> Unit = {}
 ){
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { AppTab.entries.size})
     val coroutineScope = rememberCoroutineScope ()
 
-    LaunchedEffect(pagerState.currentPage) {
-        onPageChanged(pagerState.currentPage)
-    }
-
-    var showMenu by remember { mutableStateOf(false) }
-    var isSearchActive by remember { mutableStateOf(false) }
-    var selectedAlbumName by remember { mutableStateOf<String?>(null) }
-    var selectedAlbumsSongs by remember { mutableStateOf<List<Song>>(emptyList()) }
-    var selectedQuickSelectType by remember { mutableStateOf<QuickSelectType?>(null) }
-    var selectedQuickSelectSongs by remember { mutableStateOf <List<Song>> (emptyList()) }
-    var selectedMood by remember { mutableStateOf<Mood?>(null) }
-    var selectedArtistName by remember { mutableStateOf<String?>(null) }
-    var selectedArtistSongs by remember { mutableStateOf<List<Song>>(emptyList()) }
-    var selectedGenreName by remember { mutableStateOf<String?>(null) }
-    var selectedGenreSongs by remember { mutableStateOf<List<Song>>(emptyList()) }
-    var selectedFolderName by remember { mutableStateOf<String?>(null) }
-    var selectedFolderSongs by remember { mutableStateOf<List<Song>>(emptyList()) }
+    val stack = remember { mutableStateListOf<Detail>() }
+    fun open(detail: Detail) { stack.add(detail) }
+    fun back() { stack.removeLastOrNull() }
+    // Cambiar de sección desde la barra inferior cierra los detalles abiertos.
+    LaunchedEffect(section) { stack.clear() }
 
     var showCreatedPlaylistDialog by remember { mutableStateOf(false) }
     var showAddSongsDialog by remember { mutableStateOf(false) }
     var showRestoreDialog by remember { mutableStateOf(false) }
     var playlistForOptions by remember { mutableStateOf<Playlist?>(null) }
-    var selectedPlaylist by remember { mutableStateOf<Playlist?>(null) }
 
     val playlist by viewModel.playlists.collectAsStateWithLifecycle()
     val favoriteSongs by viewModel.favoriteSongs.collectAsStateWithLifecycle()
@@ -110,26 +118,17 @@ fun MainScreen(
     val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
 
+    fun albumSongs(name: String) = songs.filter { it.album == name }.sortedWith(
+        compareBy<Song> { if (it.trackNumber > 0) it.trackNumber else Int.MAX_VALUE }.thenBy { it.title }
+    )
 
     // Menú de una canción → "Ir al álbum" / "Ir al artista": se abre la ficha desde cualquier pantalla.
     val navRequest by viewModel.navRequest.collectAsStateWithLifecycle()
     LaunchedEffect(navRequest) {
         val request = navRequest ?: return@LaunchedEffect
-        isSearchActive = false
-        selectedQuickSelectType = null; selectedMood = null; selectedGenreName = null; selectedFolderName = null; selectedPlaylist = null
         when (request) {
-            is NavRequest.Album -> {
-                selectedAlbumsSongs = songs.filter { it.album == request.name }.sortedWith(
-                    compareBy<Song> { if (it.trackNumber > 0) it.trackNumber else Int.MAX_VALUE }.thenBy { it.title }
-                )
-                selectedArtistName = null
-                selectedAlbumName = request.name
-            }
-            is NavRequest.Artist -> {
-                selectedArtistSongs = songs.filter { it.artist == request.name }
-                selectedAlbumName = null
-                selectedArtistName = request.name
-            }
+            is NavRequest.Album -> open(Detail.Album(request.name, albumSongs(request.name)))
+            is NavRequest.Artist -> open(Detail.Artist(request.name, songs.filter { it.artist == request.name }))
         }
         viewModel.clearNav()
     }
@@ -138,381 +137,246 @@ fun MainScreen(
     val albumsGridState = rememberLazyGridState()
     val genresGridstate = rememberLazyGridState()
 
+    fun playAll(list: List<Song>) { if (list.isNotEmpty()) viewModel.playSong(list.first(), customQueue = list) }
+    fun shuffleAll(list: List<Song>) {
+        if (list.isNotEmpty()) { val shuffled = list.shuffled(); viewModel.playSong(shuffled.first(), customQueue = shuffled) }
+    }
 
-    if (selectedQuickSelectType != null || selectedMood != null){
-        QuickSelectDetailScreen(
-            categoryTitle = selectedMood?.label ?: selectedQuickSelectType!!.title,
-            categorySongs = selectedQuickSelectSongs,
+    // Atrás en la raíz de Biblioteca o Ajustes vuelve a Inicio en vez de salir de la app.
+    BackHandler(enabled = stack.isEmpty() && section != AppSection.HOME) { onSectionChange(AppSection.HOME) }
+
+    when (val detail = stack.lastOrNull()) {
+        is Detail.Category -> QuickSelectDetailScreen(
+            categoryTitle = detail.title,
+            categorySongs = detail.songs,
             currentSongId = currentSong?.id,
             isPlaying = isPlaying,
             onEditSongClick = onEditSong,
             onSongClick = { song, queue -> viewModel.playSong(song, customQueue = queue) },
-            onPlayAllClick = {
-                if (selectedQuickSelectSongs.isNotEmpty()){
-                  viewModel.playSong(selectedQuickSelectSongs.first(), customQueue = selectedQuickSelectSongs)
-                }
-            },
-            onShuffleClick = {
-              if (selectedQuickSelectSongs.isNotEmpty()){
-                  val shuffledList = selectedQuickSelectSongs.shuffled()
-                  viewModel.playSong(shuffledList.first(), customQueue = shuffledList)
-              }
-            },
-            onBackClick = { selectedQuickSelectType = null; selectedMood = null }
+            onPlayAllClick = { playAll(detail.songs) },
+            onShuffleClick = { shuffleAll(detail.songs) },
+            onBackClick = ::back
         )
-    } else if (selectedAlbumName !=  null){
-        AlbumDetailScreen(
-            albumName = selectedAlbumName!!,
-            albumSongs = selectedAlbumsSongs,
+        is Detail.Album -> AlbumDetailScreen(
+            albumName = detail.name,
+            albumSongs = detail.songs,
             currentSongId = currentSong?.id,
             isPlaying = isPlaying,
             onEditSongClick = onEditSong,
             onSongClick = {song, queue -> viewModel.playSong(song, customQueue = queue)},
-            onPlayAllClick = {
-                if (selectedAlbumsSongs.isNotEmpty()){
-                    viewModel.playSong(selectedAlbumsSongs.first(), customQueue = selectedAlbumsSongs)
-                }
-            },
-            onShuffleClick = {
-                if (selectedAlbumsSongs.isNotEmpty()){
-                    val shuffledList = selectedAlbumsSongs.shuffled()
-                    viewModel.playSong(shuffledList.first(), customQueue = shuffledList)
-                }
-            },
-            onBackClick = {selectedAlbumName = null}
+            onPlayAllClick = { playAll(detail.songs) },
+            onShuffleClick = { shuffleAll(detail.songs) },
+            onBackClick = ::back
         )
-    }else if (selectedArtistName != null){
-        ArtistDetailScreen(
-            artistName = selectedArtistName!!,
-            artistSongs = selectedArtistSongs,
+        is Detail.Artist -> ArtistDetailScreen(
+            artistName = detail.name,
+            artistSongs = detail.songs,
             currentSongId = currentSong?.id,
             isPlaying = isPlaying,
             onEditSongClick = onEditSong,
-            onSongClick = {song -> viewModel.playSong(song, customQueue = selectedArtistSongs)},
-                onAlbumClick = {albumName, albumSongs ->
-                selectedAlbumName = albumName
-                selectedAlbumsSongs = albumSongs
-            },
-            onPlayAllClick = {
-                if (selectedArtistSongs.isNotEmpty()) {
-                    viewModel.playSong(
-                        selectedArtistSongs.first(),
-                        customQueue = selectedArtistSongs
-                    )
-                }
-            },
-            onShuffleClick = {
-                if (selectedArtistSongs.isNotEmpty()){
-                    val shuffledList = selectedArtistSongs.shuffled()
-                    viewModel.playSong(shuffledList.first(), customQueue = shuffledList)
-                }
-            },
-            onBackClick = {selectedArtistName = null}
+            onSongClick = {song -> viewModel.playSong(song, customQueue = detail.songs)},
+            onAlbumClick = {albumName, albumSongs -> open(Detail.Album(albumName, albumSongs)) },
+            onPlayAllClick = { playAll(detail.songs) },
+            onShuffleClick = { shuffleAll(detail.songs) },
+            onBackClick = ::back
         )
-    }else if (selectedGenreName != null){
-        GenreDetail(
-            genreName =  selectedGenreName!!,
-            genreSongs =  selectedGenreSongs,
+        is Detail.Genre -> GenreDetail(
+            genreName = detail.name,
+            genreSongs = detail.songs,
             currentSongId = currentSong?.id,
             isPlaying = isPlaying,
             onEditSongClick = onEditSong,
-            onSongClick = {song ->
-                viewModel.playSong(song, customQueue = selectedGenreSongs)
-            },
-            onPlayAllCLick = {
-                if (selectedGenreSongs.isNotEmpty()){
-                    viewModel.playSong(selectedGenreSongs.first(), customQueue = selectedGenreSongs)
-                }
-            },
-            onShuffleClick = {
-                if (selectedGenreSongs.isNotEmpty()){
-                    val shuffledList = selectedGenreSongs.shuffled()
-                    viewModel.playSong(shuffledList.first(), customQueue = shuffledList)
-                }
-            },
-            onBackClick = {
-                selectedGenreName = null
-                selectedGenreSongs = emptyList()
-            }
+            onSongClick = {song -> viewModel.playSong(song, customQueue = detail.songs) },
+            onPlayAllCLick = { playAll(detail.songs) },
+            onShuffleClick = { shuffleAll(detail.songs) },
+            onBackClick = ::back
         )
-    } else if (selectedFolderName != null){
-        QuickSelectDetailScreen(
-            categoryTitle = selectedFolderName!!.substringAfterLast('/').ifBlank { selectedFolderName!! },
-            categorySongs = selectedFolderSongs,
-            currentSongId = currentSong?.id,
-            isPlaying = isPlaying,
-            onEditSongClick = onEditSong,
-            onSongClick = {song, queue -> viewModel.playSong(song, customQueue = queue)},
-            onPlayAllClick = {
-                if (selectedFolderSongs.isNotEmpty()){
-                    viewModel.playSong(selectedFolderSongs.first(), customQueue = selectedFolderSongs)
-                }
-            },
-            onShuffleClick = {
-                if (selectedFolderSongs.isNotEmpty()){
-                    val shuffledList = selectedFolderSongs.shuffled()
-                    viewModel.playSong(shuffledList.first(), customQueue = shuffledList)
-                }
-            },
-            onBackClick = {
-                selectedFolderName = null
-                selectedFolderSongs = emptyList()
+        is Detail.PlaylistDetail -> {
+            val activePlaylist = playlist.find { it.id == detail.playlist.id } ?: detail.playlist
+            val playlistSongs = remember(songs, activePlaylist.songIds) {
+                val ids = activePlaylist.songIds.toHashSet()
+                songs.filter { it.id in ids }
             }
-        )
-    } else if (selectedPlaylist != null){
-        val activePlaylist = playlist.find { it.id == selectedPlaylist!!.id } ?: selectedPlaylist!!
-        val playlistSongs = remember(songs, activePlaylist.songIds) {
-            val ids = activePlaylist.songIds.toHashSet()
-            songs.filter { it.id in ids }
-        }
-
-        PlaylistScreenDetail(
-            playlist = activePlaylist,
-            playlistSongs = playlistSongs,
-            currentSongId = currentSong?.id,
-            isPlaying = isPlaying,
-            onSongClick = {song -> viewModel.playSong(song, customQueue =  playlistSongs)},
-            onPlayAllClick = {
-                if (playlistSongs.isNotEmpty()){
-                    viewModel.playSong(playlistSongs.first(), customQueue =  playlistSongs)
-                }
-            },
-            onShuffleClick = {
-                if (playlistSongs.isNotEmpty()){
-                    val shuffledList = playlistSongs.shuffled()
-                    viewModel.playSong(shuffledList.first(), customQueue =  shuffledList)
-                }
-            },
-            onAddSongsClick = {showAddSongsDialog = true},
-            onRestoreClick = { showRestoreDialog = true },
-            recentSongs = recentSongs,
-            onBackClick = {selectedPlaylist = null},
-            onRemoveSongFromPlaylist = { song ->
-                viewModel.removeSongFromPlaylist(activePlaylist.id, song.id)
-            }
-        )
-        if (showAddSongsDialog){
-            AddSongsToPlaylistDialog(
-                playlistName = activePlaylist.name,
-                allSongs = songs,
-                favoriteSongs = favoriteSongs,
+            PlaylistScreenDetail(
+                playlist = activePlaylist,
+                playlistSongs = playlistSongs,
+                currentSongId = currentSong?.id,
+                isPlaying = isPlaying,
+                onSongClick = {song -> viewModel.playSong(song, customQueue =  playlistSongs)},
+                onPlayAllClick = { playAll(playlistSongs) },
+                onShuffleClick = { shuffleAll(playlistSongs) },
+                onAddSongsClick = {showAddSongsDialog = true},
+                onRestoreClick = { showRestoreDialog = true },
                 recentSongs = recentSongs,
-                existingSongIds = activePlaylist.songIds,
-                onDismiss = {showAddSongsDialog = false},
-                onAddSongs = { selectedIds ->
-                    viewModel.addSongsToPlaylist(activePlaylist.id, selectedIds)
-                    showAddSongsDialog = false
+                onBackClick = ::back,
+                onRemoveSongFromPlaylist = { song ->
+                    viewModel.removeSongFromPlaylist(activePlaylist.id, song.id)
                 }
-
             )
-        }
-    }else{
-        Box(modifier = Modifier.fillMaxSize()){
-            if (isSearchActive){
-                SearchOverlayScreen(
-                    onEditSong = onEditSong,
-                    searchQuery = searchQuery,
-                    onQueryChange = {viewModel.setSearchQuery(it)},
-                    searchHistory = searchHistory,
-                    onHistoryItemClick = { selectedQuery ->
-                        viewModel.setSearchQuery(selectedQuery)
-                    },
-                    onDeleteHistoryItem = {item ->
-                        viewModel.removeFromHistory(item)
-                    },
-                    onAddSearchHistory = { query ->
-                        viewModel.addSearchHistory(query)
-                    },
+            if (showAddSongsDialog){
+                AddSongsToPlaylistDialog(
+                    playlistName = activePlaylist.name,
                     allSongs = songs,
-                    currentSongId = currentSong?.id,
-                    isPlaying = isPlaying,
-                    onSongClick = { song, searchQueue ->
-                        viewModel.addSearchHistory(searchQuery)
-                        viewModel.playSong(song, customQueue = searchQueue)
-                    },
-                    onAlbumClick = { albumName, albumSongs ->
-                        isSearchActive = false
-                        viewModel.setSearchQuery("")
-                        selectedAlbumName = albumName
-                        selectedAlbumsSongs = albumSongs
-                    },
-                    onArtistClick = { artistName, artistSongs ->
-                        isSearchActive = false
-                        viewModel.setSearchQuery("")
-                        selectedArtistName = artistName
-                        selectedArtistSongs = artistSongs
-                    },
-                    onCloseSearch = {
-                        isSearchActive = false
-                        viewModel.setSearchQuery("")
+                    favoriteSongs = favoriteSongs,
+                    recentSongs = recentSongs,
+                    existingSongIds = activePlaylist.songIds,
+                    onDismiss = {showAddSongsDialog = false},
+                    onAddSongs = { selectedIds ->
+                        viewModel.addSongsToPlaylist(activePlaylist.id, selectedIds)
+                        showAddSongsDialog = false
                     }
                 )
-            }else{
-                Scaffold(
-                    topBar = {
-                        TopAppBar(
-                            title = {
-                                Text("DEZZNUTS", style = MaterialTheme.typography.titleLarge)
-
-                            },
-                            navigationIcon = {
-                                IconButton(onClick = onOpenDrawer) {
-                                    Icon(Icons.Default.Menu, contentDescription = "Menú")
-                                }
-                            },
-                            actions = {
-                                IconButton(onClick = { isSearchActive = true}) {
-                                    Icon(Icons.Default.Search, contentDescription = "Buscar")
-                                }
-                                IconButton(onClick = {showMenu = !showMenu}) {
-                                    Icon(Icons.Default.MoreVert, contentDescription = "Opciones")
-                                }
-                                DropdownMenu(
-                                    expanded = showMenu,
-                                    onDismissRequest = {showMenu = false}
-                                ) {
-                                    DropdownMenuItem(
-                                        text = {Text("Ecualizador")},
-                                        onClick = {showMenu = false; onOpenEqualizer()}
-                                    )
-                                    DropdownMenuItem(
-                                        text = {Text("Escanear archivos")},
-                                        onClick = {showMenu = false; onOpenScanner()}
-                                    )
-                                }
-                            },
-                            colors = TopAppBarDefaults.topAppBarColors(
-                                containerColor = MaterialTheme.colorScheme.background
-                            )
-                        )
-                    }
-                ) { innerPadding ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
+            }
+        }
+        null -> when (section) {
+            AppSection.HOME -> Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = { Text("DEZZNUTS", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold) },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+                    )
+                },
+                // La barra inferior ya reserva el espacio de la barra de gestos.
+                contentWindowInsets = WindowInsets(0)
+            ) { innerPadding ->
+                Box(Modifier.padding(innerPadding)) {
+                    QuickSelectionScreen(
+                        viewModel = viewModel,
+                        onSongClick = { song, queue -> viewModel.playSong(song, customQueue = queue)},
+                        onSeeAllCategoryClick = {type, categorySongs -> open(Detail.Category(type.title, categorySongs)) },
+                        onMoodClick = { mood, moodSongs -> open(Detail.Category(mood.label, moodSongs)) }
+                    )
+                }
+            }
+            AppSection.SEARCH -> SearchOverlayScreen(
+                onEditSong = onEditSong,
+                searchQuery = searchQuery,
+                onQueryChange = {viewModel.setSearchQuery(it)},
+                searchHistory = searchHistory,
+                onHistoryItemClick = { selectedQuery -> viewModel.setSearchQuery(selectedQuery) },
+                onDeleteHistoryItem = {item -> viewModel.removeFromHistory(item) },
+                onAddSearchHistory = { query -> viewModel.addSearchHistory(query) },
+                allSongs = songs,
+                currentSongId = currentSong?.id,
+                isPlaying = isPlaying,
+                onSongClick = { song, searchQueue ->
+                    viewModel.addSearchHistory(searchQuery)
+                    viewModel.playSong(song, customQueue = searchQueue)
+                },
+                onAlbumClick = { albumName, albumSongs -> open(Detail.Album(albumName, albumSongs)) },
+                onArtistClick = { artistName, artistSongs -> open(Detail.Artist(artistName, artistSongs)) },
+                onCloseSearch = {
+                    viewModel.setSearchQuery("")
+                    onSectionChange(AppSection.HOME)
+                }
+            )
+            AppSection.SETTINGS -> settingsContent()
+            AppSection.LIBRARY -> Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = { Text("Biblioteca", style = MaterialTheme.typography.headlineSmall) },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+                    )
+                },
+                // La barra inferior ya reserva el espacio de la barra de gestos.
+                contentWindowInsets = WindowInsets(0)
+            ) { innerPadding ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    PrimaryScrollableTabRow(
+                        selectedTabIndex = pagerState.currentPage,
+                        edgePadding = 16.dp,
+                        containerColor = MaterialTheme.colorScheme.background,
+                        contentColor = MaterialTheme.colorScheme.primary
                     ) {
-                        PrimaryScrollableTabRow(
-                            selectedTabIndex = pagerState.currentPage,
-                            edgePadding = 16.dp,
-                            containerColor = MaterialTheme.colorScheme.background,
-                            contentColor = MaterialTheme.colorScheme.primary
-                        ) {
-                            AppTab.entries.forEachIndexed { index, tab ->
-                                Tab(
-                                   selected = pagerState.currentPage == index,
-                                    onClick = {
-                                        coroutineScope.launch {
-                                            pagerState.animateScrollToPage(index)
-                                        }
-                                    },
-                                    text = {Text(tab.title)}
-                                )
-                            }
+                        AppTab.entries.forEachIndexed { index, tab ->
+                            Tab(
+                                selected = pagerState.currentPage == index,
+                                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+                                text = {Text(tab.title)}
+                            )
                         }
-                        HorizontalPager(
-                            state = pagerState,
-                            modifier = Modifier.weight(1f)
-                        ) { page ->
-                             when (AppTab.entries[page]){
-                                 AppTab.QUICK_SELECT -> QuickSelectionScreen(
-                                     viewModel = viewModel,
-                                     onSongClick = { song, queue -> viewModel.playSong(song, customQueue = queue)},
-                                     onSeeAllCategoryClick = {type, categorySongs ->
-                                         selectedQuickSelectType = type
-                                         selectedQuickSelectSongs = categorySongs
-                                     },
-                                     onMoodClick = { mood, moodSongs ->
-                                         selectedMood = mood
-                                         selectedQuickSelectSongs = moodSongs
+                    }
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.weight(1f)
+                    ) { page ->
+                         when (AppTab.entries[page]){
+                             AppTab.SONGS -> Column(modifier = Modifier.fillMaxSize()) {
+                                 Row(verticalAlignment = Alignment.CenterVertically) {
+                                     Row(
+                                         modifier = Modifier
+                                             .weight(1f)
+                                             .horizontalScroll(rememberScrollState())
+                                             .padding(start = 12.dp),
+                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                     ) {
+                                         SONG_FILTER_CHIPS.forEach { (filter, label) ->
+                                             FilterChip(
+                                                 selected = currentFilter == filter,
+                                                 onClick = { viewModel.setFilter(filter) },
+                                                 label = { Text(label) }
+                                             )
+                                         }
                                      }
-                                 )
-                                 AppTab.SONGS -> Column(modifier = Modifier.fillMaxSize()) {
-                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                         Row(
-                                             modifier = Modifier
-                                                 .weight(1f)
-                                                 .horizontalScroll(rememberScrollState())
-                                                 .padding(start = 12.dp),
-                                             horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                         ) {
-                                             SONG_FILTER_CHIPS.forEach { (filter, label) ->
-                                                 FilterChip(
-                                                     selected = currentFilter == filter,
-                                                     onClick = { viewModel.setFilter(filter) },
-                                                     label = { Text(label) }
+                                     Box {
+                                         var showSortMenu by remember { mutableStateOf(false) }
+                                         IconButton(onClick = { showSortMenu = true }) {
+                                             Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Ordenar: ${currentSort.label}")
+                                         }
+                                         DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
+                                             SongSort.entries.forEach { sort ->
+                                                 DropdownMenuItem(
+                                                     text = { Text(sort.label) },
+                                                     trailingIcon = { if (sort == currentSort) Icon(Icons.Default.Check, contentDescription = null) },
+                                                     onClick = { showSortMenu = false; viewModel.setSort(sort) }
                                                  )
                                              }
                                          }
-                                         Box {
-                                             var showSortMenu by remember { mutableStateOf(false) }
-                                             IconButton(onClick = { showSortMenu = true }) {
-                                                 Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Ordenar: ${currentSort.label}")
-                                             }
-                                             DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
-                                                 SongSort.entries.forEach { sort ->
-                                                     DropdownMenuItem(
-                                                         text = { Text(sort.label) },
-                                                         trailingIcon = { if (sort == currentSort) Icon(Icons.Default.Check, contentDescription = null) },
-                                                         onClick = { showSortMenu = false; viewModel.setSort(sort) }
-                                                     )
-                                                 }
-                                             }
-                                         }
                                      }
-                                     SongListScreen(
-                                         songs = filteredSongs,
-                                         currentSongId = currentSong?.id,
-                                         isPlaying = isPlaying,
-                                         onSongClick = {song ->
-                                             viewModel.playSong(song, customQueue = filteredSongs)
-                                         },
-                                         onEditSong = onEditSong
-                                     )
                                  }
-                                 AppTab.ALBUMS -> AlbumsGridScreen(
-                                     songs = songs,
-                                     gridState = albumsGridState,
-                                     onAlbumClick = {albumName, albumSongs ->
-                                         selectedAlbumName = albumName
-                                         selectedAlbumsSongs = albumSongs
-                                     }
-                                 )
-                                 AppTab.ARTISTS -> ArtistsListScreen(
-                                     songs = songs,
-                                     listState = artisListState,
-                                     onArtistClick = {artistName, artistSongs ->
-                                         selectedArtistName = artistName
-                                         selectedArtistSongs = artistSongs
-                                     }
-                                     )
-                                 AppTab.GENRES -> GenresGridScreen(
-                                     songs = songs,
-                                     gridState = genresGridstate,
-                                     onGenreClick = {genreName, genreSongs ->
-                                         selectedGenreName = genreName
-                                         selectedGenreSongs = genreSongs
-                                     }
-                                 )
-                                 AppTab.PLAYLISTS -> PlaylistScreen(
-                                     playlist = playlist,
-                                     allSongs = songs,
-                                     onCreatePlaylistClick = { showCreatedPlaylistDialog = true},
-                                     onRestorePlaylistClick = { showRestoreDialog = true },
-                                     onPlaylistOptionsClick = { playlistForOptions = it },
-                                     onPlaylistClick = {playlist -> selectedPlaylist = playlist}
-                                 )
-
-                                 AppTab.FOLDERS -> FoldersListScreen(
-                                     songs = songs,
-                                     onFolderClick = {folderName, folderSongs ->
-                                         selectedFolderName = folderName
-                                         selectedFolderSongs = folderSongs
-                                     }
+                                 SongListScreen(
+                                     songs = filteredSongs,
+                                     currentSongId = currentSong?.id,
+                                     isPlaying = isPlaying,
+                                     onSongClick = {song -> viewModel.playSong(song, customQueue = filteredSongs) },
+                                     onEditSong = onEditSong
                                  )
                              }
+                             AppTab.ALBUMS -> AlbumsGridScreen(
+                                 songs = songs,
+                                 gridState = albumsGridState,
+                                 onAlbumClick = {albumName, albumSongs -> open(Detail.Album(albumName, albumSongs)) }
+                             )
+                             AppTab.ARTISTS -> ArtistsListScreen(
+                                 songs = songs,
+                                 listState = artisListState,
+                                 onArtistClick = {artistName, artistSongs -> open(Detail.Artist(artistName, artistSongs)) }
+                             )
+                             AppTab.GENRES -> GenresGridScreen(
+                                 songs = songs,
+                                 gridState = genresGridstate,
+                                 onGenreClick = {genreName, genreSongs -> open(Detail.Genre(genreName, genreSongs)) }
+                             )
+                             AppTab.PLAYLISTS -> PlaylistScreen(
+                                 playlist = playlist,
+                                 allSongs = songs,
+                                 onCreatePlaylistClick = { showCreatedPlaylistDialog = true},
+                                 onRestorePlaylistClick = { showRestoreDialog = true },
+                                 onPlaylistOptionsClick = { playlistForOptions = it },
+                                 onPlaylistClick = { open(Detail.PlaylistDetail(it)) }
+                             )
+                             AppTab.FOLDERS -> FoldersListScreen(
+                                 songs = songs,
+                                 onFolderClick = {folderName, folderSongs ->
+                                     open(Detail.Category(folderName.substringAfterLast('/').ifBlank { folderName }, folderSongs))
+                                 }
+                             )
                          }
-                    }
+                     }
                 }
             }
         }
