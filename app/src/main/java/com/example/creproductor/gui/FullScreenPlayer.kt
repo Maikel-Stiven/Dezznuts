@@ -2,7 +2,10 @@ package com.example.creproductor.gui
 
 import androidx.activity.compose.BackHandler
 import com.example.creproductor.data.coverModel
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.border
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -137,6 +140,7 @@ fun FullScreenPlayer(
 
     var showQueueBottomSheet by remember { mutableStateOf(false) }
     var showTrackInfo by remember { mutableStateOf(false) }
+    var showLyrics by remember { mutableStateOf(false) }
 
     var lastClickTime by remember { mutableStateOf(0L) }
     fun safeClick(action: () -> Unit){
@@ -198,6 +202,8 @@ fun FullScreenPlayer(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
+        Box(Modifier.fillMaxSize()) {
+        CoverBackdrop(song, isPlaying)
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -260,12 +266,16 @@ fun FullScreenPlayer(
                 }
             }
 
-            //
-
+            PlayerTabs(showLyrics) { showLyrics = it }
 
             //Carrusel del reproductor/Vista
 
-            HorizontalPager(
+            if (showLyrics) LyricsPane(
+                song = song,
+                currentPositionMs = currentPositionMs,
+                onSeekTo = onSeekTo,
+                modifier = Modifier.weight(1f)
+            ) else HorizontalPager(
                 state = pagerState,
                 contentPadding = PaddingValues(horizontal = 32.dp),
                 pageSpacing = 12.dp,
@@ -318,6 +328,10 @@ fun FullScreenPlayer(
                             modifier = Modifier.size(120.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
+                    // Calidad y formato sobre la portada (en vez de saturar el panel de abajo).
+                    if (page == pagerState.currentPage) {
+                        CoverChips(song, audioInfo, Modifier.align(Alignment.BottomStart).padding(10.dp))
                     }
                 }
             }
@@ -405,11 +419,13 @@ fun FullScreenPlayer(
             Spacer(modifier = Modifier.padding(vertical = 12.dp))
 
             // Panel inferior //
+            // Panel de cristal: velo claro translúcido con borde fino y un brillo arriba, sobre el fondo en movimiento.
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp)),
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                    .clip(RoundedCornerShape(24.dp))
+                    .border(1.dp, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.35f), Color.White.copy(alpha = 0.06f))), RoundedCornerShape(24.dp)),
+                color = Color.White.copy(alpha = 0.09f)
             ) {
                 Column(
                     modifier = Modifier
@@ -457,23 +473,6 @@ fun FullScreenPlayer(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            if (audioInfo.isNotBlank()) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                                    modifier = Modifier.padding(top = 4.dp)
-                                ) {
-                                    QualityBadge(song.quality)
-                                    Text(
-                                        text = audioInfo.replace(" → ", "\n"),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        textAlign = TextAlign.Center,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                            }
                         }
 
                         IconButton(onClick = {
@@ -495,6 +494,7 @@ fun FullScreenPlayer(
                     PlayerSeekBar(positionMs = currentPositionMs, durationMs = song.duration, onSeekTo = onSeekTo)
                 }
             }
+        }
         }
     }
     if (showTrackInfo) TrackInfoDialog(song, audioInfo, onEdit = { onEditSong(song) }) { showTrackInfo = false }
@@ -866,6 +866,158 @@ private fun PlayerSeekBar(positionMs: () -> Long, durationMs: Long, onSeekTo: (L
                 text = formatTime(durationMs),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+
+/**
+ * Fondo "cristal" del reproductor: capas de la carátula desenfocadas, más saturadas, que flotan y giran despacio.
+ *
+ * Coste (medido en emulador, ver docs/OPTIMIZACION.md): cada capa a pantalla completa y cada fotograma cuestan GPU y
+ * CPU de dibujo, así que:
+ * - Desenfoque: la imagen se pide a 24×24 px y se estira (el suavizado bilineal hace de blur); la saturación se
+ *   hornea UNA vez en ese bitmap ([SaturateTransformation]) en vez de aplicar un filtro de color a cada capa y fotograma.
+ * - Dos capas (no tres) con escala, desplazamiento y giro distintos, movidas por un solo valor leído en `graphicsLayer`
+ *   (fase de dibujo: sin recomposición).
+ * - El valor se actualiza ~15 veces por segundo, no 60: el movimiento es lentísimo (28 s por ciclo) y entre
+ *   actualizaciones no se dibuja nada.
+ * - Solo se anima mientras suena, y no en equipos de poca RAM o de 2 núcleos, con ahorro de batería ni con las
+ *   animaciones del sistema desactivadas.
+ */
+@Composable
+private fun CoverBackdrop(song: Song, playing: Boolean) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val painter = coil.compose.rememberAsyncImagePainter(
+        remember(song.id) { ImageRequest.Builder(context).data(song.coverModel).size(24).transformations(SaturateTransformation(1.35f)).build() }
+    )
+    val canAnimate = rememberVisualEffectsEnabled()
+    val t = remember { androidx.compose.runtime.mutableFloatStateOf(0.5f) }
+    LaunchedEffect(canAnimate && playing) {
+        if (!(canAnimate && playing)) return@LaunchedEffect
+        val start = androidx.compose.runtime.withFrameNanos { it }
+        while (true) {
+            androidx.compose.runtime.withFrameNanos { now ->
+                val phase = ((now - start) / 1_000_000_000f) % 56f / 28f      // 0..2
+                t.floatValue = if (phase <= 1f) phase else 2f - phase          // ida y vuelta
+            }
+            kotlinx.coroutines.delay(55)
+        }
+    }
+
+    val bg = MaterialTheme.colorScheme.background
+    fun lerp(a: Float, b: Float, x: Float) = a + (b - a) * x
+
+    Box(Modifier.fillMaxSize()) {
+        androidx.compose.foundation.Image(
+            painter, null, Modifier.fillMaxSize().graphicsLayer {
+                val x = t.floatValue
+                scaleX = 2.0f; scaleY = 2.0f
+                translationX = size.width * lerp(-0.12f, 0.12f, x); translationY = size.height * lerp(0.05f, -0.05f, x)
+                rotationZ = lerp(-8f, 8f, x)
+            },
+            contentScale = ContentScale.Crop
+        )
+        androidx.compose.foundation.Image(
+            painter, null, Modifier.fillMaxSize().graphicsLayer {
+                val x = t.floatValue
+                scaleX = 2.6f; scaleY = 2.6f; alpha = 0.55f
+                translationX = size.width * lerp(0.14f, -0.14f, x); translationY = size.height * lerp(-0.08f, 0.08f, x)
+                rotationZ = lerp(14f, -14f, x)
+            },
+            contentScale = ContentScale.Crop, alignment = Alignment.TopEnd
+        )
+        // Oscurece para que texto y controles se lean con cualquier carátula (más fuerte abajo, donde van los controles).
+        Box(
+            Modifier.fillMaxSize().background(
+                androidx.compose.ui.graphics.Brush.verticalGradient(listOf(bg.copy(alpha = 0.22f), bg.copy(alpha = 0.6f)))
+            )
+        )
+    }
+}
+
+/** Sube la saturación de un bitmap pequeño una sola vez (Coil lo cachea ya transformado). */
+private class SaturateTransformation(private val amount: Float) : coil.transform.Transformation {
+    override val cacheKey = "saturate-$amount"
+    override suspend fun transform(input: android.graphics.Bitmap, size: coil.size.Size): android.graphics.Bitmap {
+        val out = android.graphics.Bitmap.createBitmap(input.width, input.height, android.graphics.Bitmap.Config.ARGB_8888)
+        val paint = android.graphics.Paint().apply {
+            colorFilter = android.graphics.ColorMatrixColorFilter(android.graphics.ColorMatrix().apply { setSaturation(amount) })
+        }
+        android.graphics.Canvas(out).drawBitmap(input, 0f, 0f, paint)
+        return out
+    }
+}
+
+/** Selector "Canción | Letra" bajo el encabezado: pastilla de cristal, como el de la referencia. */
+@Composable
+private fun PlayerTabs(showLyrics: Boolean, onSelect: (Boolean) -> Unit) {
+    Row(
+        Modifier
+            .clip(RoundedCornerShape(50))
+            .background(Color.White.copy(alpha = 0.10f))
+            .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(50))
+            .padding(3.dp)
+    ) {
+        listOf(false to "Canción", true to "Letra").forEach { (lyrics, label) ->
+            val selected = showLyrics == lyrics
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                color = if (selected) Color.White else Color.White.copy(alpha = 0.6f),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(if (selected) Color.White.copy(alpha = 0.22f) else Color.Transparent)
+                    .clickable { onSelect(lyrics) }
+                    .padding(horizontal = 22.dp, vertical = 7.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Calidad y formato de la pista sobre la portada: "Hi-Res" / "Lossless", el códec con su profundidad y frecuencia
+ * (o el bitrate si tiene pérdida) y, si aplica, Bit-perfect u Offload. El detalle completo sigue en "Información
+ * técnica" (⋮).
+ */
+@Composable
+private fun CoverChips(song: Song, audioInfo: String, modifier: Modifier = Modifier) {
+    val parts = audioInfo.substringBefore(" → ").split(" · ").filter { it.isNotBlank() }
+    val format = if (song.quality == com.example.creproductor.data.QualityTier.LOSSY)
+        parts.filter { it == parts.firstOrNull() || it.endsWith("kbps") }
+    else parts.filterNot { it.endsWith("kbps") }
+    val route = audioInfo.substringAfter(" → ", "").let { r ->
+        when {
+            r.startsWith("Bit-perfect") -> "Bit-perfect"
+            r.startsWith("Offload") -> "Offload"
+            else -> ""
+        }
+    }
+    val labels = listOfNotNull(
+        when (song.quality) {
+            com.example.creproductor.data.QualityTier.HIRES -> "Hi-Res"
+            com.example.creproductor.data.QualityTier.LOSSLESS -> "Lossless"
+            else -> null
+        },
+        format.joinToString(" · ").ifEmpty { null },
+        route.ifEmpty { null }
+    )
+    if (labels.isEmpty()) return
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        labels.forEachIndexed { i, text ->
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = if (i == 0 && song.quality != com.example.creproductor.data.QualityTier.LOSSY) FontWeight.Bold else FontWeight.Medium,
+                color = Color.White,
+                maxLines = 1,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.Black.copy(alpha = 0.45f))
+                    .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(50))
+                    .padding(horizontal = 9.dp, vertical = 3.dp)
             )
         }
     }

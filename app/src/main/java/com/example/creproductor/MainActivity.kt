@@ -46,7 +46,10 @@ import com.example.creproductor.data.Song
 import com.example.creproductor.data.SongCover
 import com.example.creproductor.data.SongCoverFetcher
 import com.example.creproductor.data.coverModel
+import com.example.creproductor.gui.AboutDialog
 import com.example.creproductor.gui.AppDrawerContent
+import com.example.creproductor.gui.LocalAnimationsEnabled
+import com.example.creproductor.gui.AudioCutterDialog
 import com.example.creproductor.gui.ClearImageCacheDialog
 import com.example.creproductor.gui.DrawerMenuItem
 import com.example.creproductor.gui.EditTagDialog
@@ -55,9 +58,15 @@ import com.example.creproductor.gui.DuplicatesDialog
 import com.example.creproductor.gui.EqualizerDialog
 import com.example.creproductor.gui.FixUnknownArtistsDialog
 import com.example.creproductor.gui.HiFiAudioDialog
-import com.example.creproductor.gui.QualityBadge
+import com.example.creproductor.gui.CoverQualityStrip
 import com.example.creproductor.gui.MainScreen
 import com.example.creproductor.gui.MusicViewModel
+import com.example.creproductor.gui.NavRequest
+import com.example.creproductor.gui.ScanScreen
+import com.example.creproductor.gui.SleepTimerDialog
+import com.example.creproductor.gui.SongMenuActions
+import com.example.creproductor.gui.SongMenuSheet
+import com.example.creproductor.gui.TrackInfoDialog
 import com.example.creproductor.gui.UiState
 import com.example.creproductor.ui.theme.DEZZNUTStheme
 import kotlinx.coroutines.launch
@@ -65,12 +74,28 @@ import coil.Coil
 import com.example.creproductor.gui.PlayingEqualizerIcon
 
 
+private const val FEEDBACK_URL = "https://github.com/Maikel-Stiven/Dezznuts/issues/new"
+
 class MainActivity : ComponentActivity() {
 
     private val viewModel: MusicViewModel by viewModels()
 
+    /** Se activa al tocar la notificación del reproductor; la interfaz lo consume para abrir el reproductor completo. */
+    private val openPlayerRequest = mutableStateOf(false)
+
+    companion object {
+        const val EXTRA_OPEN_PLAYER = "open_player"
+    }
+
+    // Con launchMode singleTop, tocar la notificación con la app abierta llega aquí y no crea otra pantalla.
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        if (intent.getBooleanExtra(EXTRA_OPEN_PLAYER, false)) openPlayerRequest.value = true
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (intent?.getBooleanExtra(EXTRA_OPEN_PLAYER, false) == true) openPlayerRequest.value = true
 
         // Las portadas son miniaturas: Coil reserva por defecto el 25 % de la RAM de la app para ellas, demasiado en
         // móviles justos. 10 % (5 % en equipos de poca RAM) y RGB565 (la mitad de bytes por píxel) bastan.
@@ -110,11 +135,28 @@ class MainActivity : ComponentActivity() {
 
                     var songToEdit by remember { mutableStateOf<Song?>(null) }
                     var isPlayerFullScreenVisible by remember { mutableStateOf(false) }
+                    // Notificación tocada: se abre el reproductor completo (si aún no hay canción, se muestra en cuanto cargue).
+                    LaunchedEffect(openPlayerRequest.value) {
+                        if (openPlayerRequest.value) { isPlayerFullScreenVisible = true; openPlayerRequest.value = false }
+                    }
                     var showClearImageCacheDialog by remember { mutableStateOf(false) }
                     var showHiFiAudioDialog by remember { mutableStateOf(false) }
                     var showEqualizerDialog by remember { mutableStateOf(false) }
                     var showDuplicatesDialog by remember { mutableStateOf(false) }
                     var showFixArtistsDialog by remember { mutableStateOf(false) }
+                    var showAboutDialog by remember { mutableStateOf(false) }
+                    var showScanScreen by remember { mutableStateOf(false) }
+                    var songToCut by remember { mutableStateOf<Song?>(null) }
+                    // Android 9 o menos: guardar en la carpeta pública de Música exige el permiso de escritura.
+                    var pendingCut by remember { mutableStateOf<(() -> Unit)?>(null) }
+                    val writePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+                        if (ok) pendingCut?.invoke() else Toast.makeText(this@MainActivity, "Sin permiso no se puede guardar el corte", Toast.LENGTH_LONG).show()
+                        pendingCut = null
+                    }
+                    var showSleepTimerDialog by remember { mutableStateOf(false) }
+                    val versionName = remember {
+                        runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull() ?: "—"
+                    }
                     // Escribir etiquetas en archivos de audio exige el permiso del sistema (Android 11+): se pide para
                     // las canciones afectadas y, si el usuario acepta, se ejecuta la acción pendiente.
                     var pendingWrite by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -129,10 +171,15 @@ class MainActivity : ComponentActivity() {
                             writeLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
                         } else action()
                     }
-                    // Las pistas de una hoja CUE comparten archivo: editar una cambiaría todo el álbum.
-                    val editSong: (Song) -> Unit = { song ->
-                        if (song.cueStartMs >= 0) Toast.makeText(this@MainActivity, "Las pistas de una hoja CUE no se editan una a una", Toast.LENGTH_LONG).show()
-                        else songToEdit = song
+                    // El ⋮ de cualquier canción abre el menú de acciones (SongMenuSheet).
+                    var songMenuFor by remember { mutableStateOf<Song?>(null) }
+                    var songInfoFor by remember { mutableStateOf<Song?>(null) }
+                    val editSong: (Song) -> Unit = { song -> songMenuFor = song }
+                    fun openCutter(song: Song) {
+                        // Las pistas de una hoja CUE son un tramo de un archivo largo: se cortaría el archivo entero.
+                        if (song.cueStartMs >= 0) { Toast.makeText(this@MainActivity, "Las pistas de una hoja CUE no se pueden cortar", Toast.LENGTH_LONG).show(); return }
+                        viewModel.pauseIfPlaying()
+                        songToCut = song
                     }
                     // Confirmación del sistema para borrar archivos (Android 11+); al terminar se recarga la biblioteca.
                     val deleteLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
@@ -203,17 +250,29 @@ class MainActivity : ComponentActivity() {
                                     gesturesEnabled = !isPlayerFullScreenVisible && (drawerState.isOpen || isFirstPage),
                                     drawerContent = {
                                         AppDrawerContent(
+                                            versionName = versionName,
                                             onMenuItem= { menuItem ->
                                                 when(menuItem) {
                                                     is DrawerMenuItem.Equalizer -> { showEqualizerDialog = true }
                                                     is DrawerMenuItem.SearchDuplicates -> { showDuplicatesDialog = true }
                                                     is DrawerMenuItem.FixUnknownArtists -> { showFixArtistsDialog = true }
-                                                    is DrawerMenuItem.ScanFiles -> { /*Falta lógica del escaner de archivos*/}
-                                                    is DrawerMenuItem.AudioCutter -> {/*Falta lógica del cortador de audio*/}
-                                                    is DrawerMenuItem.SleepTimer -> {/*Falta lógica del temporizador*/}
+                                                    is DrawerMenuItem.ScanFiles -> { showScanScreen = true }
+                                                    is DrawerMenuItem.AudioCutter -> {
+                                                        val playing = currentSong
+                                                        if (playing != null) openCutter(playing)
+                                                        else Toast.makeText(this@MainActivity, "Elige una canción desde su menú ⋮ → Cortador de audio", Toast.LENGTH_LONG).show()
+                                                    }
+                                                    is DrawerMenuItem.SleepTimer -> { showSleepTimerDialog = true }
                                                     is DrawerMenuItem.ClearImageCache -> { showClearImageCacheDialog = true }
                                                     is DrawerMenuItem.HiFiAudio -> { showHiFiAudioDialog = true }
-                                                    else -> {/*no sé, aún no pienso en otras funciones que le aporten al usuario*/}
+                                                    is DrawerMenuItem.About -> { showAboutDialog = true }
+                                                    is DrawerMenuItem.SendFeedback -> {
+                                                        // Los comentarios van a los "issues" del repositorio.
+                                                        runCatching {
+                                                            startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(FEEDBACK_URL)))
+                                                        }.onFailure { Toast.makeText(this@MainActivity, "No hay navegador para abrir el enlace", Toast.LENGTH_LONG).show() }
+                                                    }
+                                                    else -> {}
                                                 }
                                             },
                                             onCloseDrawer = {
@@ -223,12 +282,14 @@ class MainActivity : ComponentActivity() {
                                     }
                                 ) {
                                     Box(modifier = Modifier.fillMaxSize()) {
+                                        // Lo que queda bajo el reproductor a pantalla completa no anima (no se ve).
+                                        CompositionLocalProvider(LocalAnimationsEnabled provides !isPlayerFullScreenVisible) {
                                         Column(modifier = Modifier.fillMaxSize()) {
                                             Box(modifier = Modifier.weight(1f)) {
                                                 MainScreen(
                                                     viewModel = viewModel,
                                                     onOpenEqualizer = { showEqualizerDialog = true },
-                                                    onOpenScanner = { /* TODO */ },
+                                                    onOpenScanner = { showScanScreen = true },
                                                     onEditSong = editSong,
                                                     onOpenDrawer = {
                                                         scope.launch { drawerState.open() }
@@ -253,6 +314,7 @@ class MainActivity : ComponentActivity() {
                                                     )
                                                 }
                                             }
+                                        }
                                         }
 
                                         if (isPlayerFullScreenVisible && currentSong != null) {
@@ -289,6 +351,34 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
+                        songMenuFor?.let { song ->
+                            val playlists by viewModel.playlists.collectAsStateWithLifecycle()
+                            SongMenuSheet(
+                                song = song,
+                                playlists = playlists,
+                                onDismiss = { songMenuFor = null },
+                                actions = SongMenuActions(
+                                    onAddToQueue = { viewModel.addToQueue(song) },
+                                    onAddToPlaylist = { id -> viewModel.addSongToPlaylist(id, song) },
+                                    onGoToAlbum = { isPlayerFullScreenVisible = false; viewModel.requestNav(NavRequest.Album(song.album)) },
+                                    onGoToArtist = { isPlayerFullScreenVisible = false; viewModel.requestNav(NavRequest.Artist(song.artist)) },
+                                    onEditTags = { songToEdit = song },
+                                    onAbout = { songInfoFor = song },
+                                    onAudioCutter = { openCutter(song) },
+                                    onDelete = {
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                            val request = MediaStore.createDeleteRequest(contentResolver, listOf(song.contentUri))
+                                            deleteLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
+                                        } else viewModel.deleteSongLegacy(song)
+                                    }
+                                )
+                            )
+                        }
+
+                        songInfoFor?.let { song ->
+                            TrackInfoDialog(song, audioInfo) { songInfoFor = null }
+                        }
+
                         songToEdit?.let { song ->
                             EditTagDialog(
                                 song = song,
@@ -299,6 +389,40 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
+
+                        songToCut?.let { song ->
+                            val cutting by viewModel.cutting.collectAsStateWithLifecycle()
+                            AudioCutterDialog(
+                                song = song,
+                                cutting = cutting,
+                                onCut = { start, end ->
+                                    val run = { viewModel.cutAudio(song, start, end) { songToCut = null } }
+                                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+                                        checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                        pendingCut = run
+                                        writePermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                                    } else run()
+                                },
+                                onDismiss = { songToCut = null }
+                            )
+                        }
+
+                        if (showScanScreen) {
+                            val scanProgress by viewModel.scanProgress.collectAsStateWithLifecycle()
+                            ScanScreen(
+                                progress = scanProgress,
+                                onStart = { roots, settings -> viewModel.startScan(roots, settings) },
+                                onCancel = { viewModel.cancelScan() },
+                                onClose = { settings -> viewModel.dismissScan(settings); showScanScreen = false }
+                            )
+                        }
+
+                        if (showSleepTimerDialog) {
+                            val sleepEnd by viewModel.sleepTimerEnd.collectAsStateWithLifecycle()
+                            SleepTimerDialog(sleepEnd, onSelect = { viewModel.setSleepTimer(it) }) { showSleepTimerDialog = false }
+                        }
+
+                        if (showAboutDialog) AboutDialog(versionName) { showAboutDialog = false }
 
                         if (showClearImageCacheDialog) {
                             ClearImageCacheDialog(onDismiss = { showClearImageCacheDialog = false })
@@ -421,23 +545,21 @@ fun SongItem(
                         modifier = Modifier.size(26.dp)
                     )
                 }
+                // Calidad (Lossless / Hi-Res) en la base de la portada: el título conserva todo el ancho de la fila.
+                CoverQualityStrip(song.quality, Modifier.align(Alignment.BottomCenter))
             }
 
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = song.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-                    QualityBadge(song.quality, modifier = Modifier.padding(start = 6.dp))
-                }
+                Text(
+                    text = song.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
                 Spacer(modifier = Modifier.height(4.dp))
 
                 val artistName = if (song.artist.isBlank() || song.artist == "<unknown>") {

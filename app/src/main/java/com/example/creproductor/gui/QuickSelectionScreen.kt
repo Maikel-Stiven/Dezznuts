@@ -38,6 +38,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.material3.AssistChip
+import androidx.compose.runtime.produceState
+import com.example.creproductor.data.Mood
+import com.example.creproductor.data.Moods
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.example.creproductor.data.Song
 
 enum class QuickSelectType(val title: String){
@@ -52,7 +59,8 @@ enum class QuickSelectType(val title: String){
 fun QuickSelectionScreen(
     viewModel: MusicViewModel,
     onSongClick: (song: Song, queue: List<Song>) -> Unit,
-    onSeeAllCategoryClick: (type: QuickSelectType, songs: List<Song>) -> Unit = {_, _ -> }
+    onSeeAllCategoryClick: (type: QuickSelectType, songs: List<Song>) -> Unit = {_, _ -> },
+    onMoodClick: (mood: Mood, songs: List<Song>) -> Unit = { _, _ -> }
 ){
 
     val favoriteSongs by viewModel.favoriteSongs.collectAsStateWithLifecycle()
@@ -97,6 +105,22 @@ fun QuickSelectionScreen(
             emptyMessage = "Aún no tienes canciones favoritas",
             onSeeAllClick = {onSeeAllCategoryClick(QuickSelectType.FAVORITES, favoriteSongs)},
             onSongClick = { song -> onSongClick(song, favoriteSongs) })
+
+        // Moods: agrupados por género fuera del hilo principal; los que no tienen canciones no se muestran.
+        val moods by produceState(emptyMap<Mood, List<Song>>(), allSongs) {
+            value = withContext(Dispatchers.Default) { Moods.group(allSongs) { it.genre } }
+        }
+        if (moods.isNotEmpty()) {
+            Text("Moods:", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                moods.forEach { (mood, songs) ->
+                    AssistChip(onClick = { onMoodClick(mood, songs) }, label = { Text("${mood.label} · ${songs.size}") })
+                }
+            }
+        }
     }
 }
 

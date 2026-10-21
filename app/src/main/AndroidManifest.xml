@@ -11,6 +11,9 @@
     
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
+    <!-- Android 9 o menos: guardar los cortes de audio en la carpeta pública de Música -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
     <!--  -->
 
     <!-- Permiso para reproducción en segundo plano junto con notificación del reproductor-->
@@ -31,6 +34,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.CReproductor"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>

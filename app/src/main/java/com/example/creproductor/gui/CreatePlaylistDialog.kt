@@ -48,11 +48,20 @@ fun CreationPlaylist(
 ){
     var playlistName by remember { mutableStateOf("") }
     var selectedCoverUri by remember { mutableStateOf<String?>(null) }
+    // La foto elegida pasa primero por el recorte 1:1.
+    var pendingCrop by remember { mutableStateOf<android.net.Uri?>(null) }
+    pendingCrop?.let { picked ->
+        SquareCropDialog(
+            source = picked,
+            onCropped = { selectedCoverUri = it.toString(); pendingCrop = null },
+            onDismiss = { pendingCrop = null }
+        )
+    }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
-        uri?.let { selectedCoverUri = it.toString() }
+        uri?.let { pendingCrop = it }
     }
 
     AlertDialog(
