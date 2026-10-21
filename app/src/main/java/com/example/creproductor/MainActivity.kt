@@ -58,7 +58,7 @@ import com.example.creproductor.gui.DuplicatesDialog
 import com.example.creproductor.gui.EqualizerDialog
 import com.example.creproductor.gui.FixUnknownArtistsDialog
 import com.example.creproductor.gui.HiFiAudioDialog
-import com.example.creproductor.gui.QualityBadge
+import com.example.creproductor.gui.CoverQualityStrip
 import com.example.creproductor.gui.MainScreen
 import com.example.creproductor.gui.MusicViewModel
 import com.example.creproductor.gui.NavRequest
@@ -545,23 +545,21 @@ fun SongItem(
                         modifier = Modifier.size(26.dp)
                     )
                 }
+                // Calidad (Lossless / Hi-Res) en la base de la portada: el título conserva todo el ancho de la fila.
+                CoverQualityStrip(song.quality, Modifier.align(Alignment.BottomCenter))
             }
 
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = song.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-                    QualityBadge(song.quality, modifier = Modifier.padding(start = 6.dp))
-                }
+                Text(
+                    text = song.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
                 Spacer(modifier = Modifier.height(4.dp))
 
                 val artistName = if (song.artist.isBlank() || song.artist == "<unknown>") {
