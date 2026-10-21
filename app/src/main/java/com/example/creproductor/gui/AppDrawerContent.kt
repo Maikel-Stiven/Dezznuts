@@ -30,6 +30,7 @@ sealed class DrawerMenuItem(
 
 @Composable
 fun AppDrawerContent(
+    versionName: String,
     onMenuItem: (DrawerMenuItem) -> Unit,
     onCloseDrawer: () -> Unit
 ){
@@ -94,7 +95,7 @@ fun AppDrawerContent(
             ) {
                 HorizontalDivider(modifier = Modifier.padding(bottom = 12.dp))
                 Text(
-                    text = "DEZZNUTS Player Alpha.0.0.1",
+                    text = "DEZZNUTS Player $versionName",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

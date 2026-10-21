@@ -21,7 +21,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import com.example.creproductor.data.SavedEqPresets
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -108,7 +114,13 @@ private fun EqualizerContent(onDismiss: () -> Unit) {
     var selected by remember { mutableIntStateOf(0) }
 
     fun save() = prefs.edit().putString(HiFiAudio.KEY_EQ_BANDS, EqBands.encode(bands)).apply()
-    val preset = EqBands.presetNameOf(bands)
+    // "Saved": presets propios (máximo 5). Guardar aparece al tocar la curva; borrar pide confirmación.
+    var saved by remember { mutableStateOf(SavedEqPresets.decode(prefs.getString(KEY_EQ_SAVED, null))) }
+    fun persistSaved(list: List<Pair<String, List<EqBand>>>) { saved = list; prefs.edit().putString(KEY_EQ_SAVED, SavedEqPresets.encode(list)).apply() }
+    var naming by remember { mutableStateOf(false) }
+    var deleting by remember { mutableStateOf<String?>(null) }
+    val savedMatch = saved.firstOrNull { (_, b) -> EqBands.sameBands(b, bands) }?.first
+    val preset = EqBands.presetNameOf(bands) ?: savedMatch
 
     Column(
         Modifier
@@ -145,6 +157,21 @@ private fun EqualizerContent(onDismiss: () -> Unit) {
                 )
             }
             FilterChip(selected = preset == null, onClick = {}, enabled = false, label = { Text("Personalizado") })
+        }
+
+        // Saved
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Saved", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            saved.forEach { (name, p) ->
+                FilterChip(
+                    selected = preset == name,
+                    onClick = { bands.clear(); bands.addAll(p); save() },
+                    label = { Text(name) },
+                    trailingIcon = { Icon(Icons.Default.Close, contentDescription = "Eliminar $name", Modifier.size(16.dp).clickable { deleting = name }) }
+                )
+            }
+            if (preset == null && saved.size < SavedEqPresets.MAX) TextButton(onClick = { naming = true }) { Text("Guardar +") }
+            if (saved.isEmpty() && preset != null) Text("Mueve la curva para guardar el tuyo", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
         // Curva
@@ -189,7 +216,29 @@ private fun EqualizerContent(onDismiss: () -> Unit) {
         }
         Spacer(Modifier.height(8.dp))
     }
+
+    if (naming) {
+        var name by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { naming = false },
+            title = { Text("Guardar preset") },
+            text = { OutlinedTextField(value = name, onValueChange = { name = SavedEqPresets.cleanName(it) }, label = { Text("Nombre") }, singleLine = true) },
+            confirmButton = { TextButton(enabled = name.isNotBlank(), onClick = { SavedEqPresets.add(saved, name, bands.toList())?.let(::persistSaved); naming = false }) { Text("Guardar") } },
+            dismissButton = { TextButton(onClick = { naming = false }) { Text("Cancelar") } }
+        )
+    }
+    deleting?.let { name ->
+        AlertDialog(
+            onDismissRequest = { deleting = null },
+            title = { Text("¿Eliminar el preset?") },
+            text = { Text("\"$name\" se borrará y quedará libre su espacio (máximo ${SavedEqPresets.MAX}).") },
+            confirmButton = { TextButton(onClick = { persistSaved(SavedEqPresets.remove(saved, name)); deleting = null }) { Text("Sí") } },
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text("No") } }
+        )
+    }
 }
+
+private const val KEY_EQ_SAVED = "eq_saved_presets"
 
 @Composable
 private fun Readout(label: String, value: String, modifier: Modifier = Modifier) {

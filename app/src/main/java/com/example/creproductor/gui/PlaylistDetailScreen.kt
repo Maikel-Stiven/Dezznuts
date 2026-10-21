@@ -51,6 +51,19 @@ import coil.compose.AsyncImage
 import com.example.creproductor.data.Playlist
 import com.example.creproductor.data.Song
 import com.example.creproductor.formatDuration
+import com.example.creproductor.data.SongOrganizer
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.FilterChip
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
+
+private enum class PlaylistFilter(val label: String) {
+    ALL("Todas"), FAVORITES("Favoritos"), RECENT("Reproducidas recientemente")
+}
 
 @Composable
 fun PlaylistScreenDetail(
@@ -64,10 +77,26 @@ fun PlaylistScreenDetail(
     onAddSongsClick: () -> Unit,
     onRestoreClick: () -> Unit,
     onBackClick: () -> Unit,
-    onRemoveSongFromPlaylist: (Song) -> Unit = {}
+    onRemoveSongFromPlaylist: (Song) -> Unit = {},
+    recentSongs: List<Song> = emptyList()
 ){
     BackHandler {
         onBackClick()
+    }
+
+    // Filtros de la maqueta: Todas / Favoritos / Reproducidas recientemente, y búsqueda dentro de la lista.
+    var filter by remember { mutableStateOf(PlaylistFilter.ALL) }
+    var query by remember { mutableStateOf("") }
+    val visibleSongs = remember(playlistSongs, recentSongs, filter, query) {
+        val base = when (filter) {
+            PlaylistFilter.ALL -> playlistSongs
+            PlaylistFilter.FAVORITES -> playlistSongs.filter { it.isFavorite }
+            PlaylistFilter.RECENT -> {
+                val inList = playlistSongs.associateBy { it.id }
+                recentSongs.mapNotNull { inList[it.id] }   // en el orden de reproducción reciente
+            }
+        }
+        if (query.isBlank()) base else base.filter { SongOrganizer.matchesQuery(it.title, it.artist, it.album, query.trim()) }
     }
 
     val displayCover = remember (playlist, playlistSongs) {
@@ -80,7 +109,7 @@ fun PlaylistScreenDetail(
         val hours = totalMins / 60
         val mins = totalMins % 60
 
-        val songCountText = if (playlistSongs.size == 1) "1 canción" else "[${playlistSongs.size} canciones"
+        val songCountText = if (playlistSongs.size == 1) "1 canción" else "${playlistSongs.size} canciones"
         val timeText = if (hours > 0) "$hours h $mins min" else "$mins min"
         "${songCountText} • ${timeText}"
     }
@@ -244,7 +273,34 @@ fun PlaylistScreenDetail(
                 }
 
                 if (playlistSongs.isNotEmpty()){
-                   itemsIndexed(playlistSongs, key = {index, song -> "playlist_song_${song.id}_$index"}) {_, song ->
+                    item {
+                        Column(Modifier.padding(horizontal = 16.dp)) {
+                            OutlinedTextField(
+                                value = query,
+                                onValueChange = { query = it },
+                                placeholder = { Text("Buscar") },
+                                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                PlaylistFilter.entries.forEach { f ->
+                                    FilterChip(selected = filter == f, onClick = { filter = f }, label = { Text(f.label) })
+                                }
+                            }
+                        }
+                    }
+                    if (visibleSongs.isEmpty()) {
+                        item {
+                            Text(
+                                "No hay canciones que coincidan",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(20.dp)
+                            )
+                        }
+                    }
+                   itemsIndexed(visibleSongs, key = {index, song -> "playlist_song_${song.id}_$index"}) {_, song ->
                        val isSelected = song.id == currentSongId
 
                        PlaylistTrackItem(

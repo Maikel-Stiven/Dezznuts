@@ -62,7 +62,14 @@ class MediaStoreScanner (private  val context: Context) {
             }
         }.toTypedArray()
 
-        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
+        // Filtros de "Escanear archivos". Son enteros propios, no texto del usuario: no hay inyección posible.
+        val filters = ScanSettings.read(context)
+        val selection = buildString {
+            append("${MediaStore.Audio.Media.IS_MUSIC} != 0")
+            if (filters.minSeconds > 0) append(" AND ${MediaStore.Audio.Media.DURATION} >= ${filters.minSeconds * 1000L}")
+            if (filters.minKb > 0) append(" AND ${MediaStore.Audio.Media.SIZE} >= ${filters.minKb * 1024L}")
+            if (filters.ignoreHidden) append(" AND ${MediaStore.Audio.Media.DATA} NOT LIKE '%/.%'")
+        }
         val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
 
         context.contentResolver.query(

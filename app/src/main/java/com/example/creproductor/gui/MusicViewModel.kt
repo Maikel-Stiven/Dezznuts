@@ -23,13 +23,17 @@ import androidx.media3.common.Tracks
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionToken
+import com.example.creproductor.data.AudioCutter
 import com.example.creproductor.data.AudioQuality
 import com.example.creproductor.data.AudioTagWriter
 import com.example.creproductor.data.TagSuggestion
 import com.example.creproductor.data.TagSuggestions
 import com.example.creproductor.data.HiFiAudio
 import com.example.creproductor.data.QualityTier
+import com.example.creproductor.data.FileScanner
 import com.example.creproductor.data.MediaStoreScanner
+import com.example.creproductor.data.ScanProgress
+import com.example.creproductor.data.ScanSettings
 import com.example.creproductor.data.Song
 import com.example.creproductor.data.SongCoverCache
 import com.example.creproductor.data.trackPlaybackPosition
@@ -60,6 +64,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
+/** Petición de ir a la ficha de un álbum o artista desde el menú de una canción; la consume `MainScreen`. */
+sealed interface NavRequest {
+    data class Album(val name: String) : NavRequest
+    data class Artist(val name: String) : NavRequest
+}
+
 sealed interface UiState {
     object PermissionRequired : UiState
     object Loading : UiState
@@ -78,6 +88,7 @@ enum class SongFilter{
 /** Tamaño de la primera publicación de la biblioteca y factor de crecimiento de las siguientes. */
 private const val FIRST_PUBLISH_SIZE = 100
 private const val PUBLISH_GROWTH = 4
+private const val MAX_DELETED_PLAYLISTS = 10
 
 class MusicViewModel (application: Application) : AndroidViewModel(application) {
 
@@ -90,6 +101,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (key == "fav_ids") syncFavoritesFromPrefs()
             else if (key == HiFiAudio.KEY_REAL_ROUTE) refreshAudioInfo()
+            else if (key == MusicService.KEY_SLEEP_END) _sleepTimerEnd.value = prefs.getLong(MusicService.KEY_SLEEP_END, 0L)
         }
 
     private val _uiState = MutableStateFlow<UiState>(UiState.PermissionRequired)
@@ -152,6 +164,10 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     private val _repeatMode = MutableStateFlow(RepeatMode.OFF)
     val repeatMode: StateFlow<RepeatMode> = _repeatMode.asStateFlow()
 
+    /** Listas borradas que se pueden restaurar (las más recientes primero, hasta [MAX_DELETED_PLAYLISTS]). */
+    private val _deletedPlaylists = MutableStateFlow<List<Playlist>>(emptyList())
+    val deletedPlaylists: StateFlow<List<Playlist>> = _deletedPlaylists.asStateFlow()
+
     /** Listas de reproducción creadas por el usuario. */
     private val _playlists = MutableStateFlow<List<Playlist>>(emptyList())
     val playlists: StateFlow<List<Playlist>> = _playlists.asStateFlow()
@@ -182,6 +198,94 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
 
+
+    private val _navRequest = MutableStateFlow<NavRequest?>(null)
+    val navRequest: StateFlow<NavRequest?> = _navRequest.asStateFlow()
+    fun requestNav(request: NavRequest) { _navRequest.value = request }
+    fun clearNav() { _navRequest.value = null }
+
+    /** Añade la canción al final de la cola; si no hay nada sonando, la reproduce. */
+    fun addToQueue(song: Song) {
+        val controller = mediaController
+        if (controller == null || controller.mediaItemCount == 0) { playSong(song, customQueue = listOf(song)); return }
+        _currentQueue.value = _currentQueue.value.ifEmpty { (_uiState.value as? UiState.Success)?.songs ?: emptyList() } + song
+        saveCurrentQueueIds(_currentQueue.value.map { it.id })
+        controller.addMediaItems(buildMediaItems(listOf(song)))
+        Toast.makeText(getApplication(), "Agregada a la cola", Toast.LENGTH_SHORT).show()
+    }
+
+    /** Borra el archivo (Android < 11; en 11+ lo hace el sistema con su propia confirmación) y recarga la biblioteca. */
+    fun deleteSongLegacy(song: Song) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val ok = runCatching { getApplication<Application>().contentResolver.delete(song.contentUri, null, null) > 0 }.getOrDefault(false)
+            withContext(Dispatchers.Main) {
+                if (!ok) Toast.makeText(getApplication(), "No se pudo eliminar", Toast.LENGTH_LONG).show()
+                loadSongs(silent = true)
+            }
+        }
+    }
+
+    fun addSongToPlaylist(playlistId: String, song: Song) {
+        addSongsToPlaylist(playlistId, listOf(song.id))
+        Toast.makeText(getApplication(), "Agregada a la lista", Toast.LENGTH_SHORT).show()
+    }
+
+    /** Estado del temporizador de apagado: 0 = apagado, -1 = al final de la canción, otro = hora de fin (ms). */
+    private val _sleepTimerEnd = MutableStateFlow(0L)
+    val sleepTimerEnd: StateFlow<Long> = _sleepTimerEnd.asStateFlow()
+
+    /** [minutes]: > 0 minutos, [MusicService.SLEEP_END_OF_TRACK] o 0 para cancelar. */
+    fun setSleepTimer(minutes: Int) {
+        mediaController?.sendCustomCommand(
+            SessionCommand(MusicService.ACTION_SLEEP_TIMER, Bundle.EMPTY),
+            Bundle().apply { putInt(MusicService.EXTRA_MINUTES, minutes) }
+        )
+    }
+
+    /** Escaneo manual de carpetas ("Escanear archivos"): `null` = sin escaneo en curso ni resultado que mostrar. */
+    private val _scanProgress = MutableStateFlow<ScanProgress?>(null)
+    val scanProgress: StateFlow<ScanProgress?> = _scanProgress.asStateFlow()
+    private var scanJob: Job? = null
+
+    fun startScan(roots: List<java.io.File>, settings: ScanSettings) {
+        if (scanJob?.isActive == true || roots.isEmpty()) return
+        settings.save(getApplication())
+        scanJob = viewModelScope.launch {
+            FileScanner.scan(getApplication(), roots, settings).collect { _scanProgress.value = it }
+            loadSongs(silent = true)   // aplica también los filtros nuevos a la biblioteca
+        }
+    }
+
+    fun cancelScan() { scanJob?.cancel(); _scanProgress.value = null }
+
+    /** Cierra el resultado del escaneo (y guarda los filtros aunque no se haya escaneado). */
+    fun dismissScan(settings: ScanSettings) {
+        if (scanJob?.isActive == true) return
+        if (settings != ScanSettings.read(getApplication())) { settings.save(getApplication()); loadSongs(silent = true) }
+        _scanProgress.value = null
+    }
+
+    /** Recorte de audio en curso (el diálogo del cortador se bloquea mientras tanto). */
+    private val _cutting = MutableStateFlow(false)
+    val cutting: StateFlow<Boolean> = _cutting.asStateFlow()
+
+    fun cutAudio(song: Song, startMs: Long, endMs: Long, onDone: () -> Unit) {
+        if (_cutting.value) return
+        viewModelScope.launch {
+            _cutting.value = true
+            val result = withContext(Dispatchers.IO) { AudioCutter.cut(getApplication(), song, startMs, endMs) }
+            _cutting.value = false
+            Toast.makeText(
+                getApplication(),
+                if (result != null) "Guardado: ${result.displayName} (Música/DEZZNUTS)" else "No se pudo cortar este archivo",
+                Toast.LENGTH_LONG
+            ).show()
+            if (result != null) { onDone(); loadSongs(silent = true) }
+        }
+    }
+
+    /** Pausa si suena (el cortador se abre con la música en silencio para poder previsualizar). */
+    fun pauseIfPlaying() { mediaController?.takeIf { it.isPlaying }?.pause() }
 
     private var loadJob: Job? = null
     private var observerJob: Job? = null
@@ -826,7 +930,23 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         savePlaylists(updated)
     }
 
+    private fun saveDeleted(list: List<Playlist>) {
+        _deletedPlaylists.value = list
+        prefs.edit { putString("deleted_playlists", PlaylistSerializer.encode(list)) }
+    }
+
+    fun restorePlaylist(playlistId: String) {
+        val playlist = _deletedPlaylists.value.firstOrNull { it.id == playlistId } ?: return
+        saveDeleted(_deletedPlaylists.value.filter { it.id != playlistId })
+        val updated = _playlists.value + playlist
+        _playlists.value = updated
+        savePlaylists(updated)
+    }
+
     fun deletePlaylist(playlistId: String){
+        _playlists.value.firstOrNull { it.id == playlistId }?.let { gone ->
+            saveDeleted((listOf(gone) + _deletedPlaylists.value).take(MAX_DELETED_PLAYLISTS))
+        }
         val updated = _playlists.value.filter { it.id != playlistId }
         _playlists.value = updated
         savePlaylists(updated)
@@ -858,6 +978,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     }
 
     private fun loadPlaylist(){
+        _deletedPlaylists.value = PlaylistSerializer.decode(prefs.getString("deleted_playlists", "") ?: "")
         val str = prefs.getString("saved_playlist", "") ?: ""
         _playlists.value = PlaylistSerializer.decode(str)
     }

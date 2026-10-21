@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.creproductor.SongListScreen
 import com.example.creproductor.data.Playlist
+import com.example.creproductor.data.Mood
 import com.example.creproductor.data.Song
 import kotlinx.coroutines.launch
 
@@ -77,6 +78,7 @@ fun MainScreen(
     var selectedAlbumsSongs by remember { mutableStateOf<List<Song>>(emptyList()) }
     var selectedQuickSelectType by remember { mutableStateOf<QuickSelectType?>(null) }
     var selectedQuickSelectSongs by remember { mutableStateOf <List<Song>> (emptyList()) }
+    var selectedMood by remember { mutableStateOf<Mood?>(null) }
     var selectedArtistName by remember { mutableStateOf<String?>(null) }
     var selectedArtistSongs by remember { mutableStateOf<List<Song>>(emptyList()) }
     var selectedGenreName by remember { mutableStateOf<String?>(null) }
@@ -86,6 +88,8 @@ fun MainScreen(
 
     var showCreatedPlaylistDialog by remember { mutableStateOf(false) }
     var showAddSongsDialog by remember { mutableStateOf(false) }
+    var showRestoreDialog by remember { mutableStateOf(false) }
+    var playlistForOptions by remember { mutableStateOf<Playlist?>(null) }
     var selectedPlaylist by remember { mutableStateOf<Playlist?>(null) }
 
     val playlist by viewModel.playlists.collectAsStateWithLifecycle()
@@ -103,14 +107,37 @@ fun MainScreen(
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
 
 
+    // Menú de una canción → "Ir al álbum" / "Ir al artista": se abre la ficha desde cualquier pantalla.
+    val navRequest by viewModel.navRequest.collectAsStateWithLifecycle()
+    LaunchedEffect(navRequest) {
+        val request = navRequest ?: return@LaunchedEffect
+        isSearchActive = false
+        selectedQuickSelectType = null; selectedMood = null; selectedGenreName = null; selectedFolderName = null; selectedPlaylist = null
+        when (request) {
+            is NavRequest.Album -> {
+                selectedAlbumsSongs = songs.filter { it.album == request.name }.sortedWith(
+                    compareBy<Song> { if (it.trackNumber > 0) it.trackNumber else Int.MAX_VALUE }.thenBy { it.title }
+                )
+                selectedArtistName = null
+                selectedAlbumName = request.name
+            }
+            is NavRequest.Artist -> {
+                selectedArtistSongs = songs.filter { it.artist == request.name }
+                selectedAlbumName = null
+                selectedArtistName = request.name
+            }
+        }
+        viewModel.clearNav()
+    }
+
     val artisListState = rememberLazyListState()
     val albumsGridState = rememberLazyGridState()
     val genresGridstate = rememberLazyGridState()
 
 
-    if (selectedQuickSelectType != null){
+    if (selectedQuickSelectType != null || selectedMood != null){
         QuickSelectDetailScreen(
-            categoryTitle = selectedQuickSelectType!!.title,
+            categoryTitle = selectedMood?.label ?: selectedQuickSelectType!!.title,
             categorySongs = selectedQuickSelectSongs,
             currentSongId = currentSong?.id,
             isPlaying = isPlaying,
@@ -127,7 +154,7 @@ fun MainScreen(
                   viewModel.playSong(shuffledList.first(), customQueue = shuffledList)
               }
             },
-            onBackClick = {selectedQuickSelectType = null}
+            onBackClick = { selectedQuickSelectType = null; selectedMood = null }
         )
     } else if (selectedAlbumName !=  null){
         AlbumDetailScreen(
@@ -206,7 +233,7 @@ fun MainScreen(
         )
     } else if (selectedFolderName != null){
         QuickSelectDetailScreen(
-            categoryTitle = selectedFolderName!!,
+            categoryTitle = selectedFolderName!!.substringAfterLast('/').ifBlank { selectedFolderName!! },
             categorySongs = selectedFolderSongs,
             currentSongId = currentSong?.id,
             isPlaying = isPlaying,
@@ -253,7 +280,8 @@ fun MainScreen(
                 }
             },
             onAddSongsClick = {showAddSongsDialog = true},
-            onRestoreClick = {/*falta lógica*/},
+            onRestoreClick = { showRestoreDialog = true },
+            recentSongs = recentSongs,
             onBackClick = {selectedPlaylist = null},
             onRemoveSongFromPlaylist = { song ->
                 viewModel.removeSongFromPlaylist(activePlaylist.id, song.id)
@@ -389,6 +417,10 @@ fun MainScreen(
                                      onSeeAllCategoryClick = {type, categorySongs ->
                                          selectedQuickSelectType = type
                                          selectedQuickSelectSongs = categorySongs
+                                     },
+                                     onMoodClick = { mood, moodSongs ->
+                                         selectedMood = mood
+                                         selectedQuickSelectSongs = moodSongs
                                      }
                                  )
                                  AppTab.SONGS -> Column(modifier = Modifier.fillMaxSize()) {
@@ -444,7 +476,8 @@ fun MainScreen(
                                      playlist = playlist,
                                      allSongs = songs,
                                      onCreatePlaylistClick = { showCreatedPlaylistDialog = true},
-                                     onRestorePlaylistClick = {/*agregar lógica*/},
+                                     onRestorePlaylistClick = { showRestoreDialog = true },
+                                     onPlaylistOptionsClick = { playlistForOptions = it },
                                      onPlaylistClick = {playlist -> selectedPlaylist = playlist}
                                  )
 
@@ -461,6 +494,15 @@ fun MainScreen(
                 }
             }
         }
+    }
+
+    playlistForOptions?.let { p ->
+        PlaylistOptionsDialog(p, onDelete = { viewModel.deletePlaylist(p.id) }, onDismiss = { playlistForOptions = null })
+    }
+
+    if (showRestoreDialog){
+        val deleted by viewModel.deletedPlaylists.collectAsStateWithLifecycle()
+        RestorePlaylistsDialog(deleted, onRestore = { viewModel.restorePlaylist(it) }, onDismiss = { showRestoreDialog = false })
     }
 
     if (showCreatedPlaylistDialog){

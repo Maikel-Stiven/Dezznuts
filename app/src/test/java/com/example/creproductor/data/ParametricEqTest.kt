@@ -140,3 +140,28 @@ class EqCurvePerformanceTest {
         org.junit.Assert.assertTrue("demasiado lento: $perFrameUs µs", perFrameUs < 2000)   // cabe de sobra en 16 ms
     }
 }
+
+class SavedEqPresetsTest {
+    private val bands = EqBands.PRESETS[1].second
+
+    @Test fun `guarda hasta cinco y rechaza el sexto`() {
+        var list = emptyList<Pair<String, List<EqBand>>>()
+        for (i in 1..5) list = SavedEqPresets.add(list, "P$i", bands)!!
+        org.junit.Assert.assertNull(SavedEqPresets.add(list, "P6", bands))
+        org.junit.Assert.assertEquals(5, SavedEqPresets.add(list, "p3", bands)!!.size)   // mismo nombre: reemplaza
+    }
+
+    @Test fun `ida y vuelta del texto y nombres con separadores`() {
+        val list = SavedEqPresets.add(emptyList(), "Mi|pre\nset", bands)!!
+        assertEquals("Mipreset", list[0].first)
+        val back = SavedEqPresets.decode(SavedEqPresets.encode(list))
+        assertEquals("Mipreset", back[0].first)
+        assertEquals(true, EqBands.sameBands(bands, back[0].second))
+    }
+
+    @Test fun `borrar libera el espacio`() {
+        val list = SavedEqPresets.add(emptyList(), "A", bands)!!
+        assertEquals(0, SavedEqPresets.remove(list, "A").size)
+        org.junit.Assert.assertNull(SavedEqPresets.add(emptyList(), "   ", bands))
+    }
+}
