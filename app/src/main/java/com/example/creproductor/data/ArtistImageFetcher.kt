@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -21,6 +22,13 @@ object ArtistImageFetcher {
 
     /** Artistas sin foto en esta sesión: evita repetir la consulta de red en cada fila/scroll. */
     private val noPhoto = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+
+    /**
+     * Como mucho 2 consultas a la vez. Antes cada fila de la pestaña "Artistas" lanzaba la suya a la vez (decenas de
+     * conexiones HTTPS simultáneas: +24 MB de memoria nativa medidos al abrir la pestaña con 40 artistas). Con el límite,
+     * las conexiones se reutilizan y las filas que se salen de pantalla cancelan su espera y nunca consultan.
+     */
+    private val networkLimit = kotlinx.coroutines.sync.Semaphore(2)
 
     private fun isOnline (context: Context): Boolean {
         val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
@@ -64,6 +72,9 @@ object ArtistImageFetcher {
             return@withContext null
         }
 
+        networkLimit.withPermit {
+        // Otra fila pudo resolver al mismo artista mientras esperaba su turno.
+        if (prefs.contains(cleanArtist)) return@withContext prefs.getString(cleanArtist, null)
         var connection: HttpURLConnection? = null
         try {
             val encodedQuery = URLEncoder.encode(cleanArtist, "UTF-8")
@@ -95,6 +106,7 @@ object ArtistImageFetcher {
             e.printStackTrace()
         }finally {
             connection?.disconnect()
+        }
         }
         return@withContext null
     }
