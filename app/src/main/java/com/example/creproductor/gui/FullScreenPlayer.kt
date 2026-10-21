@@ -33,6 +33,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -137,6 +138,7 @@ fun FullScreenPlayer(
 
     var showQueueBottomSheet by remember { mutableStateOf(false) }
     var showTrackInfo by remember { mutableStateOf(false) }
+    var showLyrics by remember { mutableStateOf(false) }
 
     var lastClickTime by remember { mutableStateOf(0L) }
     fun safeClick(action: () -> Unit){
@@ -243,6 +245,13 @@ fun FullScreenPlayer(
                 }
 
                 Row {
+                    IconButton(onClick = { showLyrics = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Lyrics,
+                            contentDescription = "Letras",
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
                     IconButton(onClick = onOpenEqualizer) {
                         Icon(
                             imageVector = Icons.Default.Tune,
@@ -497,6 +506,7 @@ fun FullScreenPlayer(
             }
         }
     }
+    if (showLyrics) LyricsSheet(song, currentPositionMs, onSeekTo) { showLyrics = false }
     if (showTrackInfo) TrackInfoDialog(song, audioInfo, onEdit = { onEditSong(song) }) { showTrackInfo = false }
     if (showQueueBottomSheet){
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
