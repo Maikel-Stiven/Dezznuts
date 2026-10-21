@@ -87,6 +87,7 @@ fun MainScreen(
     section: AppSection,
     onSectionChange: (AppSection) -> Unit,
     settingsContent: @Composable () -> Unit,
+    onExportPlaylist: (Playlist) -> Unit = {},
     onEditSong: (Song) -> Unit = {}
 ){
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { AppTab.entries.size})
@@ -383,7 +384,7 @@ fun MainScreen(
     }
 
     playlistForOptions?.let { p ->
-        PlaylistOptionsDialog(p, onDelete = { viewModel.deletePlaylist(p.id) }, onDismiss = { playlistForOptions = null })
+        PlaylistOptionsDialog(p, onDelete = { viewModel.deletePlaylist(p.id) }, onExport = { onExportPlaylist(p) }, onDismiss = { playlistForOptions = null })
     }
 
     if (showRestoreDialog){

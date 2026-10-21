@@ -5,6 +5,9 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
+import com.example.creproductor.data.LibraryBackup
+import com.example.creproductor.data.M3u
+import com.example.creproductor.data.SongMatcher
 import android.widget.Toast
 import android.database.ContentObserver
 import android.os.Bundle
@@ -1025,6 +1028,86 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         }
         _playlists.value = updated
         savePlaylists(updated)
+    }
+
+    // ---- Copia de seguridad y listas M3U (archivos elegidos por el usuario con el selector del sistema) ----
+
+    private val librarySongs get() = (_uiState.value as? UiState.Success)?.songs.orEmpty()
+
+    private suspend fun readText(uri: Uri): String? = withContext(Dispatchers.IO) {
+        runCatching { getApplication<Application>().contentResolver.openInputStream(uri)!!.bufferedReader().use { it.readText() } }.getOrNull()
+    }
+
+    private suspend fun writeText(uri: Uri, text: String): Boolean = withContext(Dispatchers.IO) {
+        runCatching { getApplication<Application>().contentResolver.openOutputStream(uri, "wt")!!.bufferedWriter().use { it.write(text) } }.isSuccess
+    }
+
+    private fun toast(text: String) = Toast.makeText(getApplication(), text, Toast.LENGTH_LONG).show()
+
+    fun exportBackup(uri: Uri) {
+        val byId = librarySongs.associateBy { it.id }
+        val backup = LibraryBackup(
+            favorites = getSavedFavoritesIds().mapNotNull { byId[it]?.path },
+            playCounts = playCountMap.toMap().mapNotNull { (id, n) -> byId[id]?.path?.let { it to n } }.toMap(),
+            playlists = _playlists.value.map { p -> p.name to p.songIds.mapNotNull { byId[it]?.path } }
+        )
+        viewModelScope.launch {
+            toast(if (writeText(uri, backup.encode()))
+                "Copia guardada: ${backup.playlists.size} listas y ${backup.favorites.size} favoritas"
+            else "No se pudo guardar la copia")
+        }
+    }
+
+    /** Suma la copia a lo que ya hay: favoritas unidas, reproducciones al máximo y listas fusionadas por nombre. */
+    fun importBackup(uri: Uri) {
+        viewModelScope.launch {
+            val backup = readText(uri)?.let(LibraryBackup::decode)
+                ?: return@launch toast("Ese archivo no es una copia de DEZZNUTS")
+            val songs = librarySongs
+            val matcher = SongMatcher(songs) { it.path }
+
+            val favIds = matcher.match(backup.favorites).map { it.id }
+            saveFavoriteIds(getSavedFavoritesIds() + favIds)   // el listener de preferencias repinta los corazones
+
+            backup.playCounts.forEach { (path, n) ->
+                matcher.find(path)?.let { playCountMap[it.id] = maxOf(playCountMap[it.id] ?: 0, n) }
+            }
+            savePlayCounts()
+            restoreDashboardLists(songs)
+
+            var lists = _playlists.value
+            backup.playlists.forEach { (name, paths) -> lists = mergePlaylist(lists, name, matcher.match(paths).map { it.id }) }
+            _playlists.value = lists
+            savePlaylists(lists)
+            toast("Copia restaurada: ${backup.playlists.size} listas y ${favIds.size} favoritas")
+        }
+    }
+
+    private fun mergePlaylist(lists: List<Playlist>, name: String, ids: List<Long>): List<Playlist> {
+        val existing = lists.firstOrNull { it.name == name }
+            ?: return lists + Playlist(name = name, songIds = ids.distinct())
+        return lists.map { if (it.id == existing.id) it.copy(songIds = (it.songIds + ids).distinct()) else it }
+    }
+
+    fun exportPlaylistM3u(playlistId: String, uri: Uri) {
+        val playlist = _playlists.value.firstOrNull { it.id == playlistId } ?: return
+        val byId = librarySongs.associateBy { it.id }
+        val songs = playlist.songIds.mapNotNull { byId[it] }
+        viewModelScope.launch {
+            toast(if (writeText(uri, M3u.write(songs))) "\"${playlist.name}\" exportada (${songs.size} canciones)" else "No se pudo exportar la lista")
+        }
+    }
+
+    fun importM3u(uri: Uri, name: String) {
+        viewModelScope.launch {
+            val paths = readText(uri)?.let(M3u::parse).orEmpty()
+            val ids = SongMatcher(librarySongs) { it.path }.match(paths).map { it.id }
+            if (ids.isEmpty()) return@launch toast("No se encontró en tu biblioteca ninguna canción de esa lista")
+            val lists = mergePlaylist(_playlists.value, name, ids)
+            _playlists.value = lists
+            savePlaylists(lists)
+            toast("\"$name\": ${ids.size} de ${paths.size} canciones encontradas")
+        }
     }
 
     private fun savePlaylists(list: List<Playlist>){

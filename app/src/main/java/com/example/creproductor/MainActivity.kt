@@ -197,6 +197,22 @@ class MainActivity : ComponentActivity() {
                         viewModel.loadSongs(silent = true)
                     }
                     var section by rememberSaveable { mutableStateOf(AppSection.HOME) }
+                    // Copia de seguridad y M3U: el usuario elige el archivo con el selector del sistema (sin permisos extra).
+                    val saveBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+                        uri?.let(viewModel::exportBackup)
+                    }
+                    val openBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                        uri?.let(viewModel::importBackup)
+                    }
+                    val openM3u = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                        uri?.let { viewModel.importM3u(it, displayName(it)?.substringBeforeLast('.') ?: "Lista importada") }
+                    }
+                    var playlistToExport by remember { mutableStateOf<com.example.creproductor.data.Playlist?>(null) }
+                    val saveM3u = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("audio/x-mpegurl")) { uri ->
+                        val p = playlistToExport
+                        if (uri != null && p != null) viewModel.exportPlaylistM3u(p.id, uri)
+                        playlistToExport = null
+                    }
                     fun runAction(action: AppAction) {
                         when (action) {
                             AppAction.Equalizer -> showEqualizerDialog = true
@@ -209,6 +225,9 @@ class MainActivity : ComponentActivity() {
                                 else Toast.makeText(this@MainActivity, "Elige una canción desde su menú ⋮ → Cortador de audio", Toast.LENGTH_LONG).show()
                             }
                             AppAction.SleepTimer -> showSleepTimerDialog = true
+                            AppAction.ExportBackup -> saveBackup.launch("dezznuts-copia-${java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).format(java.util.Date())}.txt")
+                            AppAction.ImportBackup -> openBackup.launch(arrayOf("text/*", "application/octet-stream"))
+                            AppAction.ImportM3u -> openM3u.launch(arrayOf("audio/x-mpegurl", "audio/mpegurl", "application/vnd.apple.mpegurl", "text/*", "application/octet-stream"))
                             AppAction.ClearImageCache -> showClearImageCacheDialog = true
                             AppAction.HiFiAudio -> showHiFiAudioDialog = true
                             AppAction.About -> showAboutDialog = true
@@ -275,6 +294,7 @@ class MainActivity : ComponentActivity() {
                                                     section = section,
                                                     onSectionChange = { section = it },
                                                     onEditSong = editSong,
+                                                    onExportPlaylist = { playlistToExport = it; saveM3u.launch("${it.name}.m3u8") },
                                                     settingsContent = {
                                                         SettingsScreen(versionName = versionName, onAction = ::runAction)
                                                     }
@@ -472,6 +492,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+/** Nombre visible de un archivo elegido con el selector del sistema. */
+private fun android.content.Context.displayName(uri: android.net.Uri): String? =
+    contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
+        if (it.moveToFirst()) it.getString(0) else null
+    }
 
 @Composable
 fun SongListScreen(
