@@ -60,6 +60,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
+/** Petición de ir a la ficha de un álbum o artista desde el menú de una canción; la consume `MainScreen`. */
+sealed interface NavRequest {
+    data class Album(val name: String) : NavRequest
+    data class Artist(val name: String) : NavRequest
+}
+
 sealed interface UiState {
     object PermissionRequired : UiState
     object Loading : UiState
@@ -182,6 +188,37 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
 
+
+    private val _navRequest = MutableStateFlow<NavRequest?>(null)
+    val navRequest: StateFlow<NavRequest?> = _navRequest.asStateFlow()
+    fun requestNav(request: NavRequest) { _navRequest.value = request }
+    fun clearNav() { _navRequest.value = null }
+
+    /** Añade la canción al final de la cola; si no hay nada sonando, la reproduce. */
+    fun addToQueue(song: Song) {
+        val controller = mediaController
+        if (controller == null || controller.mediaItemCount == 0) { playSong(song, customQueue = listOf(song)); return }
+        _currentQueue.value = _currentQueue.value.ifEmpty { (_uiState.value as? UiState.Success)?.songs ?: emptyList() } + song
+        saveCurrentQueueIds(_currentQueue.value.map { it.id })
+        controller.addMediaItems(buildMediaItems(listOf(song)))
+        Toast.makeText(getApplication(), "Agregada a la cola", Toast.LENGTH_SHORT).show()
+    }
+
+    /** Borra el archivo (Android < 11; en 11+ lo hace el sistema con su propia confirmación) y recarga la biblioteca. */
+    fun deleteSongLegacy(song: Song) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val ok = runCatching { getApplication<Application>().contentResolver.delete(song.contentUri, null, null) > 0 }.getOrDefault(false)
+            withContext(Dispatchers.Main) {
+                if (!ok) Toast.makeText(getApplication(), "No se pudo eliminar", Toast.LENGTH_LONG).show()
+                loadSongs(silent = true)
+            }
+        }
+    }
+
+    fun addSongToPlaylist(playlistId: String, song: Song) {
+        addSongsToPlaylist(playlistId, listOf(song.id))
+        Toast.makeText(getApplication(), "Agregada a la lista", Toast.LENGTH_SHORT).show()
+    }
 
     private var loadJob: Job? = null
     private var observerJob: Job? = null

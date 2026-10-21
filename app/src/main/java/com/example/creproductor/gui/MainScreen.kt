@@ -103,6 +103,29 @@ fun MainScreen(
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
 
 
+    // Menú de una canción → "Ir al álbum" / "Ir al artista": se abre la ficha desde cualquier pantalla.
+    val navRequest by viewModel.navRequest.collectAsStateWithLifecycle()
+    LaunchedEffect(navRequest) {
+        val request = navRequest ?: return@LaunchedEffect
+        isSearchActive = false
+        selectedQuickSelectType = null; selectedGenreName = null; selectedFolderName = null; selectedPlaylist = null
+        when (request) {
+            is NavRequest.Album -> {
+                selectedAlbumsSongs = songs.filter { it.album == request.name }.sortedWith(
+                    compareBy<Song> { if (it.trackNumber > 0) it.trackNumber else Int.MAX_VALUE }.thenBy { it.title }
+                )
+                selectedArtistName = null
+                selectedAlbumName = request.name
+            }
+            is NavRequest.Artist -> {
+                selectedArtistSongs = songs.filter { it.artist == request.name }
+                selectedAlbumName = null
+                selectedArtistName = request.name
+            }
+        }
+        viewModel.clearNav()
+    }
+
     val artisListState = rememberLazyListState()
     val albumsGridState = rememberLazyGridState()
     val genresGridstate = rememberLazyGridState()

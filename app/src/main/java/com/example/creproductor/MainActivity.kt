@@ -58,6 +58,10 @@ import com.example.creproductor.gui.HiFiAudioDialog
 import com.example.creproductor.gui.QualityBadge
 import com.example.creproductor.gui.MainScreen
 import com.example.creproductor.gui.MusicViewModel
+import com.example.creproductor.gui.NavRequest
+import com.example.creproductor.gui.SongMenuActions
+import com.example.creproductor.gui.SongMenuSheet
+import com.example.creproductor.gui.TrackInfoDialog
 import com.example.creproductor.gui.UiState
 import com.example.creproductor.ui.theme.DEZZNUTStheme
 import kotlinx.coroutines.launch
@@ -129,11 +133,10 @@ class MainActivity : ComponentActivity() {
                             writeLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
                         } else action()
                     }
-                    // Las pistas de una hoja CUE comparten archivo: editar una cambiaría todo el álbum.
-                    val editSong: (Song) -> Unit = { song ->
-                        if (song.cueStartMs >= 0) Toast.makeText(this@MainActivity, "Las pistas de una hoja CUE no se editan una a una", Toast.LENGTH_LONG).show()
-                        else songToEdit = song
-                    }
+                    // El ⋮ de cualquier canción abre el menú de acciones (SongMenuSheet).
+                    var songMenuFor by remember { mutableStateOf<Song?>(null) }
+                    var songInfoFor by remember { mutableStateOf<Song?>(null) }
+                    val editSong: (Song) -> Unit = { song -> songMenuFor = song }
                     // Confirmación del sistema para borrar archivos (Android 11+); al terminar se recarga la biblioteca.
                     val deleteLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
                         viewModel.loadSongs(silent = true)
@@ -287,6 +290,34 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             }
+                        }
+
+                        songMenuFor?.let { song ->
+                            val playlists by viewModel.playlists.collectAsStateWithLifecycle()
+                            SongMenuSheet(
+                                song = song,
+                                playlists = playlists,
+                                onDismiss = { songMenuFor = null },
+                                actions = SongMenuActions(
+                                    onAddToQueue = { viewModel.addToQueue(song) },
+                                    onAddToPlaylist = { id -> viewModel.addSongToPlaylist(id, song) },
+                                    onGoToAlbum = { isPlayerFullScreenVisible = false; viewModel.requestNav(NavRequest.Album(song.album)) },
+                                    onGoToArtist = { isPlayerFullScreenVisible = false; viewModel.requestNav(NavRequest.Artist(song.artist)) },
+                                    onEditTags = { songToEdit = song },
+                                    onAbout = { songInfoFor = song },
+                                    onAudioCutter = { Toast.makeText(this@MainActivity, "El cortador de audio llegará pronto", Toast.LENGTH_SHORT).show() },
+                                    onDelete = {
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                            val request = MediaStore.createDeleteRequest(contentResolver, listOf(song.contentUri))
+                                            deleteLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
+                                        } else viewModel.deleteSongLegacy(song)
+                                    }
+                                )
+                            )
+                        }
+
+                        songInfoFor?.let { song ->
+                            TrackInfoDialog(song, audioInfo) { songInfoFor = null }
                         }
 
                         songToEdit?.let { song ->
