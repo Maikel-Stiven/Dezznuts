@@ -391,8 +391,11 @@ fun PlayingEqualizerIcon(
     color: Color = MaterialTheme.colorScheme.primary,
     isPlaying: Boolean = true
 ){
-    // Sin música, o con la pantalla tapada (LocalAnimationsEnabled), no se crea la animación infinita: no hay fotogramas.
-    if (isPlaying && LocalAnimationsEnabled.current) AnimatedEqualizerBars(modifier, color)
+    // Sin música no se dibuja nada. Sonando: animada solo si se ve (LocalAnimationsEnabled) y el equipo lo aguanta
+    // (rememberVisualEffectsEnabled); si no, barras fijas, que siguen indicando la fila que suena sin gastar fotogramas.
+    val effects = rememberVisualEffectsEnabled()
+    if (isPlaying && effects && LocalAnimationsEnabled.current) AnimatedEqualizerBars(modifier, color)
+    else if (isPlaying) EqualizerBars(modifier, color, { 0.55f }, { 0.9f }, { 0.7f })
     else EqualizerBars(modifier, color, { 0f }, { 0f }, { 0f })
 }
 
