@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.creproductor.SongListScreen
 import com.example.creproductor.data.Playlist
+import com.example.creproductor.data.Mood
 import com.example.creproductor.data.Song
 import kotlinx.coroutines.launch
 
@@ -77,6 +78,7 @@ fun MainScreen(
     var selectedAlbumsSongs by remember { mutableStateOf<List<Song>>(emptyList()) }
     var selectedQuickSelectType by remember { mutableStateOf<QuickSelectType?>(null) }
     var selectedQuickSelectSongs by remember { mutableStateOf <List<Song>> (emptyList()) }
+    var selectedMood by remember { mutableStateOf<Mood?>(null) }
     var selectedArtistName by remember { mutableStateOf<String?>(null) }
     var selectedArtistSongs by remember { mutableStateOf<List<Song>>(emptyList()) }
     var selectedGenreName by remember { mutableStateOf<String?>(null) }
@@ -110,7 +112,7 @@ fun MainScreen(
     LaunchedEffect(navRequest) {
         val request = navRequest ?: return@LaunchedEffect
         isSearchActive = false
-        selectedQuickSelectType = null; selectedGenreName = null; selectedFolderName = null; selectedPlaylist = null
+        selectedQuickSelectType = null; selectedMood = null; selectedGenreName = null; selectedFolderName = null; selectedPlaylist = null
         when (request) {
             is NavRequest.Album -> {
                 selectedAlbumsSongs = songs.filter { it.album == request.name }.sortedWith(
@@ -133,9 +135,9 @@ fun MainScreen(
     val genresGridstate = rememberLazyGridState()
 
 
-    if (selectedQuickSelectType != null){
+    if (selectedQuickSelectType != null || selectedMood != null){
         QuickSelectDetailScreen(
-            categoryTitle = selectedQuickSelectType!!.title,
+            categoryTitle = selectedMood?.label ?: selectedQuickSelectType!!.title,
             categorySongs = selectedQuickSelectSongs,
             currentSongId = currentSong?.id,
             isPlaying = isPlaying,
@@ -152,7 +154,7 @@ fun MainScreen(
                   viewModel.playSong(shuffledList.first(), customQueue = shuffledList)
               }
             },
-            onBackClick = {selectedQuickSelectType = null}
+            onBackClick = { selectedQuickSelectType = null; selectedMood = null }
         )
     } else if (selectedAlbumName !=  null){
         AlbumDetailScreen(
@@ -415,6 +417,10 @@ fun MainScreen(
                                      onSeeAllCategoryClick = {type, categorySongs ->
                                          selectedQuickSelectType = type
                                          selectedQuickSelectSongs = categorySongs
+                                     },
+                                     onMoodClick = { mood, moodSongs ->
+                                         selectedMood = mood
+                                         selectedQuickSelectSongs = moodSongs
                                      }
                                  )
                                  AppTab.SONGS -> Column(modifier = Modifier.fillMaxSize()) {
