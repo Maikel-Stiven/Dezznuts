@@ -43,6 +43,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -135,7 +137,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     /** Derivado de [uiState]: solo las canciones marcadas como favoritas. */
     val favoriteSongs: StateFlow<List<Song>> = uiState.map { state ->
         if (state is UiState.Success) state.songs.filter { it.isFavorite } else emptyList()
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
 
     /** Historial de búsquedas recientes (la más reciente primero). */
     private val _searchHistory = MutableStateFlow<List<String>>(emptyList())
@@ -177,7 +179,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
             val matchesQuery = SongOrganizer.matchesQuery(song.title, song.artist, song.album, query)
             matchesFilter && matchesQuery
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
 
 
     private var loadJob: Job? = null
@@ -319,20 +321,29 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         )
     }
 
+    /**
+     * Sondea la posición solo mientras suena (en pausa la corrutina queda suspendida: cero despertares). La
+     * posición se guarda en disco al pausar y cada 10 s, no cada segundo como antes.
+     */
     private fun startPositionTracker(){
         viewModelScope.launch {
-            while (true){
-                mediaController?.let{ controller ->
-                    if (controller.isPlaying){
-                        _currentPositionMs.value = controller.currentPosition
-                        prefs.edit{putLong("last_position_ms", controller.currentPosition)}
-                    }
+            _isPlaying.collectLatest { playing ->
+                if (!playing) {
+                    mediaController?.let { c -> persistPosition(c.currentPosition) }
+                    return@collectLatest
                 }
-                delay(1000L)
+                var ticks = 0
+                while (true) {
+                    val controller = mediaController ?: break
+                    _currentPositionMs.value = controller.currentPosition
+                    if (++ticks % 10 == 0) persistPosition(controller.currentPosition)
+                    delay(1000L)
+                }
             }
-
         }
     }
+
+    private fun persistPosition(ms: Long) { prefs.edit { putLong("last_position_ms", ms) } }
 
     private fun loadSearchHistory(){
         val raw = prefs.getString("search_history_str", "") ?: ""
@@ -457,7 +468,6 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         PlaybackDiagnostics.markSeekRequest(positionMs)
         _currentPositionMs.value = positionMs
         mediaController?.seekTo(positionMs)
-        prefs.edit { putLong("last_position_ms", positionMs) }
     }
     fun loadSongs(silent: Boolean = false){
         loadJob?.cancel()
@@ -678,6 +688,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     }
 
     override fun onCleared() {
+        mediaController?.let { persistPosition(it.currentPosition) }
         prefs.unregisterOnSharedPreferenceChangeListener(favPrefsListener)
         getApplication<Application>().contentResolver.unregisterContentObserver(mediaStoreObserver)
         mediaController?.release()

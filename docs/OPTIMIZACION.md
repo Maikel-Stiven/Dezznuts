@@ -83,3 +83,11 @@ La posición de reproducción es el único dato que cambia continuamente (cada 5
 
 - `registerSongPlay` reordena toda la biblioteca para "Más reproducidas" en cada cambio de pista; solo importa con bibliotecas de varios miles de canciones.
 - `savePlayCounts` reescribe todo el mapa en cada reproducción; podría hacerse con *debounce* si el coste llegara a notarse.
+
+### 8. Menos trabajo en el hilo principal y menos RAM (equipos modestos)
+- **Agrupados de pestañas** (álbumes, artistas, géneros, carpetas) y **búsqueda**: se calculan en `Dispatchers.Default`; antes bloqueaban la interfaz al abrir la pestaña o teclear.
+- **`filteredSongs` y `favoriteSongs`**: `flowOn(Dispatchers.Default)`.
+- **Portadas (Coil):** caché en memoria al 10 % de la RAM (5 % en equipos de poca RAM) en vez del 25 %, y RGB565.
+- **Posición de reproducción:** el sondeo solo corre mientras suena (en pausa no despierta) y se guarda en disco al pausar y cada 10 s, no cada segundo ni en cada *seek*.
+- **Interfaz:** `MainScreen` recoge los flujos con `collectAsStateWithLifecycle` (nada en segundo plano); `formatDuration` sin `String.format` (se llamaba por fila); conteo de álbumes por artista con `remember`.
+- No medido en dispositivo: son recortes de trabajo evidentes, falta confirmar la mejora en un móvil real.

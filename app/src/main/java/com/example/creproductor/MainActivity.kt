@@ -41,6 +41,7 @@ import com.example.creproductor.data.ArtistImageFetcher
 import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.disk.DiskCache
+import coil.memory.MemoryCache
 import com.example.creproductor.data.Song
 import com.example.creproductor.gui.AppDrawerContent
 import com.example.creproductor.gui.ClearImageCacheDialog
@@ -68,7 +69,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Las portadas son miniaturas: Coil reserva por defecto el 25 % de la RAM de la app para ellas, demasiado en
+        // móviles justos. 10 % (5 % en equipos de poca RAM) y RGB565 (la mitad de bytes por píxel) bastan.
+        val lowRam = (getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager).isLowRamDevice
         val imageLoader = ImageLoader.Builder(this)
+            .memoryCache { MemoryCache.Builder(this).maxSizePercent(if (lowRam) 0.05 else 0.10).build() }
+            .allowRgb565(true)
+            .crossfade(false)
             .diskCache {
                 DiskCache.Builder()
                     .directory(cacheDir.resolve(ArtistImageFetcher.IMAGE_CACHE_DIR))
@@ -360,7 +367,7 @@ fun formatDuration(durationMs: Long): String{
     val totalSeconds = durationMs / 1000
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
-    return String.format("%d:%02d", minutes, seconds)
+    return if (seconds < 10) "$minutes:0$seconds" else "$minutes:$seconds"
 }
 
 @Composable

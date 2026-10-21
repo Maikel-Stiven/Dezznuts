@@ -44,6 +44,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,6 +57,16 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.creproductor.data.Song
 import com.example.creproductor.data.SongOrganizer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+/**
+ * Calcula fuera del hilo principal; `null` mientras tanto. Agrupar miles de canciones al abrir una pestaña
+ * bloqueaba el hilo de la interfaz (se notaba más en móviles lentos).
+ */
+@Composable
+private fun <T> rememberOffMain(key: Any?, compute: () -> T): T? =
+    produceState<T?>(null, key) { value = withContext(Dispatchers.Default) { compute() } }.value
 
 @Composable
 fun AlbumsGridScreen(
@@ -64,14 +75,14 @@ fun AlbumsGridScreen(
     onAlbumClick: (albumName: String, albumSongs: List<Song>) -> Unit = { _, _ ->}
 ){
 
-    val albumsMap = remember (songs){
+    val albumsMap = rememberOffMain(songs) {
         SongOrganizer.groupByAlbum(
             items = songs,
             albumOf = {it.album},
             trackNumberOf = {it.trackNumber},
             titleOf = {it.title}
         )
-    }
+    } ?: return
     val albumsKeys = remember(albumsMap) { albumsMap.keys.toList() }
 
     if (albumsMap.isEmpty()){
@@ -179,9 +190,9 @@ fun GenresGridScreen(
     onGenreClick: (genreName: String, genreSongs: List<Song>) -> Unit = {_, _ ->}
 ){
 
-    val genresMap = remember (songs) {
+    val genresMap = rememberOffMain(songs) {
         SongOrganizer.groupByGenre(songs) { it.genre }
-    }
+    } ?: return
     val genresKeys = remember(genresMap) { genresMap.keys.toList() }
 
     if (genresMap.isEmpty()){
@@ -267,9 +278,9 @@ fun ArtistsListScreen(
     onArtistClick: (artistName: String, artistSongs: List<Song>) -> Unit = {_, _ ->}
 ){
 
-    val artistsMap = remember(songs) {
+    val artistsMap = rememberOffMain(songs) {
         SongOrganizer.groupByArtist(songs) { it.artist }
-    }
+    } ?: return
     val artistsKeys = remember(artistsMap) { artistsMap.keys.toList() }
 
     if (artistsMap.isEmpty()){
@@ -297,12 +308,14 @@ fun ArtistsListScreen(
                 // ficha del artista, así que aparece al instante si ya se cargó antes.
                 val artistPhoto = rememberArtistPhoto(artistName, avatarUri, delayMs = 100L)
 
-                val albumsCount = artistSongs
-                    .map { it.album }
-                    .filter { it.isNotBlank() && !it.equals("unknown", ignoreCase = true) }
-                    .distinct()
-                    .size
-                    .coerceAtLeast(if (artistSongs. isNotEmpty()) 1 else 0)
+                val albumsCount = remember(artistSongs) {
+                    artistSongs
+                        .map { it.album }
+                        .filter { it.isNotBlank() && !it.equals("unknown", ignoreCase = true) }
+                        .distinct()
+                        .size
+                        .coerceAtLeast(if (artistSongs.isNotEmpty()) 1 else 0)
+                }
 
                 val albumText = if (albumsCount == 1) "1 álbum" else "$albumsCount álbumes"
                 val songText = if (artistSongs.size == 1) "1 canción" else "${artistSongs.size} canciones"
@@ -374,9 +387,9 @@ fun FoldersListScreen(
     listState: LazyListState = rememberLazyListState(),
     onFolderClick: (folderName: String, folderSongs: List<Song>) -> Unit = { _, _ -> }
 ){
-    val foldersMap = remember(songs) {
+    val foldersMap = rememberOffMain(songs) {
         SongOrganizer.groupByFolder(songs) { it.path }
-    }
+    } ?: return
     val foldersKeys = remember(foldersMap) { foldersMap.keys.toList() }
 
     if (foldersMap.isEmpty()){
