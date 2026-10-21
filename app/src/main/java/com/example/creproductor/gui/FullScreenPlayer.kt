@@ -198,6 +198,8 @@ fun FullScreenPlayer(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
+        Box(Modifier.fillMaxSize()) {
+        CoverBackdrop(song)
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -495,6 +497,7 @@ fun FullScreenPlayer(
                     PlayerSeekBar(positionMs = currentPositionMs, durationMs = song.duration, onSeekTo = onSeekTo)
                 }
             }
+        }
         }
     }
     if (showTrackInfo) TrackInfoDialog(song, audioInfo, onEdit = { onEditSong(song) }) { showTrackInfo = false }
@@ -868,5 +871,31 @@ private fun PlayerSeekBar(positionMs: () -> Long, durationMs: Long, onSeekTo: (L
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+
+/**
+ * Fondo del reproductor: la carátula desfocada y oscurecida.
+ *
+ * Se pide la imagen a 32×32 px y se estira a pantalla completa: el suavizado bilineal da el desenfoque sin
+ * `RenderEffect` ni `Modifier.blur` (que solo existen en Android 12+ y gastan GPU). Así cuesta ~4 KB de RAM y
+ * se ve igual en un teléfono de gama baja que en uno nuevo. Sin carátula, queda el fondo liso del tema.
+ */
+@Composable
+private fun CoverBackdrop(song: Song) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val request = remember(song.id) {
+        ImageRequest.Builder(context).data(song.coverModel).size(32).build()
+    }
+    val bg = MaterialTheme.colorScheme.background
+    Box(Modifier.fillMaxSize()) {
+        AsyncImage(model = request, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        // Oscurece para que el texto y los controles se lean con cualquier carátula (más fuerte abajo, donde van los controles).
+        Box(
+            Modifier.fillMaxSize().background(
+                androidx.compose.ui.graphics.Brush.verticalGradient(listOf(bg.copy(alpha = 0.55f), bg.copy(alpha = 0.92f)))
+            )
+        )
     }
 }
