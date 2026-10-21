@@ -2,7 +2,10 @@ package com.example.creproductor.gui
 
 import androidx.activity.compose.BackHandler
 import com.example.creproductor.data.coverModel
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.border
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -199,7 +202,7 @@ fun FullScreenPlayer(
         color = MaterialTheme.colorScheme.background
     ) {
         Box(Modifier.fillMaxSize()) {
-        CoverBackdrop(song)
+        CoverBackdrop(song, isPlaying)
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -407,11 +410,13 @@ fun FullScreenPlayer(
             Spacer(modifier = Modifier.padding(vertical = 12.dp))
 
             // Panel inferior //
+            // Panel de cristal: velo claro translúcido con borde fino y un brillo arriba, sobre el fondo en movimiento.
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp)),
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                    .clip(RoundedCornerShape(24.dp))
+                    .border(1.dp, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.35f), Color.White.copy(alpha = 0.06f))), RoundedCornerShape(24.dp)),
+                color = Color.White.copy(alpha = 0.09f)
             ) {
                 Column(
                     modifier = Modifier
@@ -876,25 +881,80 @@ private fun PlayerSeekBar(positionMs: () -> Long, durationMs: Long, onSeekTo: (L
 
 
 /**
- * Fondo del reproductor: la carátula desfocada y oscurecida.
+ * Fondo "cristal" del reproductor: capas de la carátula desenfocadas, más saturadas, que flotan y giran despacio.
  *
- * Se pide la imagen a 32×32 px y se estira a pantalla completa: el suavizado bilineal da el desenfoque sin
- * `RenderEffect` ni `Modifier.blur` (que solo existen en Android 12+ y gastan GPU). Así cuesta ~4 KB de RAM y
- * se ve igual en un teléfono de gama baja que en uno nuevo. Sin carátula, queda el fondo liso del tema.
+ * - Desenfoque: la imagen se pide a 32×32 px y se estira (el suavizado bilineal hace de blur). Nada de
+ *   `RenderEffect`/`Modifier.blur` (solo Android 12+ y caros): ~4 KB de RAM, igual en un teléfono de gama baja.
+ * - Movimiento: tres capas de la misma imagen con escala, desplazamiento y giro distintos, movidas por UNA sola
+ *   animación. Los valores se leen dentro de `graphicsLayer` (fase de dibujo): no hay recomposición por fotograma.
+ * - Ahorro: la animación solo existe mientras suena, y no se crea en equipos de poca RAM ni si el usuario tiene las
+ *   animaciones del sistema desactivadas (ahorro de batería): ahí queda un fondo fijo.
  */
 @Composable
-private fun CoverBackdrop(song: Song) {
+private fun CoverBackdrop(song: Song, playing: Boolean) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val request = remember(song.id) {
-        ImageRequest.Builder(context).data(song.coverModel).size(32).build()
+    val painter = coil.compose.rememberAsyncImagePainter(
+        remember(song.id) { ImageRequest.Builder(context).data(song.coverModel).size(32).build() }
+    )
+    val canAnimate = remember {
+        val lowRam = (context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager).isLowRamDevice
+        val animationsOn = android.provider.Settings.Global.getFloat(context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
+        !lowRam && animationsOn
     }
+    val progress: () -> Float = if (canAnimate && playing) {
+        val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "fondo").animateFloat(
+            0f, 1f,
+            androidx.compose.animation.core.infiniteRepeatable(
+                androidx.compose.animation.core.tween(28_000, easing = androidx.compose.animation.core.LinearEasing),
+                androidx.compose.animation.core.RepeatMode.Reverse
+            ),
+            label = "t"
+        )
+        val read: () -> Float = { t.value }
+        read
+    } else {
+        val still: () -> Float = { 0.5f }
+        still
+    }
+
     val bg = MaterialTheme.colorScheme.background
+    val vivid = remember { androidx.compose.ui.graphics.ColorFilter.colorMatrix(androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(1.5f) }) }
+    fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t
+
     Box(Modifier.fillMaxSize()) {
-        AsyncImage(model = request, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-        // Oscurece para que el texto y los controles se lean con cualquier carátula (más fuerte abajo, donde van los controles).
+        // Capa grande y lenta.
+        androidx.compose.foundation.Image(
+            painter, null, Modifier.fillMaxSize().graphicsLayer {
+                val t = progress()
+                scaleX = 2.0f; scaleY = 2.0f
+                translationX = size.width * lerp(-0.12f, 0.12f, t); translationY = size.height * lerp(0.05f, -0.05f, t)
+                rotationZ = lerp(-8f, 8f, t)
+            },
+            contentScale = ContentScale.Crop, colorFilter = vivid
+        )
+        // Capa que cruza en sentido contrario, desde otra zona de la imagen: mezcla colores y da profundidad.
+        androidx.compose.foundation.Image(
+            painter, null, Modifier.fillMaxSize().graphicsLayer {
+                val t = progress()
+                scaleX = 2.6f; scaleY = 2.6f; alpha = 0.55f
+                translationX = size.width * lerp(0.14f, -0.14f, t); translationY = size.height * lerp(-0.08f, 0.08f, t)
+                rotationZ = lerp(14f, -14f, t)
+            },
+            contentScale = ContentScale.Crop, alignment = Alignment.TopEnd, colorFilter = vivid
+        )
+        // Tercera capa, más suave, que se mueve en vertical.
+        androidx.compose.foundation.Image(
+            painter, null, Modifier.fillMaxSize().graphicsLayer {
+                val t = progress()
+                scaleX = 1.6f; scaleY = 1.6f; alpha = 0.4f
+                translationY = size.height * lerp(0.1f, -0.1f, t); translationX = size.width * lerp(-0.05f, 0.05f, 1f - t)
+            },
+            contentScale = ContentScale.Crop, alignment = Alignment.BottomStart, colorFilter = vivid
+        )
+        // Oscurece para que texto y controles se lean con cualquier carátula (más fuerte abajo, donde van los controles).
         Box(
             Modifier.fillMaxSize().background(
-                androidx.compose.ui.graphics.Brush.verticalGradient(listOf(bg.copy(alpha = 0.55f), bg.copy(alpha = 0.92f)))
+                androidx.compose.ui.graphics.Brush.verticalGradient(listOf(bg.copy(alpha = 0.45f), bg.copy(alpha = 0.88f)))
             )
         )
     }
