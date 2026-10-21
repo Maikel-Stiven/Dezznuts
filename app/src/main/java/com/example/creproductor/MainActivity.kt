@@ -60,6 +60,7 @@ import com.example.creproductor.gui.QualityBadge
 import com.example.creproductor.gui.MainScreen
 import com.example.creproductor.gui.MusicViewModel
 import com.example.creproductor.gui.NavRequest
+import com.example.creproductor.gui.SleepTimerDialog
 import com.example.creproductor.gui.SongMenuActions
 import com.example.creproductor.gui.SongMenuSheet
 import com.example.creproductor.gui.TrackInfoDialog
@@ -123,6 +124,7 @@ class MainActivity : ComponentActivity() {
                     var showDuplicatesDialog by remember { mutableStateOf(false) }
                     var showFixArtistsDialog by remember { mutableStateOf(false) }
                     var showAboutDialog by remember { mutableStateOf(false) }
+                    var showSleepTimerDialog by remember { mutableStateOf(false) }
                     val versionName = remember {
                         runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull() ?: "—"
                     }
@@ -221,7 +223,7 @@ class MainActivity : ComponentActivity() {
                                                     is DrawerMenuItem.FixUnknownArtists -> { showFixArtistsDialog = true }
                                                     is DrawerMenuItem.ScanFiles -> { /*Falta lógica del escaner de archivos*/}
                                                     is DrawerMenuItem.AudioCutter -> {/*Falta lógica del cortador de audio*/}
-                                                    is DrawerMenuItem.SleepTimer -> {/*Falta lógica del temporizador*/}
+                                                    is DrawerMenuItem.SleepTimer -> { showSleepTimerDialog = true }
                                                     is DrawerMenuItem.ClearImageCache -> { showClearImageCacheDialog = true }
                                                     is DrawerMenuItem.HiFiAudio -> { showHiFiAudioDialog = true }
                                                     is DrawerMenuItem.About -> { showAboutDialog = true }
@@ -344,6 +346,11 @@ class MainActivity : ComponentActivity() {
                                     requestWrite(listOf(song)) { viewModel.updatedSongTags(song, title, artist, album, coverUriOrUrl) }
                                 }
                             )
+                        }
+
+                        if (showSleepTimerDialog) {
+                            val sleepEnd by viewModel.sleepTimerEnd.collectAsStateWithLifecycle()
+                            SleepTimerDialog(sleepEnd, onSelect = { viewModel.setSleepTimer(it) }) { showSleepTimerDialog = false }
                         }
 
                         if (showAboutDialog) AboutDialog(versionName) { showAboutDialog = false }

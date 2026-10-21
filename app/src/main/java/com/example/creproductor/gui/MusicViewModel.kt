@@ -96,6 +96,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (key == "fav_ids") syncFavoritesFromPrefs()
             else if (key == HiFiAudio.KEY_REAL_ROUTE) refreshAudioInfo()
+            else if (key == MusicService.KEY_SLEEP_END) _sleepTimerEnd.value = prefs.getLong(MusicService.KEY_SLEEP_END, 0L)
         }
 
     private val _uiState = MutableStateFlow<UiState>(UiState.PermissionRequired)
@@ -218,6 +219,18 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     fun addSongToPlaylist(playlistId: String, song: Song) {
         addSongsToPlaylist(playlistId, listOf(song.id))
         Toast.makeText(getApplication(), "Agregada a la lista", Toast.LENGTH_SHORT).show()
+    }
+
+    /** Estado del temporizador de apagado: 0 = apagado, -1 = al final de la canción, otro = hora de fin (ms). */
+    private val _sleepTimerEnd = MutableStateFlow(0L)
+    val sleepTimerEnd: StateFlow<Long> = _sleepTimerEnd.asStateFlow()
+
+    /** [minutes]: > 0 minutos, [MusicService.SLEEP_END_OF_TRACK] o 0 para cancelar. */
+    fun setSleepTimer(minutes: Int) {
+        mediaController?.sendCustomCommand(
+            SessionCommand(MusicService.ACTION_SLEEP_TIMER, Bundle.EMPTY),
+            Bundle().apply { putInt(MusicService.EXTRA_MINUTES, minutes) }
+        )
     }
 
     private var loadJob: Job? = null

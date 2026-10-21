@@ -165,6 +165,14 @@ class MusicService : MediaSessionService(){
 
         /** Comando de sesión para reconstruir el reproductor con los ajustes Hi-Fi actuales. */
         const val ACTION_REFRESH_AUDIO = "ACTION_REFRESH_AUDIO"
+
+        /** Temporizador de apagado: extra [EXTRA_MINUTES] (> 0 minutos, [SLEEP_END_OF_TRACK] o 0 para cancelar). */
+        const val ACTION_SLEEP_TIMER = "ACTION_SLEEP_TIMER"
+        const val EXTRA_MINUTES = "minutes"
+        const val SLEEP_END_OF_TRACK = -1
+
+        /** Preferencia con el estado del temporizador: 0 = apagado, -1 = al final de la canción, otro = hora de fin (ms). */
+        const val KEY_SLEEP_END = "sleep_timer_end_ms"
     }
 
 
@@ -180,6 +188,7 @@ class MusicService : MediaSessionService(){
 
         updateNotificationLayout()
 
+        prefs.edit().putLong(KEY_SLEEP_END, 0L).apply()   // un temporizador no sobrevive a la muerte del servicio
         prefs.registerOnSharedPreferenceChangeListener(hifiPrefsListener)
         audioManager.registerAudioDeviceCallback(deviceCallback, null)
         applyPreferredDevice()
@@ -263,6 +272,15 @@ class MusicService : MediaSessionService(){
      * para que el botón de la notificación muestre el estado correcto.
      */
     private fun attachPlayerListener(player: ExoPlayer) {
+        // "Al final de la canción": el reproductor ya se pausó solo; se limpia el estado del temporizador.
+        player.addListener(object : Player.Listener {
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                if (!playWhenReady && reason == Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM) {
+                    player.pauseAtEndOfMediaItems = false
+                    prefs.edit().putLong(KEY_SLEEP_END, 0L).apply()
+                }
+            }
+        })
         // Lo que el AudioTrack abrió de verdad: offload, frecuencia y profundidad reales.
         player.addAnalyticsListener(object : AnalyticsListener {
             override fun onAudioTrackInitialized(
@@ -416,6 +434,25 @@ class MusicService : MediaSessionService(){
         pauseFadeStart = SystemClock.elapsedRealtime()
         updateFade()
         return true
+    }
+
+    private val sleepTimerTick = Runnable {
+        mediaSession?.player?.pause()   // pasa por FadingPlayer: pausa con fundido
+        prefs.edit().putLong(KEY_SLEEP_END, 0L).apply()
+    }
+
+    /** Programa (o cancela) el apagado. Vive en el servicio, así sigue aunque la pantalla se cierre. */
+    private fun setSleepTimer(minutes: Int) {
+        handler.removeCallbacks(sleepTimerTick)
+        exoPlayer?.pauseAtEndOfMediaItems = minutes == SLEEP_END_OF_TRACK
+        when {
+            minutes > 0 -> {
+                prefs.edit().putLong(KEY_SLEEP_END, System.currentTimeMillis() + minutes * 60_000L).apply()
+                handler.postDelayed(sleepTimerTick, minutes * 60_000L)
+            }
+            minutes == SLEEP_END_OF_TRACK -> prefs.edit().putLong(KEY_SLEEP_END, -1L).apply()
+            else -> prefs.edit().putLong(KEY_SLEEP_END, 0L).apply()
+        }
     }
 
     /** Envuelve al reproductor para que pausar (desde la app, la notificación o los auriculares) haga fundido. */
@@ -644,6 +681,7 @@ class MusicService : MediaSessionService(){
                 .add(SessionCommand(ACTION_FAVORITE, Bundle.EMPTY))
                 .add(SessionCommand(ACTION_CLOSE, Bundle.EMPTY))
                 .add(SessionCommand(ACTION_REFRESH_AUDIO, Bundle.EMPTY))
+                .add(SessionCommand(ACTION_SLEEP_TIMER, Bundle.EMPTY))
                 .build()
 
             val playerCommands = connectionResult.availablePlayerCommands.buildUpon()
@@ -676,6 +714,7 @@ class MusicService : MediaSessionService(){
                 ACTION_REFRESH_AUDIO -> {
                     rebuildPlayer()
                 }
+                ACTION_SLEEP_TIMER -> setSleepTimer(args.getInt(EXTRA_MINUTES, 0))
             }
             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
         }
