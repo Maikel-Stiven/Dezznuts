@@ -463,7 +463,7 @@ private fun SearchCategoryItem(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val shape = if (isCircle) CircleShape else RoundedCornerShape(8.dp)
+        val shape = if (isCircle) CircleShape else MaterialTheme.shapes.small
 
         Box(
             modifier = Modifier

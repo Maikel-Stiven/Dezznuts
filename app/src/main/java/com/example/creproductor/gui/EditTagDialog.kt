@@ -80,7 +80,7 @@ fun EditTagDialog(
                 Box(
                     modifier = Modifier
                         .size(110.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(MaterialTheme.shapes.medium)
                         .background(MaterialTheme.colorScheme.onSurfaceVariant),
                     contentAlignment = Alignment.Center
                 ){
