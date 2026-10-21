@@ -231,7 +231,7 @@ fun MainScreen(
         )
     } else if (selectedFolderName != null){
         QuickSelectDetailScreen(
-            categoryTitle = selectedFolderName!!,
+            categoryTitle = selectedFolderName!!.substringAfterLast('/').ifBlank { selectedFolderName!! },
             categorySongs = selectedFolderSongs,
             currentSongId = currentSong?.id,
             isPlaying = isPlaying,
@@ -279,6 +279,7 @@ fun MainScreen(
             },
             onAddSongsClick = {showAddSongsDialog = true},
             onRestoreClick = { showRestoreDialog = true },
+            recentSongs = recentSongs,
             onBackClick = {selectedPlaylist = null},
             onRemoveSongFromPlaylist = { song ->
                 viewModel.removeSongFromPlaylist(activePlaylist.id, song.id)
