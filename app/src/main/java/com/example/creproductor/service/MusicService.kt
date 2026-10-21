@@ -4,6 +4,7 @@
 
 package com.example.creproductor.service
 
+import android.app.PendingIntent
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.SharedPreferences
@@ -39,6 +40,7 @@ import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import com.example.creproductor.R
+import com.example.creproductor.MainActivity
 import com.example.creproductor.data.AudioQuality
 import com.example.creproductor.data.BitPerfect
 import com.example.creproductor.data.MixerFormat
@@ -175,6 +177,7 @@ class MusicService : MediaSessionService(){
         exoPlayer = player
         attachPlayerListener(player)
         mediaSession = MediaSession.Builder(this, FadingPlayer(player))
+            .setSessionActivity(openPlayerIntent())
             .setCallback(CustomMediaSessionCallback())
             .build()
 
@@ -186,6 +189,17 @@ class MusicService : MediaSessionService(){
         applyBitPerfect()
         switchProfileIfNeeded()
         applyVolume()
+    }
+
+    /**
+     * Lo que se abre al tocar la notificación o el control de la pantalla bloqueada: la app, con el reproductor
+     * completo. SINGLE_TOP + CLEAR_TOP reutiliza la pantalla ya abierta en vez de apilar otra encima.
+     */
+    private fun openPlayerIntent(): PendingIntent {
+        val intent = Intent(this, MainActivity::class.java)
+            .putExtra(MainActivity.EXTRA_OPEN_PLAYER, true)
+            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        return PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
 
     /**

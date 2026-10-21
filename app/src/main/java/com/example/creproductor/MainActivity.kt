@@ -69,8 +69,22 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: MusicViewModel by viewModels()
 
+    /** Se activa al tocar la notificación del reproductor; la interfaz lo consume para abrir el reproductor completo. */
+    private val openPlayerRequest = mutableStateOf(false)
+
+    companion object {
+        const val EXTRA_OPEN_PLAYER = "open_player"
+    }
+
+    // Con launchMode singleTop, tocar la notificación con la app abierta llega aquí y no crea otra pantalla.
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        if (intent.getBooleanExtra(EXTRA_OPEN_PLAYER, false)) openPlayerRequest.value = true
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (intent?.getBooleanExtra(EXTRA_OPEN_PLAYER, false) == true) openPlayerRequest.value = true
 
         // Las portadas son miniaturas: Coil reserva por defecto el 25 % de la RAM de la app para ellas, demasiado en
         // móviles justos. 10 % (5 % en equipos de poca RAM) y RGB565 (la mitad de bytes por píxel) bastan.
@@ -110,6 +124,10 @@ class MainActivity : ComponentActivity() {
 
                     var songToEdit by remember { mutableStateOf<Song?>(null) }
                     var isPlayerFullScreenVisible by remember { mutableStateOf(false) }
+                    // Notificación tocada: se abre el reproductor completo (si aún no hay canción, se muestra en cuanto cargue).
+                    LaunchedEffect(openPlayerRequest.value) {
+                        if (openPlayerRequest.value) { isPlayerFullScreenVisible = true; openPlayerRequest.value = false }
+                    }
                     var showClearImageCacheDialog by remember { mutableStateOf(false) }
                     var showHiFiAudioDialog by remember { mutableStateOf(false) }
                     var showEqualizerDialog by remember { mutableStateOf(false) }
