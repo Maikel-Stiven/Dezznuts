@@ -875,73 +875,64 @@ private fun PlayerSeekBar(positionMs: () -> Long, durationMs: Long, onSeekTo: (L
 /**
  * Fondo "cristal" del reproductor: capas de la carátula desenfocadas, más saturadas, que flotan y giran despacio.
  *
- * - Desenfoque: la imagen se pide a 32×32 px y se estira (el suavizado bilineal hace de blur). Nada de
- *   `RenderEffect`/`Modifier.blur` (solo Android 12+ y caros): ~4 KB de RAM, igual en un teléfono de gama baja.
- * - Movimiento: tres capas de la misma imagen con escala, desplazamiento y giro distintos, movidas por UNA sola
- *   animación. Los valores se leen dentro de `graphicsLayer` (fase de dibujo): no hay recomposición por fotograma.
- * - Ahorro: la animación solo existe mientras suena, y no se crea en equipos de poca RAM ni si el usuario tiene las
- *   animaciones del sistema desactivadas (ahorro de batería): ahí queda un fondo fijo.
+ * Coste (medido en emulador, ver docs/OPTIMIZACION.md): cada capa a pantalla completa y cada fotograma cuestan GPU y
+ * CPU de dibujo, así que:
+ * - Desenfoque: la imagen se pide a 24×24 px y se estira (el suavizado bilineal hace de blur); la saturación se
+ *   hornea UNA vez en ese bitmap ([SaturateTransformation]) en vez de aplicar un filtro de color a cada capa y fotograma.
+ * - Dos capas (no tres) con escala, desplazamiento y giro distintos, movidas por un solo valor leído en `graphicsLayer`
+ *   (fase de dibujo: sin recomposición).
+ * - El valor se actualiza ~15 veces por segundo, no 60: el movimiento es lentísimo (28 s por ciclo) y entre
+ *   actualizaciones no se dibuja nada.
+ * - Solo se anima mientras suena, y no en equipos de poca RAM o de 2 núcleos, con ahorro de batería ni con las
+ *   animaciones del sistema desactivadas.
  */
 @Composable
 private fun CoverBackdrop(song: Song, playing: Boolean) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val painter = coil.compose.rememberAsyncImagePainter(
-        remember(song.id) { ImageRequest.Builder(context).data(song.coverModel).size(24).build() }
+        remember(song.id) { ImageRequest.Builder(context).data(song.coverModel).size(24).transformations(SaturateTransformation(1.35f)).build() }
     )
+    // Equipos modestos (poca RAM o solo 2 núcleos), ahorro de batería o animaciones del sistema apagadas: fondo fijo.
     val canAnimate = remember {
         val lowRam = (context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager).isLowRamDevice
         val animationsOn = android.provider.Settings.Global.getFloat(context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
-        !lowRam && animationsOn
+        val powerSave = (context.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager).isPowerSaveMode
+        !lowRam && Runtime.getRuntime().availableProcessors() > 2 && animationsOn && !powerSave
     }
-    val progress: () -> Float = if (canAnimate && playing) {
-        val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "fondo").animateFloat(
-            0f, 1f,
-            androidx.compose.animation.core.infiniteRepeatable(
-                androidx.compose.animation.core.tween(28_000, easing = androidx.compose.animation.core.LinearEasing),
-                androidx.compose.animation.core.RepeatMode.Reverse
-            ),
-            label = "t"
-        )
-        val read: () -> Float = { t.value }
-        read
-    } else {
-        val still: () -> Float = { 0.5f }
-        still
+    val t = remember { androidx.compose.runtime.mutableFloatStateOf(0.5f) }
+    LaunchedEffect(canAnimate && playing) {
+        if (!(canAnimate && playing)) return@LaunchedEffect
+        val start = androidx.compose.runtime.withFrameNanos { it }
+        while (true) {
+            androidx.compose.runtime.withFrameNanos { now ->
+                val phase = ((now - start) / 1_000_000_000f) % 56f / 28f      // 0..2
+                t.floatValue = if (phase <= 1f) phase else 2f - phase          // ida y vuelta
+            }
+            kotlinx.coroutines.delay(55)
+        }
     }
 
     val bg = MaterialTheme.colorScheme.background
-    val vivid = remember { androidx.compose.ui.graphics.ColorFilter.colorMatrix(androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(1.35f) }) }
-    fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t
+    fun lerp(a: Float, b: Float, x: Float) = a + (b - a) * x
 
     Box(Modifier.fillMaxSize()) {
-        // Capa grande y lenta.
         androidx.compose.foundation.Image(
             painter, null, Modifier.fillMaxSize().graphicsLayer {
-                val t = progress()
+                val x = t.floatValue
                 scaleX = 2.0f; scaleY = 2.0f
-                translationX = size.width * lerp(-0.12f, 0.12f, t); translationY = size.height * lerp(0.05f, -0.05f, t)
-                rotationZ = lerp(-8f, 8f, t)
+                translationX = size.width * lerp(-0.12f, 0.12f, x); translationY = size.height * lerp(0.05f, -0.05f, x)
+                rotationZ = lerp(-8f, 8f, x)
             },
-            contentScale = ContentScale.Crop, colorFilter = vivid
+            contentScale = ContentScale.Crop
         )
-        // Capa que cruza en sentido contrario, desde otra zona de la imagen: mezcla colores y da profundidad.
         androidx.compose.foundation.Image(
             painter, null, Modifier.fillMaxSize().graphicsLayer {
-                val t = progress()
+                val x = t.floatValue
                 scaleX = 2.6f; scaleY = 2.6f; alpha = 0.55f
-                translationX = size.width * lerp(0.14f, -0.14f, t); translationY = size.height * lerp(-0.08f, 0.08f, t)
-                rotationZ = lerp(14f, -14f, t)
+                translationX = size.width * lerp(0.14f, -0.14f, x); translationY = size.height * lerp(-0.08f, 0.08f, x)
+                rotationZ = lerp(14f, -14f, x)
             },
-            contentScale = ContentScale.Crop, alignment = Alignment.TopEnd, colorFilter = vivid
-        )
-        // Tercera capa, más suave, que se mueve en vertical.
-        androidx.compose.foundation.Image(
-            painter, null, Modifier.fillMaxSize().graphicsLayer {
-                val t = progress()
-                scaleX = 1.6f; scaleY = 1.6f; alpha = 0.4f
-                translationY = size.height * lerp(0.1f, -0.1f, t); translationX = size.width * lerp(-0.05f, 0.05f, 1f - t)
-            },
-            contentScale = ContentScale.Crop, alignment = Alignment.BottomStart, colorFilter = vivid
+            contentScale = ContentScale.Crop, alignment = Alignment.TopEnd
         )
         // Oscurece para que texto y controles se lean con cualquier carátula (más fuerte abajo, donde van los controles).
         Box(
@@ -952,6 +943,18 @@ private fun CoverBackdrop(song: Song, playing: Boolean) {
     }
 }
 
+/** Sube la saturación de un bitmap pequeño una sola vez (Coil lo cachea ya transformado). */
+private class SaturateTransformation(private val amount: Float) : coil.transform.Transformation {
+    override val cacheKey = "saturate-$amount"
+    override suspend fun transform(input: android.graphics.Bitmap, size: coil.size.Size): android.graphics.Bitmap {
+        val out = android.graphics.Bitmap.createBitmap(input.width, input.height, android.graphics.Bitmap.Config.ARGB_8888)
+        val paint = android.graphics.Paint().apply {
+            colorFilter = android.graphics.ColorMatrixColorFilter(android.graphics.ColorMatrix().apply { setSaturation(amount) })
+        }
+        android.graphics.Canvas(out).drawBitmap(input, 0f, 0f, paint)
+        return out
+    }
+}
 
 /** Selector "Canción | Letra" bajo el encabezado: pastilla de cristal, como el de la referencia. */
 @Composable

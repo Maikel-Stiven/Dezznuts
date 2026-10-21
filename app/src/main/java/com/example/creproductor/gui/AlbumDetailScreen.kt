@@ -391,7 +391,13 @@ fun PlayingEqualizerIcon(
     color: Color = MaterialTheme.colorScheme.primary,
     isPlaying: Boolean = true
 ){
+    // Sin música, o con la pantalla tapada (LocalAnimationsEnabled), no se crea la animación infinita: no hay fotogramas.
+    if (isPlaying && LocalAnimationsEnabled.current) AnimatedEqualizerBars(modifier, color)
+    else EqualizerBars(modifier, color, 0f, 0f, 0f)
+}
 
+@Composable
+private fun AnimatedEqualizerBars(modifier: Modifier, color: Color) {
     val transition = rememberInfiniteTransition(label = "eq_anim")
 
     val bar1 by transition.animateFloat(
@@ -417,7 +423,11 @@ fun PlayingEqualizerIcon(
             repeatMode = RepeatMode.Reverse
         ), label = "b3"
     )
+    EqualizerBars(modifier, color, bar1, bar2, bar3)
+}
 
+@Composable
+private fun EqualizerBars(modifier: Modifier, color: Color, bar1: Float, bar2: Float, bar3: Float) {
     val  density = LocalDensity.current
     val barWidthPx = remember(density) {with(density) {3.dp.toPx()}}
     val gapPx = remember (density){with(density) {2.dp.toPx()} }
@@ -425,9 +435,9 @@ fun PlayingEqualizerIcon(
 
     Canvas(modifier = modifier.size(width = 16.dp, height = 14.dp)) {
         val maxHeight = size.height
-        val b1H = if (isPlaying) maxHeight * bar1 else maxHeight * 0f
-        val b2H = if (isPlaying) maxHeight * bar2 else maxHeight * 0f
-        val b3H = if (isPlaying) maxHeight * bar3 else maxHeight * 0f
+        val b1H = maxHeight * bar1
+        val b2H = maxHeight * bar2
+        val b3H = maxHeight * bar3
 
         drawRoundRect(
             color = color,

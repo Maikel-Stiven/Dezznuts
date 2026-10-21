@@ -48,6 +48,7 @@ import com.example.creproductor.data.SongCoverFetcher
 import com.example.creproductor.data.coverModel
 import com.example.creproductor.gui.AboutDialog
 import com.example.creproductor.gui.AppDrawerContent
+import com.example.creproductor.gui.LocalAnimationsEnabled
 import com.example.creproductor.gui.AudioCutterDialog
 import com.example.creproductor.gui.ClearImageCacheDialog
 import com.example.creproductor.gui.DrawerMenuItem
@@ -281,6 +282,8 @@ class MainActivity : ComponentActivity() {
                                     }
                                 ) {
                                     Box(modifier = Modifier.fillMaxSize()) {
+                                        // Lo que queda bajo el reproductor a pantalla completa no anima (no se ve).
+                                        CompositionLocalProvider(LocalAnimationsEnabled provides !isPlayerFullScreenVisible) {
                                         Column(modifier = Modifier.fillMaxSize()) {
                                             Box(modifier = Modifier.weight(1f)) {
                                                 MainScreen(
@@ -311,6 +314,7 @@ class MainActivity : ComponentActivity() {
                                                     )
                                                 }
                                             }
+                                        }
                                         }
 
                                         if (isPlayerFullScreenVisible && currentSong != null) {
