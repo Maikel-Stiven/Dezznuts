@@ -49,12 +49,12 @@ fun RestorePlaylistsDialog(deleted: List<Playlist>, onRestore: (String) -> Unit,
 
 /** Opciones de una lista (⋮): hoy, eliminarla. Se puede deshacer desde "Restaurar listas de reproducción". */
 @Composable
-fun PlaylistOptionsDialog(playlist: Playlist, onDelete: () -> Unit, onDismiss: () -> Unit) {
+fun PlaylistOptionsDialog(playlist: Playlist, onDelete: () -> Unit, onExport: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(playlist.name) },
-        text = { Text("¿Eliminar esta lista? Podrás recuperarla con \"Restaurar listas de reproducción\"; las canciones no se borran del dispositivo.") },
-        confirmButton = { TextButton(onClick = { onDelete(); onDismiss() }) { Text("Eliminar lista") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+        text = { Text("Exporta la lista como M3U para usarla en otro reproductor, o elimínala (podrás recuperarla con \"Restaurar listas de reproducción\"; las canciones no se borran del dispositivo).") },
+        confirmButton = { TextButton(onClick = { onExport(); onDismiss() }) { Text("Exportar M3U") } },
+        dismissButton = { TextButton(onClick = { onDelete(); onDismiss() }) { Text("Eliminar lista", color = androidx.compose.material3.MaterialTheme.colorScheme.error) } }
     )
 }

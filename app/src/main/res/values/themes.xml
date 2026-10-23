@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.CReproductor" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Oscuro y con el fondo de la app: sin él, la ventana se pinta en blanco antes de que cargue Compose. -->
+    <style name="Theme.CReproductor" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/fondo_app</item>
+    </style>
 </resources>

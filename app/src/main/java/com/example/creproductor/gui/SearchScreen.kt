@@ -43,12 +43,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -144,9 +146,13 @@ fun SearchOverlayScreen(
             .fillMaxSize()
             .statusBarsPadding()
     ) {
+        // Al entrar en Buscar, el cursor ya está en el campo y sale el teclado.
+        val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+        LaunchedEffect(Unit) { focusRequester.requestFocus() }
         Surface(
             color = MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.fillMaxWidth()
+            shape = MaterialTheme.shapes.extraLarge,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -161,7 +167,7 @@ fun SearchOverlayScreen(
                 TextField(
                     value = searchQuery,
                     onValueChange = onQueryChange,
-                    placeholder = { Text("Buscar...") },
+                    placeholder = { Text("Canciones, álbumes o artistas") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(
@@ -178,7 +184,7 @@ fun SearchOverlayScreen(
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent
                     ),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).focusRequester(focusRequester)
                 )
 
                 if (searchQuery.isNotEmpty()){
@@ -189,20 +195,23 @@ fun SearchOverlayScreen(
                             style = MaterialTheme.typography.labelMedium
                         )
                     }
-                }else{
-                    IconButton(onClick = {}) {
-                        Icon(Icons.Default.Search, contentDescription = "Buscar")
-                    }
                 }
             }
         }
 
-        if (searchQuery.isBlank()){
+        if (searchQuery.isBlank() && searchHistory.isEmpty()) {
+            Text(
+                text = "Busca en toda tu biblioteca por título, artista o álbum.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(24.dp)
+            )
+        } else if (searchQuery.isBlank()){
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(top = 8.dp)
             ) {
-                items(searchHistory){ item ->
+                items(searchHistory, key = { it }){ item ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -463,7 +472,7 @@ private fun SearchCategoryItem(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val shape = if (isCircle) CircleShape else RoundedCornerShape(8.dp)
+        val shape = if (isCircle) CircleShape else MaterialTheme.shapes.small
 
         Box(
             modifier = Modifier

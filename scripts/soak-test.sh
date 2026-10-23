@@ -11,7 +11,7 @@
 # (las coordenadas son de un móvil 720x1560; ajústalas con los argumentos 2 y 3).
 set -euo pipefail
 
-PKG=com.example.creproductor
+PKG=io.github.maikelstiven.dezznuts
 DURATION=${1:-300}
 TAP_X=${2:-300}
 TAP_Y=${3:-455}

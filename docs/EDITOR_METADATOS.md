@@ -10,7 +10,7 @@ El diálogo (`EditTagDialog`), la escritura (`AudioTagWriter`, con copia de segu
 - **Permiso de escritura** con `MediaStore.createWriteRequest` (Android 11+): el sistema pregunta "¿Permitir que DEZZNUTS modifique este archivo?" y solo entonces se escribe. Antes de Android 11 se escribe directamente.
 - **Sugerencias para artista desconocido** (`TagSuggestions`, puro y probado): deduce "Artista - Título" del título o del nombre del archivo, quita números de pista (`01. `, `02 - `) sin confundir `7 Years` ni `21 Guns`, y limpia ruido de YouTube. Sin internet. El diálogo muestra un chip «Usar «Beck» — «Loser»».
 - **Los marcadores no son datos:** `<unknown>` y "Artista desconocido" empiezan como campo vacío, y un campo vacío **no se escribe** en el archivo (antes se habría guardado el marcador).
-- **Corregir artistas desconocidos** (menú lateral): lista las canciones con sugerencia, marcadas por defecto; se aplican todas con **un solo** permiso del sistema. Las que no se pueden deducir se editan una a una.
+- **Corregir artistas desconocidos** (Ajustes → Biblioteca): lista las canciones con sugerencia, marcadas por defecto; se aplican todas con **un solo** permiso del sistema. Las que no se pueden deducir se editan una a una.
 - **Portada:** solo se reescribe si el usuario la cambió (búsqueda web "Auto-web" o galería, ya existentes).
 - Recarga de la biblioteca silenciosa tras editar.
 - Las pistas de una hoja CUE no se editan (comparten archivo con todo el álbum): se avisa.

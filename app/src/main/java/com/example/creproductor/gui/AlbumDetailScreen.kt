@@ -146,7 +146,7 @@ fun AlbumDetailScreen(
                         modifier = Modifier
                             .size(250.dp)
                             .aspectRatio(1f)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(MaterialTheme.shapes.small)
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
                     ) {
@@ -224,7 +224,7 @@ fun AlbumDetailScreen(
                         Button(
                             onClick = onPlayAllClick,
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = MaterialTheme.shapes.medium
                         ) {
                             Icon(
                                 imageVector = Icons.Default.PlayArrow,
@@ -238,7 +238,7 @@ fun AlbumDetailScreen(
                         OutlinedButton(
                             onClick = onShuffleClick,
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(8.dp),
+                            shape = MaterialTheme.shapes.small,
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = MaterialTheme.colorScheme.primary,
                                 disabledContentColor = MaterialTheme.colorScheme.primary,
@@ -311,7 +311,7 @@ private fun AlbumTrackItem(
         Box(
             modifier = Modifier
                 .size(45.dp)
-                .clip(RoundedCornerShape(4.dp))
+                .clip(MaterialTheme.shapes.extraSmall)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ){
@@ -391,33 +391,39 @@ fun PlayingEqualizerIcon(
     color: Color = MaterialTheme.colorScheme.primary,
     isPlaying: Boolean = true
 ){
+    // Sin música no se dibuja nada. Sonando: animada solo si se ve (LocalAnimationsEnabled) y el equipo lo aguanta
+    // (rememberVisualEffectsEnabled); si no, barras fijas, que siguen indicando la fila que suena sin gastar fotogramas.
+    val effects = rememberVisualEffectsEnabled()
+    if (isPlaying && effects && LocalAnimationsEnabled.current) AnimatedEqualizerBars(modifier, color)
+    else if (isPlaying) EqualizerBars(modifier, color, { 0.55f }, { 0.9f }, { 0.7f })
+    else EqualizerBars(modifier, color, { 0f }, { 0f }, { 0f })
+}
 
-    val transition = rememberInfiniteTransition(label = "eq_anim")
+/**
+ * Barras animadas con UN solo reloj que avanza ~15 veces por segundo (antes: tres animaciones infinitas a 60 fps, que
+ * mantenían toda la ventana dibujando a 60 fps mientras sonaba una canción). Para un icono de 16×14 dp el
+ * movimiento se ve igual de vivo.
+ */
+@Composable
+private fun AnimatedEqualizerBars(modifier: Modifier, color: Color) {
+    val phase = remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        val start = androidx.compose.runtime.withFrameNanos { it }
+        while (true) {
+            androidx.compose.runtime.withFrameNanos { now -> phase.floatValue = (now - start) / 1_000_000_000f }
+            kotlinx.coroutines.delay(55)
+        }
+    }
+    // Cada barra oscila a su ritmo (periodos ~0,84 s, 1,06 s y 0,72 s, como las animaciones originales).
+    fun bar(period: Float, offset: Float, lo: Float, hi: Float): Float {
+        val x = (kotlin.math.sin((phase.floatValue / period + offset) * 2f * Math.PI.toFloat()) + 1f) / 2f
+        return lo + (hi - lo) * x
+    }
+    EqualizerBars(modifier, color, { bar(0.84f, 0.00f, 0.2f, 0.9f) }, { bar(1.06f, 0.30f, 0.25f, 0.85f) }, { bar(0.72f, 0.60f, 0.35f, 1.0f) })
+}
 
-    val bar1 by transition.animateFloat(
-        initialValue = 0.2f, targetValue = 0.9f,
-        animationSpec = infiniteRepeatable(
-            animation = tween (420, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ), label = "b1"
-    )
-
-    val bar2 by transition.animateFloat(
-        initialValue = 0.85f, targetValue = 0.25f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(530, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ), label = "b2"
-    )
-
-    val bar3 by transition.animateFloat(
-        initialValue = 0.35f, targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(360, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ), label = "b3"
-    )
-
+@Composable
+private fun EqualizerBars(modifier: Modifier, color: Color, bar1: () -> Float, bar2: () -> Float, bar3: () -> Float) {
     val  density = LocalDensity.current
     val barWidthPx = remember(density) {with(density) {3.dp.toPx()}}
     val gapPx = remember (density){with(density) {2.dp.toPx()} }
@@ -425,9 +431,9 @@ fun PlayingEqualizerIcon(
 
     Canvas(modifier = modifier.size(width = 16.dp, height = 14.dp)) {
         val maxHeight = size.height
-        val b1H = if (isPlaying) maxHeight * bar1 else maxHeight * 0f
-        val b2H = if (isPlaying) maxHeight * bar2 else maxHeight * 0f
-        val b3H = if (isPlaying) maxHeight * bar3 else maxHeight * 0f
+        val b1H = maxHeight * bar1()
+        val b2H = maxHeight * bar2()
+        val b3H = maxHeight * bar3()
 
         drawRoundRect(
             color = color,

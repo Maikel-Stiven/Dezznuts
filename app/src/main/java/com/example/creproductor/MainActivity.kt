@@ -1,5 +1,13 @@
 package com.example.creproductor
 
+import com.example.creproductor.gui.CoverAccentTheme
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.Manifest
 import android.os.Build
@@ -47,17 +55,21 @@ import com.example.creproductor.data.SongCover
 import com.example.creproductor.data.SongCoverFetcher
 import com.example.creproductor.data.coverModel
 import com.example.creproductor.gui.AboutDialog
-import com.example.creproductor.gui.AppDrawerContent
+import com.example.creproductor.gui.AppAction
+import com.example.creproductor.gui.AppSection
+import com.example.creproductor.gui.SettingsScreen
+import com.example.creproductor.gui.StatusScreen
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.example.creproductor.gui.LocalAnimationsEnabled
 import com.example.creproductor.gui.AudioCutterDialog
 import com.example.creproductor.gui.ClearImageCacheDialog
-import com.example.creproductor.gui.DrawerMenuItem
 import com.example.creproductor.gui.EditTagDialog
 import com.example.creproductor.gui.FullScreenPlayer
 import com.example.creproductor.gui.DuplicatesDialog
 import com.example.creproductor.gui.EqualizerDialog
 import com.example.creproductor.gui.FixUnknownArtistsDialog
 import com.example.creproductor.gui.HiFiAudioDialog
-import com.example.creproductor.gui.QualityBadge
+import com.example.creproductor.gui.CoverQualityStrip
 import com.example.creproductor.gui.MainScreen
 import com.example.creproductor.gui.MusicViewModel
 import com.example.creproductor.gui.NavRequest
@@ -79,8 +91,22 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: MusicViewModel by viewModels()
 
+    /** Se activa al tocar la notificación del reproductor; la interfaz lo consume para abrir el reproductor completo. */
+    private val openPlayerRequest = mutableStateOf(false)
+
+    companion object {
+        const val EXTRA_OPEN_PLAYER = "open_player"
+    }
+
+    // Con launchMode singleTop, tocar la notificación con la app abierta llega aquí y no crea otra pantalla.
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        if (intent.getBooleanExtra(EXTRA_OPEN_PLAYER, false)) openPlayerRequest.value = true
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (intent?.getBooleanExtra(EXTRA_OPEN_PLAYER, false) == true) openPlayerRequest.value = true
 
         // Las portadas son miniaturas: Coil reserva por defecto el 25 % de la RAM de la app para ellas, demasiado en
         // móviles justos. 10 % (5 % en equipos de poca RAM) y RGB565 (la mitad de bytes por píxel) bastan.
@@ -120,6 +146,10 @@ class MainActivity : ComponentActivity() {
 
                     var songToEdit by remember { mutableStateOf<Song?>(null) }
                     var isPlayerFullScreenVisible by remember { mutableStateOf(false) }
+                    // Notificación tocada: se abre el reproductor completo (si aún no hay canción, se muestra en cuanto cargue).
+                    LaunchedEffect(openPlayerRequest.value) {
+                        if (openPlayerRequest.value) { isPlayerFullScreenVisible = true; openPlayerRequest.value = false }
+                    }
                     var showClearImageCacheDialog by remember { mutableStateOf(false) }
                     var showHiFiAudioDialog by remember { mutableStateOf(false) }
                     var showEqualizerDialog by remember { mutableStateOf(false) }
@@ -166,7 +196,49 @@ class MainActivity : ComponentActivity() {
                     val deleteLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
                         viewModel.loadSongs(silent = true)
                     }
-                    var isFirstPage by remember { mutableStateOf(true) }
+                    var section by rememberSaveable { mutableStateOf(AppSection.HOME) }
+                    // Copia de seguridad y M3U: el usuario elige el archivo con el selector del sistema (sin permisos extra).
+                    val saveBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+                        uri?.let(viewModel::exportBackup)
+                    }
+                    val openBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                        uri?.let(viewModel::importBackup)
+                    }
+                    val openM3u = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                        uri?.let { viewModel.importM3u(it, displayName(it)?.substringBeforeLast('.') ?: "Lista importada") }
+                    }
+                    var playlistToExport by remember { mutableStateOf<com.example.creproductor.data.Playlist?>(null) }
+                    val saveM3u = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("audio/x-mpegurl")) { uri ->
+                        val p = playlistToExport
+                        if (uri != null && p != null) viewModel.exportPlaylistM3u(p.id, uri)
+                        playlistToExport = null
+                    }
+                    fun runAction(action: AppAction) {
+                        when (action) {
+                            AppAction.Equalizer -> showEqualizerDialog = true
+                            AppAction.SearchDuplicates -> showDuplicatesDialog = true
+                            AppAction.FixUnknownArtists -> showFixArtistsDialog = true
+                            AppAction.ScanFiles -> showScanScreen = true
+                            AppAction.AudioCutter -> {
+                                val playing = currentSong
+                                if (playing != null) openCutter(playing)
+                                else Toast.makeText(this@MainActivity, "Elige una canción desde su menú ⋮ → Cortador de audio", Toast.LENGTH_LONG).show()
+                            }
+                            AppAction.SleepTimer -> showSleepTimerDialog = true
+                            AppAction.ExportBackup -> saveBackup.launch("dezznuts-copia-${java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).format(java.util.Date())}.txt")
+                            AppAction.ImportBackup -> openBackup.launch(arrayOf("text/*", "application/octet-stream"))
+                            AppAction.ImportM3u -> openM3u.launch(arrayOf("audio/x-mpegurl", "audio/mpegurl", "application/vnd.apple.mpegurl", "text/*", "application/octet-stream"))
+                            AppAction.ClearImageCache -> showClearImageCacheDialog = true
+                            AppAction.HiFiAudio -> showHiFiAudioDialog = true
+                            AppAction.About -> showAboutDialog = true
+                            AppAction.SendFeedback -> {
+                                // Los comentarios van a los "issues" del repositorio.
+                                runCatching {
+                                    startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(FEEDBACK_URL)))
+                                }.onFailure { Toast.makeText(this@MainActivity, "No hay navegador para abrir el enlace", Toast.LENGTH_LONG).show() }
+                            }
+                        }
+                    }
 
                     val requiredPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         Manifest.permission.READ_MEDIA_AUDIO
@@ -188,93 +260,43 @@ class MainActivity : ComponentActivity() {
 
                     Box(modifier = Modifier.fillMaxSize()) {
                         when (val state = uiState) {
-                            is UiState.PermissionRequired -> {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Button(onClick = { permissionLauncher.launch(requiredPermission) }) {
-                                        Text("Conceder acceso")
-                                    }
-                                }
-                            }
-                            is UiState.Loading -> {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularProgressIndicator()
-                                }
-                            }
-                            is UiState.Empty -> {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("No se encontraron archivos de audio locales")
-                                }
-                            }
+                            is UiState.PermissionRequired -> StatusScreen(
+                                title = "Tu música, sin anuncios ni suscripciones",
+                                message = "DEZZNUTS necesita permiso para leer los archivos de audio de este teléfono. No sube nada a internet.",
+                                actionLabel = "Permitir acceso",
+                                onAction = { permissionLauncher.launch(requiredPermission) }
+                            )
+                            is UiState.Loading -> StatusScreen(
+                                title = "Buscando tu música…",
+                                message = "La primera vez puede tardar unos segundos si tienes muchas canciones.",
+                                loading = true
+                            )
+                            is UiState.Empty -> StatusScreen(
+                                title = "No encontramos música",
+                                message = "Copia archivos de audio a las carpetas Música o Descargas y vuelve a buscar.",
+                                actionLabel = "Buscar de nuevo",
+                                onAction = { viewModel.loadSongs() },
+                                secondaryLabel = "Escanear carpetas",
+                                onSecondary = { showScanScreen = true }
+                            )
                             is UiState.Success -> {
-                                val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-                                val scope = rememberCoroutineScope()
-
                                 BackHandler(enabled = isPlayerFullScreenVisible) {
                                     isPlayerFullScreenVisible = false
                                 }
 
-                                BackHandler(enabled = drawerState.isOpen) {
-                                    scope.launch { drawerState.close() }
-                                }
-
-                                ModalNavigationDrawer(
-                                    drawerState = drawerState,
-                                    gesturesEnabled = !isPlayerFullScreenVisible && (drawerState.isOpen || isFirstPage),
-                                    drawerContent = {
-                                        AppDrawerContent(
-                                            versionName = versionName,
-                                            onMenuItem= { menuItem ->
-                                                when(menuItem) {
-                                                    is DrawerMenuItem.Equalizer -> { showEqualizerDialog = true }
-                                                    is DrawerMenuItem.SearchDuplicates -> { showDuplicatesDialog = true }
-                                                    is DrawerMenuItem.FixUnknownArtists -> { showFixArtistsDialog = true }
-                                                    is DrawerMenuItem.ScanFiles -> { showScanScreen = true }
-                                                    is DrawerMenuItem.AudioCutter -> {
-                                                        val playing = currentSong
-                                                        if (playing != null) openCutter(playing)
-                                                        else Toast.makeText(this@MainActivity, "Elige una canción desde su menú ⋮ → Cortador de audio", Toast.LENGTH_LONG).show()
-                                                    }
-                                                    is DrawerMenuItem.SleepTimer -> { showSleepTimerDialog = true }
-                                                    is DrawerMenuItem.ClearImageCache -> { showClearImageCacheDialog = true }
-                                                    is DrawerMenuItem.HiFiAudio -> { showHiFiAudioDialog = true }
-                                                    is DrawerMenuItem.About -> { showAboutDialog = true }
-                                                    is DrawerMenuItem.SendFeedback -> {
-                                                        // Los comentarios van a los "issues" del repositorio.
-                                                        runCatching {
-                                                            startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(FEEDBACK_URL)))
-                                                        }.onFailure { Toast.makeText(this@MainActivity, "No hay navegador para abrir el enlace", Toast.LENGTH_LONG).show() }
-                                                    }
-                                                    else -> {}
-                                                }
-                                            },
-                                            onCloseDrawer = {
-                                                scope.launch { drawerState.close() }
-                                            }
-                                        )
-                                    }
-                                ) {
                                     Box(modifier = Modifier.fillMaxSize()) {
+                                        // Lo que queda bajo el reproductor a pantalla completa no anima (no se ve).
+                                        CompositionLocalProvider(LocalAnimationsEnabled provides !isPlayerFullScreenVisible) {
                                         Column(modifier = Modifier.fillMaxSize()) {
                                             Box(modifier = Modifier.weight(1f)) {
                                                 MainScreen(
                                                     viewModel = viewModel,
-                                                    onOpenEqualizer = { showEqualizerDialog = true },
-                                                    onOpenScanner = { showScanScreen = true },
+                                                    section = section,
+                                                    onSectionChange = { section = it },
                                                     onEditSong = editSong,
-                                                    onOpenDrawer = {
-                                                        scope.launch { drawerState.open() }
-                                                    },
-                                                    onPageChanged = {page ->
-                                                        isFirstPage = (page == 0)
+                                                    onExportPlaylist = { playlistToExport = it; saveM3u.launch("${it.name}.m3u8") },
+                                                    settingsContent = {
+                                                        SettingsScreen(versionName = versionName, onAction = ::runAction)
                                                     }
                                                 )
                                             }
@@ -285,24 +307,46 @@ class MainActivity : ComponentActivity() {
                                                 exit = slideOutVertically(targetOffsetY = { it })
                                             ) {
                                                 currentSong?.let { song ->
-                                                    BottomPlayerBar(
-                                                        song = song,
-                                                        isPlaying = isPlaying,
-                                                        onTogglePlayPause = { viewModel.togglePlayPause() },
-                                                        onBarClick = { isPlayerFullScreenVisible = true }
+                                                    CoverAccentTheme(song) {
+                                                        BottomPlayerBar(
+                                                            song = song,
+                                                            isPlaying = isPlaying,
+                                                            onTogglePlayPause = { viewModel.togglePlayPause() },
+                                                            onBarClick = { isPlayerFullScreenVisible = true },
+                                                            onNext = { viewModel.playNext() },
+                                                            onPrevious = { viewModel.playPrevious() }
+                                                        )
+                                                    }
+                                                }
+                                            }
+
+                                            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
+                                                AppSection.entries.forEach { item ->
+                                                    NavigationBarItem(
+                                                        selected = section == item,
+                                                        onClick = { section = item },
+                                                        icon = { Icon(item.icon, contentDescription = null) },
+                                                        label = { Text(item.title) }
                                                     )
                                                 }
                                             }
                                         }
+                                        }
 
-                                        if (isPlayerFullScreenVisible && currentSong != null) {
+                                        AnimatedVisibility(
+                                            visible = isPlayerFullScreenVisible && currentSong != null,
+                                            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                                            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+                                        ) {
+                                            val playingSong = currentSong ?: return@AnimatedVisibility
                                             val activeSongsQueue = currentQueue.ifEmpty { state.songs }
                                             // Solo aquí se suscribe a la posición, y se entrega como lambda: la lee
                                             // únicamente la barra de progreso, así el resto del reproductor no se recompone cada 500 ms.
                                             val currentPositionMs by viewModel.currentPositionMs.collectAsStateWithLifecycle()
 
+                                            CoverAccentTheme(playingSong) {
                                             FullScreenPlayer(
-                                                song = currentSong!!,
+                                                song = playingSong,
                                                 songs = activeSongsQueue,
                                                 isPlaying = isPlaying,
                                                 currentPositionMs = { currentPositionMs },
@@ -323,9 +367,9 @@ class MainActivity : ComponentActivity() {
                                                 onDismiss = { isPlayerFullScreenVisible = false },
                                                 onToggleFavorite = { song -> viewModel.toggleFavorite(song) }
                                             )
+                                            }
                                         }
                                     }
-                                }
                             }
                         }
 
@@ -336,6 +380,7 @@ class MainActivity : ComponentActivity() {
                                 playlists = playlists,
                                 onDismiss = { songMenuFor = null },
                                 actions = SongMenuActions(
+                                    onPlayNext = { viewModel.playNextInQueue(song) },
                                     onAddToQueue = { viewModel.addToQueue(song) },
                                     onAddToPlaylist = { id -> viewModel.addSongToPlaylist(id, song) },
                                     onGoToAlbum = { isPlayerFullScreenVisible = false; viewModel.requestNav(NavRequest.Album(song.album)) },
@@ -448,6 +493,12 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/** Nombre visible de un archivo elegido con el selector del sistema. */
+private fun android.content.Context.displayName(uri: android.net.Uri): String? =
+    contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
+        if (it.moveToFirst()) it.getString(0) else null
+    }
+
 @Composable
 fun SongListScreen(
     songs: List<Song>,
@@ -490,21 +541,23 @@ fun SongItem(
     onEditClick: () -> Unit
 ) {
     val backgroundColor = if (isSelected){
-        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
     }else{
         MaterialTheme.colorScheme.background
     }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .clip(MaterialTheme.shapes.medium)
                 .background(backgroundColor)
                 .clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
                     .size(52.dp)
+                    .clip(MaterialTheme.shapes.small)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
@@ -523,33 +576,25 @@ fun SongItem(
                         modifier = Modifier.size(26.dp)
                     )
                 }
+                // Calidad (Lossless / Hi-Res) en la base de la portada: el título conserva todo el ancho de la fila.
+                CoverQualityStrip(song.quality, Modifier.align(Alignment.BottomCenter))
             }
 
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = song.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-                    QualityBadge(song.quality, modifier = Modifier.padding(start = 6.dp))
-                }
+                Text(
+                    text = song.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
                 Spacer(modifier = Modifier.height(4.dp))
 
-                val artistName = if (song.artist.isBlank() || song.artist == "<unknown>") {
-                    "Artista desconocido"
-                }else{
-                    song.artist
-                }
-
                 Text(
-                    text = "$artistName • ${formatDuration(song.duration)}",
+                    text = "${displayArtist(song.artist)} • ${formatDuration(song.duration)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -577,33 +622,52 @@ fun SongItem(
 
 }
 
+/**
+ * Mini-reproductor flotante. Tocar o deslizar hacia arriba abre el reproductor; deslizar a los lados cambia de canción.
+ */
 @Composable
 fun BottomPlayerBar(
     song: Song,
     isPlaying: Boolean,
     onTogglePlayPause: () -> Unit,
-    onBarClick: () -> Unit = {}
+    onBarClick: () -> Unit = {},
+    onNext: () -> Unit = {},
+    onPrevious: () -> Unit = {}
 ) {
+    val swipePx = with(LocalDensity.current) { 56.dp.toPx() }
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onBarClick),
-        tonalElevation = 8.dp,
-        shadowElevation = 8.dp,
+            .padding(horizontal = 8.dp, vertical = 6.dp)
+            .pointerInput(Unit) {
+                var dx = 0f; var dy = 0f
+                detectDragGestures(
+                    onDragStart = { dx = 0f; dy = 0f },
+                    onDragEnd = {
+                        when {
+                            -dy > swipePx && -dy > kotlin.math.abs(dx) -> onBarClick()
+                            dx < -swipePx -> onNext()
+                            dx > swipePx -> onPrevious()
+                        }
+                    }
+                ) { change, drag -> change.consume(); dx += drag.x; dy += drag.y }
+            },
+        onClick = onBarClick,
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = 6.dp,
+        shadowElevation = 12.dp,
         color = MaterialTheme.colorScheme.surfaceContainerHigh
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                // Evita que el mini-reproductor quede bajo la barra de gestos (edge-to-edge).
-                .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(start = 8.dp, end = 10.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(6.dp))
+                    .size(48.dp)
+                    .clip(MaterialTheme.shapes.small)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
@@ -618,7 +682,7 @@ fun BottomPlayerBar(
                     Icon(
                         imageVector = Icons.Default.MusicNote,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -628,38 +692,38 @@ fun BottomPlayerBar(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = song.title,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.basicMarquee()
                 )
-
-                val artistName = if (song.artist.isBlank() || song.artist == "<unknown>") {
-                    "Artista desconocido"
-                }else{
-                    song.artist
-                }
-
-                val hasAlbum = song.album.isNotBlank() && !song.album.equals("<unknown>", ignoreCase = true)
-                val subtitlteText = if (hasAlbum) "$artistName • ${song.album}" else artistName
-
                 Text(
-                    text = subtitlteText,
+                    text = displayArtist(song.artist),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-
             }
 
-            FilledIconButton(onClick = onTogglePlayPause) {
+            FilledIconButton(
+                onClick = onTogglePlayPause,
+                modifier = Modifier.size(44.dp),
+                shape = CircleShape
+            ) {
                 Icon(
                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     contentDescription = if (isPlaying) "Pausar" else "Reproducir"
                 )
             }
+            IconButton(onClick = onNext) {
+                Icon(Icons.Default.SkipNext, contentDescription = "Siguiente", tint = MaterialTheme.colorScheme.onSurface)
+            }
         }
     }
 }
+
+/** "<unknown>" de MediaStore o vacío → "Artista desconocido". */
+fun displayArtist(artist: String): String =
+    if (artist.isBlank() || artist.equals("<unknown>", ignoreCase = true)) "Artista desconocido" else artist

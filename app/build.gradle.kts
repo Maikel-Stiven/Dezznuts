@@ -10,7 +10,9 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.creproductor"
+        // Identidad de la app en Android (F-Droid y Play rechazan com.example). El paquete del código sigue siendo
+        // com.example.creproductor (namespace): cambiarlo solo movería archivos.
+        applicationId = "io.github.maikelstiven.dezznuts"
         minSdk = 24
         targetSdk = 37
         versionCode = 2
