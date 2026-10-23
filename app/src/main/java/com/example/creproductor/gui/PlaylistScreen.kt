@@ -33,17 +33,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.creproductor.data.Playlist
 import com.example.creproductor.data.Song
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 @Composable
 fun PlaylistScreen(
@@ -52,8 +56,12 @@ fun PlaylistScreen(
     onCreatePlaylistClick: () -> Unit,
     onRestorePlaylistClick: () -> Unit,
     onPlaylistClick: (Playlist) -> Unit,
-    onPlaylistOptionsClick: (Playlist) -> Unit = {}
+    onPlaylistOptionsClick: (Playlist) -> Unit = {},
+    menuActionsProvider: ((Playlist) -> PlaylistMenuActions)? = null
 ){
+
+    var selectedPlaylistForMenu by remember { mutableStateOf<Playlist?>(null) }
+
     Box(modifier = Modifier.fillMaxSize()){
         if (playlist.isEmpty()){
             Column(
@@ -83,7 +91,8 @@ fun PlaylistScreen(
                 Text(
                     text = "Aún no has creado una lista de reproducción",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
                 )
 
                 Spacer(modifier = Modifier.height(28.dp))
@@ -93,6 +102,12 @@ fun PlaylistScreen(
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth(0.8f)
                 ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text("Crear lista de reproducción")
                 }
 
@@ -223,6 +238,28 @@ fun PlaylistScreen(
                     contentDescription = "Crear lista"
                 )
             }
+        }
+
+        selectedPlaylistForMenu?.let{ activePlaylist ->
+            val actions = menuActionsProvider?.invoke(activePlaylist) ?: PlaylistMenuActions (
+                onAddToQueue = {},
+                onAddToPlaylist = {},
+                onSaveToDevice = {},
+                onEditTags = {},
+                onDeletePlaylist = {},
+                onRemoveDuplicates = {},
+                onDeleteFromDevice = {},
+                onPlay = {},
+                onAddSongs = {}
+            )
+
+            PlaylistMenuSheet(
+                playlist = activePlaylist,
+                allSongs = allSongs,
+                allPlaylist = playlist,
+                actions = actions,
+                onDismiss = {selectedPlaylistForMenu = null}
+            )
         }
     }
 }

@@ -496,8 +496,33 @@ fun MainScreen(
         }
     }
 
-    playlistForOptions?.let { p ->
-        PlaylistOptionsDialog(p, onDelete = { viewModel.deletePlaylist(p.id) }, onDismiss = { playlistForOptions = null })
+    playlistForOptions?.let { activePlaylist ->
+        PlaylistMenuSheet(
+            playlist = activePlaylist,
+            allSongs =  songs,
+            allPlaylist =  playlist,
+            actions = PlaylistMenuActions(
+                onPlay = {
+                    val songMap = songs.associateBy { it.id }
+                    val playlistSongs = activePlaylist.songIds.mapNotNull { songMap[it] }
+                    if (playlistSongs.isNotEmpty()){
+                        viewModel.playSong(playlistSongs.first(), customQueue = playlistSongs)
+                    }
+                },
+                onAddSongs = {
+                    selectedPlaylist = activePlaylist
+                    showAddSongsDialog = true
+                },
+                onAddToQueue = {viewModel.addPlaylistToQueue(activePlaylist)},
+                onAddToPlaylist = { targetId -> viewModel.appendPlaylistToPlaylist(activePlaylist, targetId)},
+                onSaveToDevice = {/***/},
+                onEditTags =  {/***/},
+                onDeletePlaylist = {viewModel.deletePlaylist(activePlaylist.id)},
+                onRemoveDuplicates = {viewModel.removeDuplicatesFromPlaylist(activePlaylist.id)},
+                onDeleteFromDevice = {viewModel.deletePlaylistSongsFromStorage(activePlaylist)}
+            ),
+            onDismiss = {playlistForOptions = null}
+        )
     }
 
     if (showRestoreDialog){

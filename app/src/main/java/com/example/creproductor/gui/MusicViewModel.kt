@@ -54,6 +54,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import androidx.core.content.edit
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import com.example.creproductor.data.Playlist
 import com.example.creproductor.data.PlaylistSerializer
 import com.example.creproductor.data.RepeatMode
@@ -396,6 +398,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
 
     private fun refreshAudioInfo() { lastTracks?.let { _audioInfo.value = describeAudio(it) } }
 
+    @OptIn(UnstableApi :: class)
     private fun describeAudio(tracks: Tracks): String {
         val format = tracks.groups
             .firstOrNull { it.type == C.TRACK_TYPE_AUDIO && it.isSelected }
@@ -659,7 +662,6 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                 .sortedByDescending { playCountMap[it.id] ?: 0 }
                 .take(30)
 
-            val currentRecentSnapshot = _recentPlayedSongs.value.toList()
             val updatedRecent = (listOf(song) + _recentPlayedSongs.value)
                 .distinctBy{it.id}
                 .take(30)
@@ -1048,6 +1050,61 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
             songMap[lastSongId]?.let { lastSong ->
                 _currentSong.value = lastSong
                 _currentPositionMs.value = prefs.getLong("last_position_ms", 0L)
+            }
+        }
+    }
+
+    /** Añadé las canciones a la lista de reproducción que este sonando en ese momento **/
+    fun addPlaylistToQueue(playlist: Playlist){
+        val allSongs = (_uiState.value as?  UiState.Success)?.songs ?: return
+        val songMap = allSongs.associateBy { it.id }
+        val playlistSongs = playlist.songIds.mapNotNull { songMap[it] }
+        if (playlistSongs.isEmpty()) return
+
+        val updatedQueue = _currentQueue.value + playlistSongs
+        _currentQueue.value = updatedQueue
+        saveCurrentQueueIds(updatedQueue.map { it.id })
+
+        mediaController?.addMediaItems(buildMediaItems(playlistSongs))
+        Toast.makeText(getApplication(), "Lista agregada a la cola", Toast.LENGTH_SHORT).show()
+    }
+
+    /** Copia las canciones de una playlist a otra */
+    fun appendPlaylistToPlaylist (sourcePlaylist: Playlist, targetPlaylistId: String){
+        addSongsToPlaylist(targetPlaylistId, sourcePlaylist.songIds)
+        Toast.makeText(getApplication(), "Canciones añadidas a la playlist", Toast.LENGTH_SHORT).show()
+    }
+
+    /** Elimina IDs duplicadas (canciones) dentro de la playlist */
+    fun removeDuplicatesFromPlaylist(playlistId: String){
+        val updated = _playlists.value.map { playlist ->
+            if (playlist.id == playlistId){
+                playlist.copy(songIds = playlist.songIds.distinct())
+            }else playlist
+        }
+        _playlists.value = updated
+        savePlaylists(updated)
+        Toast.makeText(getApplication(), "Duplicados eliminados", Toast.LENGTH_LONG).show()
+    }
+
+    /** Elimina del dispositivo las canciones dentro de la playlist*/
+    fun deletePlaylistSongsFromStorage(playlist: Playlist){
+        val allSongs = (_uiState.value as? UiState.Success)?.songs ?: return
+        val songMap = allSongs.associateBy { it.id }
+        val playlistSongs = playlist.songIds.mapNotNull { songMap[it] }
+
+        viewModelScope.launch (Dispatchers.IO) {
+            var deleteCount = 0
+            for (song in playlistSongs){
+                val ok = runCatching {
+                    getApplication<Application>().contentResolver.delete(song.contentUri, null, null) > 0
+                }.getOrDefault(false)
+                if (ok) deleteCount++
+            }
+
+            withContext(Dispatchers.Main){
+                Toast.makeText(getApplication(), "Se eliminaron $deleteCount archivos del dispositivo", Toast.LENGTH_SHORT).show()
+                loadSongs(silent = true)
             }
         }
     }
