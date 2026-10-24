@@ -249,8 +249,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
 
     /**
      * Pone la canción justo después de la que suena; si no hay nada sonando, la reproduce.
-     * ponytail: con el aleatorio activo Media3 la coloca en un punto al azar del orden aleatorio; para respetarlo
-     * haría falta un ShuffleOrder propio en el servicio.
+     * Con el aleatorio activo el servicio reordena el orden aleatorio para que de verdad sea la siguiente.
      */
     fun playNextInQueue(song: Song) {
         val controller = mediaController
@@ -260,6 +259,12 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         _currentQueue.value = queue.subList(0, at) + song + queue.subList(at, queue.size)
         saveCurrentQueueIds(_currentQueue.value.map { it.id })
         controller.addMediaItems(at, buildMediaItems(listOf(song)))
+        if (controller.shuffleModeEnabled) {
+            controller.sendCustomCommand(
+                SessionCommand(MusicService.ACTION_PLAY_NEXT_SHUFFLE, Bundle.EMPTY),
+                Bundle().apply { putInt(MusicService.EXTRA_INDEX, at) }
+            )
+        }
         Toast.makeText(getApplication(), "Suena a continuación", Toast.LENGTH_SHORT).show()
     }
 

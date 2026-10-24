@@ -171,6 +171,10 @@ class MusicService : MediaSessionService(){
         /** Temporizador de apagado: extra [EXTRA_MINUTES] (> 0 minutos, [SLEEP_END_OF_TRACK] o 0 para cancelar). */
         const val ACTION_SLEEP_TIMER = "ACTION_SLEEP_TIMER"
         const val EXTRA_MINUTES = "minutes"
+
+        /** Con el aleatorio activo, coloca la pista [EXTRA_INDEX] justo después de la que suena (ver [moveNextInShuffle]). */
+        const val ACTION_PLAY_NEXT_SHUFFLE = "ACTION_PLAY_NEXT_SHUFFLE"
+        const val EXTRA_INDEX = "index"
         const val SLEEP_END_OF_TRACK = -1
 
         /** Preferencia con el estado del temporizador: 0 = apagado, -1 = al final de la canción, otro = hora de fin (ms). */
@@ -651,6 +655,23 @@ class MusicService : MediaSessionService(){
             return mediaSession
     }
 
+    /**
+     * Media3 coloca una pista añadida en un punto al azar del orden aleatorio. Aquí se reconstruye ese orden
+     * (recorriendo la línea de tiempo en modo aleatorio) y se deja [index] justo detrás de la pista actual.
+     */
+    private fun moveNextInShuffle(player: Player, index: Int) {
+        val exo = player as? ExoPlayer ?: return
+        val timeline = exo.currentTimeline
+        if (!exo.shuffleModeEnabled || index !in 0 until timeline.windowCount) return
+        val order = ArrayList<Int>(timeline.windowCount)
+        var w = timeline.getFirstWindowIndex(true)
+        while (w != C.INDEX_UNSET) { order += w; w = timeline.getNextWindowIndex(w, Player.REPEAT_MODE_OFF, true) }
+        if (order.size != timeline.windowCount) return
+        order.remove(index)
+        order.add((order.indexOf(exo.currentMediaItemIndex) + 1).coerceAtLeast(0), index)
+        exo.setShuffleOrder(androidx.media3.exoplayer.source.ShuffleOrder.DefaultShuffleOrder(order.toIntArray(), System.nanoTime()))
+    }
+
     override fun onTaskRemoved(rootIntent: Intent?){
         val player = mediaSession?.player
         if (player != null) {
@@ -696,6 +717,7 @@ class MusicService : MediaSessionService(){
                 .add(SessionCommand(ACTION_CLOSE, Bundle.EMPTY))
                 .add(SessionCommand(ACTION_REFRESH_AUDIO, Bundle.EMPTY))
                 .add(SessionCommand(ACTION_SLEEP_TIMER, Bundle.EMPTY))
+                .add(SessionCommand(ACTION_PLAY_NEXT_SHUFFLE, Bundle.EMPTY))
                 .build()
 
             val playerCommands = connectionResult.availablePlayerCommands.buildUpon()
@@ -752,6 +774,7 @@ class MusicService : MediaSessionService(){
                     rebuildPlayer()
                 }
                 ACTION_SLEEP_TIMER -> setSleepTimer(args.getInt(EXTRA_MINUTES, 0))
+                ACTION_PLAY_NEXT_SHUFFLE -> moveNextInShuffle(session.player, args.getInt(EXTRA_INDEX, -1))
             }
             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
         }
