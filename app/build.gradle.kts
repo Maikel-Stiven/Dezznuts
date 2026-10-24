@@ -36,6 +36,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        // NewPipeExtractor usa APIs de Java 8+ (java.time...) que minSdk 24 no trae.
+        isCoreLibraryDesugaringEnabled = true
     }
     buildFeatures {
         compose = true
@@ -72,6 +74,11 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    //
+
+    // YouTube Music: búsqueda y URL de audio sin cuenta (GPLv3, igual que este proyecto)
+    implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.26.5")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     //
 
     //implementación de seteo/configuración de etiquetas de las canciones

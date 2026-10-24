@@ -100,6 +100,18 @@ fun SettingsScreen(
                     Icons.Default.Movie, ::isAnimatedCoverOn, ::setAnimatedCover
                 )
             }
+            item(key = "ytmusic") {
+                Text(
+                    text = "YouTube Music",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 24.dp, top = 20.dp, bottom = 4.dp)
+                )
+                PrefSwitch(
+                    "Buscar y reproducir en YouTube Music", "Función no oficial (NewPipeExtractor): puede dejar de funcionar sin aviso y va contra los términos de YouTube. Usa internet y no necesita cuenta",
+                    Icons.Default.CloudQueue, com.example.creproductor.data.YtMusic::isEnabled, com.example.creproductor.data.YtMusic::setEnabled
+                )
+            }
             item {
                 Text(
                     text = "DEZZNUTS $versionName · libre y gratuito",
