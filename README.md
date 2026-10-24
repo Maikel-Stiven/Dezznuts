@@ -30,10 +30,12 @@ reproduce en segundo plano con **Media3 / ExoPlayer**.
 ## 📸 Capturas
 
 <div align="center">
-<img src="docs/screenshots/01-inicio.png" alt="Inicio" width="22%" />
-<img src="docs/screenshots/02-canciones.png" alt="Biblioteca" width="22%" />
-<img src="docs/screenshots/03-ajustes.png" alt="Ajustes" width="22%" />
-<img src="docs/screenshots/04-reproductor.png" alt="Reproductor" width="22%" />
+<img src="docs/screenshots/01-inicio.png" alt="Inicio" width="15%" />
+<img src="docs/screenshots/02-canciones.png" alt="Canciones" width="15%" />
+<img src="docs/screenshots/04-reproductor.png" alt="Reproductor" width="15%" />
+<img src="docs/screenshots/07-letras.png" alt="Letras" width="15%" />
+<img src="docs/screenshots/06-menu.png" alt="Menú" width="15%" />
+<img src="docs/screenshots/05-opciones.png" alt="Opciones" width="15%" />
 </div>
 
 ---
@@ -44,10 +46,10 @@ reproduce en segundo plano con **Media3 / ExoPlayer**.
 
 **Interfaz**
 
-- Barra inferior **Inicio · Biblioteca · Buscar · Ajustes**; los detalles (artista, álbum, género, lista) se
-  apilan y "atrás" vuelve a la pantalla anterior.
-- Identidad propia: negro cálido y caramelo, tipografía **Manrope** y radios de esquina unificados.
-- El reproductor y el mini-reproductor toman el **color dominante de la carátula**.
+- Barra superior con ☰ · lupa · ⋮, **pestañas deslizables** (Selección rápida, Canciones, Álbumes, Artistas, Géneros,
+  Listas, Carpetas y **YT Music**) y menú lateral; los detalles se apilan y "atrás" vuelve a la pantalla anterior.
+- Identidad DEZZNUTS: **morado** `#BB86FC` y turquesa sobre negro; temas opcionales (AMOLED, claro, Material You).
+- Pantalla de **Opciones** completa; textos en **español e inglés**.
 - Reproductor a pantalla completa: portada, título y favorito, progreso, controles, pestaña de **letras**
   sincronizadas (LRCLIB) y fondo animado con la carátula. Se abre deslizando el mini-reproductor hacia arriba y
   se cierra arrastrando hacia abajo; deslizar el mini-reproductor a los lados cambia de canción.
@@ -153,7 +155,7 @@ adb logcat -s DezzSeek
 | Componente | Versión / Herramienta |
 |------------|-----------------------|
 | Lenguaje | Kotlin `2.2.10` |
-| UI | Jetpack Compose (BOM `2026.02.01`), Material 3, fuente Manrope (OFL) |
+| UI | Jetpack Compose (BOM `2026.02.01`), Material 3, tipografía de Material |
 | Reproductor | AndroidX Media3 `1.9.1` (ExoPlayer + MediaSession) |
 | Imágenes | Coil `2.7.0` |
 | Etiquetas | jaudiotagger `3.0.1` |
@@ -188,11 +190,11 @@ ecualizador, ReplayGain, hojas CUE, letras LRC y formato de duración. El CI
 
 ```
 app/src/main/java/com/example/creproductor/
-├── MainActivity.kt        # Entrada, permisos, barra inferior, mini-reproductor y diálogos
+├── MainActivity.kt        # Entrada, permisos, mini-reproductor y diálogos
 ├── data/                  # Modelos, escaneo (MediaStore), etiquetas, metadatos y preferencias
 ├── service/               # MusicService (reproducción), HiFiRenderersFactory, PlaybackDiagnostics
 ├── gui/                   # Pantallas Compose + MusicViewModel
-└── ui/theme/              # Colores, tipografía (Manrope) y formas de DEZZNUTS
+└── ui/theme/              # Tema de DEZZNUTS (morado, AMOLED, claro, Material You)
 ```
 
 📄 El detalle técnico completo (arquitectura, flujo de datos y notas de desarrollo) está en

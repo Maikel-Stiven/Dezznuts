@@ -23,10 +23,12 @@ Features other players lock behind a paywall (auto-tagging, audio cutter, equali
 ## 📸 Screenshots
 
 <div align="center">
-<img src="docs/screenshots/01-inicio.png" alt="Home" width="22%" />
-<img src="docs/screenshots/02-canciones.png" alt="Library" width="22%" />
-<img src="docs/screenshots/03-ajustes.png" alt="Settings" width="22%" />
-<img src="docs/screenshots/04-reproductor.png" alt="Player" width="22%" />
+<img src="docs/screenshots/01-inicio.png" alt="Home" width="15%" />
+<img src="docs/screenshots/02-canciones.png" alt="Songs" width="15%" />
+<img src="docs/screenshots/04-reproductor.png" alt="Player" width="15%" />
+<img src="docs/screenshots/07-letras.png" alt="Lyrics" width="15%" />
+<img src="docs/screenshots/06-menu.png" alt="Menu" width="15%" />
+<img src="docs/screenshots/05-opciones.png" alt="Options" width="15%" />
 </div>
 
 ## 📦 What is it?
@@ -38,7 +40,7 @@ A native Android app written in **Kotlin + Jetpack Compose** that scans the musi
 | Area | Detail |
 |------|--------|
 | **Navigation** | Bottom bar Home · Library · Search · Settings; detail screens stack, so Back returns to the previous one. |
-| **Design** | Own identity (warm black + caramel, **Manrope** font); player and mini-player take the **cover's dominant color**. |
+| **Design** | DEZZNUTS identity: **purple** `#BB86FC` and teal on black, top tabs + side menu; optional AMOLED, light and Material You themes; full-screen Options; Spanish and English. |
 | **Player** | Cover, title & favorite, seek bar, controls, synced **lyrics** (LRCLIB), animated cover backdrop. Swipe the mini-player up to open, drag down to close, swipe sideways to skip. |
 | **Library** | Songs (filters + **sorting**), Albums, Artists, Playlists, Genres, Folders; Home with recent, most played, favorites and moods. |
 | **Queue** | **Play next**, add to queue, drag to reorder, remove. |
