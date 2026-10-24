@@ -2,6 +2,7 @@ package com.example.creproductor.gui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -94,6 +95,7 @@ fun AppDrawerContent(versionName: String, onAction: (AppAction) -> Unit, onClose
 }
 
 /** Opciones con interruptor (todas apagadas por defecto): lo visual y lo que usa internet. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun OptionsDialog(onDismiss: () -> Unit) {
     AlertDialog(
@@ -101,6 +103,19 @@ fun OptionsDialog(onDismiss: () -> Unit) {
         title = { Text("Opciones") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                Text("Tema", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(bottom = 4.dp))
+                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    com.example.creproductor.ui.theme.ThemeMode.entries
+                        .filter { it != com.example.creproductor.ui.theme.ThemeMode.DYNAMIC || com.example.creproductor.ui.theme.ThemeSetting.dynamicAvailable }
+                        .forEach { m ->
+                            FilterChip(
+                                selected = com.example.creproductor.ui.theme.ThemeSetting.mode == m,
+                                onClick = { com.example.creproductor.ui.theme.ThemeSetting.set(context, m) },
+                                label = { Text(m.label) }
+                            )
+                        }
+                }
                 PrefSwitch(
                     "Color de la carátula en el reproductor", "Los botones y el progreso toman el tono de la portada. Apagado: siempre el morado de DEZZNUTS",
                     Icons.Default.Palette, ::isCoverAccentOn, ::setCoverAccent

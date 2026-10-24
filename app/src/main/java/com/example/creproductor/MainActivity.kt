@@ -131,6 +131,7 @@ class MainActivity : ComponentActivity() {
             .build()
         Coil.setImageLoader (imageLoader)
 
+        com.example.creproductor.ui.theme.ThemeSetting.load(this)
         setContent {
             DEZZNUTStheme {
                 Surface(
