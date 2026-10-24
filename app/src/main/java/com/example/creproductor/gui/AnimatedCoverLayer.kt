@@ -50,7 +50,7 @@ fun AnimatedCoverLayer(song: Song, isPlaying: Boolean, active: Boolean, modifier
     var url by remember(song.id) { mutableStateOf<String?>(null) }
     LaunchedEffect(song.id) {
         url = if (!networkAllowsVideo(context)) null
-        else runCatching { withContext(Dispatchers.IO) { AnimatedCover.find(context, song) } }.getOrNull()
+        else runCatching { AnimatedCover.find(context, song) }.getOrNull()
     }
     val videoUrl = url ?: return
 

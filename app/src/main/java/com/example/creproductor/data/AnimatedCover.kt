@@ -31,23 +31,20 @@ object AnimatedCover {
     private fun key(song: Song) = "${song.artist.trim().lowercase()}|${song.album.trim().lowercase()}"
 
     private fun cacheFile(context: Context, song: Song) =
-        File(File(context.cacheDir, "animated_cover"), "${key(song).hashCode().toUInt().toString(16)}.txt")
+        File(File(context.cacheDir, "animated_cover_v2"), "${key(song).hashCode().toUInt().toString(16)}.txt")
 
     /** ¿Tiene sentido preguntar? Sin álbum o con artista desconocido el servicio no acierta. */
     fun eligible(song: Song) =
         song.album.isNotBlank() && song.artist.isNotBlank() && !song.artist.startsWith("<") && !song.album.startsWith("<")
 
-    /**
-     * URL del bucle o `null`. Lanza [IOException] si no hay conexión o el servicio está saturado (429/5xx): eso no se
-     * guarda para reintentar luego. Bloquea: llamar fuera del hilo principal.
-     */
-    fun find(context: Context, song: Song): String? {
-        if (!eligible(song)) return null
-        val f = cacheFile(context, song)
-        if (f.isFile && System.currentTimeMillis() - f.lastModified() < TTL_MS) {
-            return f.readText().takeIf { it != NONE }
-        }
-        val url = "$BASE?s=${enc(song.title)}&a=${enc(song.artist)}&al=${enc(song.album)}&d=${song.duration / 1000}"
+    /** "Nevermind (Remastered)" → "Nevermind"; "Rush! - Single" → "Rush!". */
+    internal fun baseAlbum(album: String) = album
+        .replace(Regex("""\s*[(\[][^)\]]*[)\]]"""), "")
+        .replace(Regex("""(?i)\s+-\s+(single|ep|deluxe.*|remaster.*)$"""), "")
+        .trim()
+
+    private fun ask(song: Song, album: String): String? {
+        val url = "$BASE?s=${enc(song.title)}&a=${enc(song.artist)}&al=${enc(album)}&d=${song.duration / 1000}"
         val c = URL(url).openConnection() as HttpURLConnection
         val body = try {
             c.connectTimeout = 8000; c.readTimeout = 8000
@@ -55,9 +52,38 @@ object AnimatedCover {
             if (c.responseCode != 200) throw IOException("HTTP ${c.responseCode}")
             c.inputStream.bufferedReader().use { it.readText() }
         } finally { c.disconnect() }
-        val result = parse(body)
-        runCatching { f.apply { parentFile?.mkdirs() }.writeText(result ?: NONE) }
-        return result
+        return parse(body)
+    }
+
+    /**
+     * URL del bucle o `null`. El bucle cuelga de un álbum concreto de Apple, así que se prueba el álbum de tus etiquetas,
+     * el mismo sin sufijos de edición y los álbumes en los que iTunes tiene la canción (máx. 4 consultas). Lanza
+     * [IOException] si no hay conexión o el servicio está saturado (429/5xx) y no se pudo comprobar ninguno: eso no se
+     * guarda, para reintentar luego. Solo se guarda el "no hay" si todo se pudo consultar.
+     */
+    suspend fun find(context: Context, song: Song): String? {
+        if (!eligible(song)) return null
+        val f = cacheFile(context, song)
+        if (f.isFile && System.currentTimeMillis() - f.lastModified() < TTL_MS) {
+            return f.readText().takeIf { it != NONE }
+        }
+        val candidates = (listOf(song.album, baseAlbum(song.album)) + CoverFetcher.albumCandidates(song.title, song.artist))
+            .filter { it.isNotBlank() && !it.startsWith("<") }.distinct().take(4)
+        var failed: IOException? = null
+        var answered = 0
+        for (album in candidates) {
+            try {
+                answered++
+                ask(song, album)?.let { hit ->
+                    runCatching { f.apply { parentFile?.mkdirs() }.writeText(hit) }
+                    return hit
+                }
+            } catch (e: IOException) { answered--; failed = e }
+        }
+        // Si alguna consulta falló, el "no hay" no es fiable: no se guarda.
+        if (failed != null) { if (answered == 0) throw failed else return null }
+        runCatching { f.apply { parentFile?.mkdirs() }.writeText(NONE) }
+        return null
     }
 
     private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")

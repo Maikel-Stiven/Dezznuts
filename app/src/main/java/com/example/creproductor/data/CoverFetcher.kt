@@ -33,6 +33,23 @@ object CoverFetcher {
         return unknown || a.contains(fa) || fa.contains(a)
     }
 
+    /**
+     * Álbumes (sin repetir) en los que iTunes tiene esta canción: el álbum de tus etiquetas casi nunca coincide con el
+     * de Apple (ediciones, "Remastered", "Deluxe"), y el bucle animado cuelga de un álbum concreto.
+     */
+    suspend fun albumCandidates(title: String, artist: String): List<String> = withContext(Dispatchers.IO) {
+        try {
+            val q = URLEncoder.encode("$title $artist".trim(), "UTF-8")
+            val c = URL("https://itunes.apple.com/search?term=$q&media=music&entity=song&limit=10").openConnection() as HttpURLConnection
+            c.connectTimeout = 5000; c.readTimeout = 5000
+            if (c.responseCode != HttpURLConnection.HTTP_OK) return@withContext emptyList()
+            val results = JSONObject(c.inputStream.bufferedReader().use { it.readText() }).getJSONArray("results")
+            (0 until results.length()).map { results.getJSONObject(it) }
+                .filter { isSameSong(title, artist, it.optString("trackName"), it.optString("artistName")) }
+                .map { it.optString("collectionName") }.filter { it.isNotBlank() }.distinct()
+        } catch (e: CancellationException) { throw e } catch (_: Exception) { emptyList() }
+    }
+
     suspend fun fetchOfficialCover(title: String, artist: String): RemoteMetaDataResult? = withContext(Dispatchers.IO){
         try {
             val query = "$title $artist".trim()

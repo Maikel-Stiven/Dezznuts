@@ -18,3 +18,11 @@ class AnimatedCoverTest {
 
     @Test fun noAceptaHttpPlano() = assertNull(AnimatedCover.parse("""{"animated":"http://x/y.m3u8"}"""))
 }
+
+class AnimatedCoverAlbumTest {
+    @Test fun quitaEdiciones() {
+        assertEquals("Nevermind", AnimatedCover.baseAlbum("Nevermind (Remastered)"))
+        assertEquals("Rush!", AnimatedCover.baseAlbum("Rush! - Single"))
+        assertEquals("Teatro d'ira", AnimatedCover.baseAlbum("Teatro d'ira [Deluxe Edition]"))
+    }
+}
