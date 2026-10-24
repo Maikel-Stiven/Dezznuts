@@ -4,6 +4,15 @@ Este documento recoge el plan acordado el 2026-10-21 para que DEZZNUTS sea "el r
 pena tener en el celular", lo que ya está hecho y **por dónde seguir**. Cada etapa se trabaja en su rama, pasa por
 `optimizacion` y después a `main`.
 
+> **Actualización 2026-10-24.** La navegación y el estilo vuelven a la maqueta de Canva: pestañas arriba, menú
+> hamburguesa, morado `#BB86FC` sobre `#121212`, tipografía y formas estándar (la barra inferior, la pantalla de
+> Ajustes, Manrope y el tono caramelo de la etapa 2 se retiraron). Hecho desde entonces, todo opcional y apagado por
+> defecto: portada con movimiento y animada, color de la carátula, temas AMOLED/claro/Material You, YouTube Music
+> (búsqueda, reproducción y "Me gusta" con sesión), reanudar desde Bluetooth, aleatorio con "a continuación",
+> Android Auto (árbol Recientes/Favoritas/Listas/Todas), widget, letras animadas y estadísticas. Pendiente: pasar los
+> textos a `strings.xml` e inglés; probar en teléfonos reales (widget, Android Auto y la sesión de YouTube Music no se
+> probaron en un equipo real).
+
 ## Estado de las etapas
 
 | # | Etapa | Estado | Commit |

@@ -201,6 +201,7 @@ class MainActivity : ComponentActivity() {
                     var section by rememberSaveable { mutableStateOf(AppSection.HOME) }
                     var showOptionsDialog by remember { mutableStateOf(false) }
                     var showStatsDialog by remember { mutableStateOf(false) }
+                    var showYtLibrary by remember { mutableStateOf(false) }
                     // Copia de seguridad y M3U: el usuario elige el archivo con el selector del sistema (sin permisos extra).
                     val saveBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
                         uri?.let(viewModel::exportBackup)
@@ -237,6 +238,7 @@ class MainActivity : ComponentActivity() {
                             AppAction.About -> showAboutDialog = true
                             AppAction.Options -> showOptionsDialog = true
                             AppAction.Stats -> showStatsDialog = true
+                            AppAction.YtLibrary -> showYtLibrary = true
                             AppAction.SendFeedback -> {
                                 // Los comentarios van a los "issues" del repositorio.
                                 runCatching {
@@ -456,6 +458,7 @@ class MainActivity : ComponentActivity() {
 
                         if (showAboutDialog) AboutDialog(versionName) { showAboutDialog = false }
                         if (showOptionsDialog) OptionsDialog { showOptionsDialog = false }
+                        if (showYtLibrary) com.example.creproductor.gui.YtLibraryDialog(onPlay = { viewModel.playYt(it) }, onDismiss = { showYtLibrary = false })
                         if (showStatsDialog) com.example.creproductor.gui.StatsDialog((uiState as? UiState.Success)?.songs.orEmpty()) { showStatsDialog = false }
 
                         if (showClearImageCacheDialog) {

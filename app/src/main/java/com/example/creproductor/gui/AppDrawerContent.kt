@@ -43,6 +43,7 @@ sealed class AppAction(
     object ImportM3u : AppAction("Importar lista M3U", "Traer una lista de otro reproductor", Icons.Default.PlaylistAdd)
     object ClearImageCache : AppAction("Borrar caché de imágenes", "Carátulas y fotos de artistas descargadas", Icons.Default.DeleteSweep)
     object About: AppAction("Acerca de", "Versión, licencia y créditos", Icons.Default.Info)
+    object YtLibrary : AppAction("Mi YouTube Music", "Iniciar sesión y ver tus canciones con Me gusta", Icons.Default.CloudQueue)
     object Stats : AppAction("Estadísticas", "Lo más escuchado y las horas de música", Icons.Default.BarChart)
     object Options : AppAction("Opciones", "Portada con movimiento, color de la carátula, funciones en línea", Icons.Default.Tune)
     object SendFeedback : AppAction("Enviar comentarios", "Reportar un fallo o pedir una función en GitHub", Icons.AutoMirrored.Filled.HelpOutline)
@@ -55,7 +56,7 @@ private val DRAWER_GROUPS = listOf(
     "Biblioteca" to listOf(AppAction.Stats, AppAction.ScanFiles, AppAction.SearchDuplicates, AppAction.FixUnknownArtists),
     "Herramientas" to listOf(AppAction.AudioCutter, AppAction.SleepTimer),
     "Copia de seguridad" to listOf(AppAction.ExportBackup, AppAction.ImportBackup, AppAction.ImportM3u),
-    "Más" to listOf(AppAction.Options, AppAction.ClearImageCache, AppAction.About, AppAction.SendFeedback)
+    "Más" to listOf(AppAction.YtLibrary, AppAction.Options, AppAction.ClearImageCache, AppAction.About, AppAction.SendFeedback)
 )
 
 @Composable
@@ -76,7 +77,9 @@ fun AppDrawerContent(versionName: String, onAction: (AppAction) -> Unit, onClose
                         group, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp)
                     )
-                    actions.forEach { item ->
+                    // "Mi YouTube Music" solo aparece si activaste YouTube Music en Opciones.
+                    val ytOn = com.example.creproductor.data.YtMusic.isEnabled(androidx.compose.ui.platform.LocalContext.current)
+                    actions.filter { it != AppAction.YtLibrary || ytOn }.forEach { item ->
                         NavigationDrawerItem(
                             label = { Text(item.title) },
                             icon = { Icon(item.icon, contentDescription = null) },
