@@ -226,6 +226,7 @@ fun FullScreenPlayer(
         color = MaterialTheme.colorScheme.background
     ) {
         val coverContext = LocalContext.current
+        val animatedCoverOn = remember { isAnimatedCoverOn(coverContext) }
         val (tiltX, tiltY) = rememberCoverTilt(remember { isCoverMotionOn(coverContext) })
         Box(Modifier.fillMaxSize()) {
         CoverBackdrop(song, isPlaying)
@@ -328,6 +329,7 @@ fun FullScreenPlayer(
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
+                        if (currentPagerSong != null) AnimatedCoverLayer(currentPagerSong, isPlaying, page == pagerState.currentPage && animatedCoverOn)
                     } else {
                         Icon(
                             imageVector = Icons.Default.MusicNote,

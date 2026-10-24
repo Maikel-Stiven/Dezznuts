@@ -84,22 +84,20 @@ fun SettingsScreen(
                     }
                 }
             }
-            item(key = "cover_motion") {
-                val context = androidx.compose.ui.platform.LocalContext.current
-                var on by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(isCoverMotionOn(context)) }
+            item(key = "appearance") {
                 Text(
                     text = "Apariencia",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(start = 24.dp, top = 20.dp, bottom = 4.dp)
                 )
-                ListItem(
-                    headlineContent = { Text("Portada con movimiento", style = MaterialTheme.typography.titleSmall) },
-                    supportingContent = { Text("La portada se inclina con el teléfono (se desactiva sola en equipos modestos o con ahorro de batería)") },
-                    leadingContent = { Icon(Icons.Default.ScreenRotation, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                    trailingContent = { androidx.compose.material3.Switch(checked = on, onCheckedChange = { on = it; setCoverMotion(context, it) }) },
-                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
-                    modifier = Modifier.clickable { on = !on; setCoverMotion(context, on) }.padding(horizontal = 8.dp)
+                PrefSwitch(
+                    "Portada con movimiento", "La portada se inclina con el teléfono (se desactiva sola en equipos modestos o con ahorro de batería)",
+                    Icons.Default.ScreenRotation, ::isCoverMotionOn, ::setCoverMotion
+                )
+                PrefSwitch(
+                    "Portada animada (en línea)", "Bucle de video del álbum cuando existe, solo con Wi-Fi. Consulta artwork.boidu.dev (servicio comunitario, no oficial) con título, artista y álbum",
+                    Icons.Default.Movie, ::isAnimatedCoverOn, ::setAnimatedCover
                 )
             }
             item {
@@ -113,4 +111,21 @@ fun SettingsScreen(
             }
         }
     }
+}
+
+@Composable
+private fun PrefSwitch(
+    title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector,
+    read: (android.content.Context) -> Boolean, write: (android.content.Context, Boolean) -> Unit
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var on by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(read(context)) }
+    ListItem(
+        headlineContent = { Text(title, style = MaterialTheme.typography.titleSmall) },
+        supportingContent = { Text(subtitle) },
+        leadingContent = { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+        trailingContent = { androidx.compose.material3.Switch(checked = on, onCheckedChange = { on = it; write(context, it) }) },
+        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
+        modifier = Modifier.clickable { on = !on; write(context, on) }.padding(horizontal = 8.dp)
+    )
 }

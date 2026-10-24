@@ -57,6 +57,7 @@ dependencies {
     val media3Version = "1.9.1"
     implementation("androidx.media3:media3-exoplayer:$media3Version")
     implementation("androidx.media3:media3-session:$media3Version")
+    implementation("androidx.media3:media3-exoplayer-hls:$media3Version")
     implementation("androidx.compose.material:material-icons-extended-android:1.7.8")
     implementation("io.coil-kt:coil-compose:2.7.0")
     //
@@ -64,6 +65,7 @@ dependencies {
     //Testeos
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation("org.json:json:20240303")
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
