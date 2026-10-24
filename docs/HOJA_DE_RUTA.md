@@ -4,6 +4,8 @@ Este documento recoge el plan acordado el 2026-10-21 para que DEZZNUTS sea "el r
 pena tener en el celular", lo que ya está hecho y **por dónde seguir**. Cada etapa se trabaja en su rama, pasa por
 `optimizacion` y después a `main`.
 
+> **Estado actual y pendientes: [`ESTADO_Y_PENDIENTES.md`](ESTADO_Y_PENDIENTES.md).**
+>
 > **Actualización 2026-10-24.** La navegación y el estilo vuelven a la maqueta de Canva: pestañas arriba, menú
 > hamburguesa, morado `#BB86FC` sobre `#121212`, tipografía y formas estándar (la barra inferior, la pantalla de
 > Ajustes, Manrope y el tono caramelo de la etapa 2 se retiraron). Hecho desde entonces, todo opcional y apagado por
