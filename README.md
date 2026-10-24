@@ -11,7 +11,7 @@
 ![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.2-7F52FF?logo=kotlin&logoColor=white)
 ![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?logo=jetpackcompose&logoColor=white)
-![Versión](https://img.shields.io/badge/versi%C3%B3n-1.0.0-brightgreen)
+![Versión](https://img.shields.io/badge/versi%C3%B3n-1.1.0-brightgreen)
 ![PRs](https://img.shields.io/badge/PRs-bienvenidos-brightgreen)
 
 </div>
@@ -20,7 +20,7 @@ Reproductor de música **local** para Android, open source y gratuito. La idea e
 funciones que otros reproductores suelen cobrar (etiquetado automático, cortador de audio,
 ecualizador, temporizador), "solo por amor al arte".
 
-> ✅ **Versión 1.0.0**: primera versión estable. Descarga el APK en [Releases](../../releases/latest) y mira el
+> ✅ **Versión 1.1.0**. Descarga el APK en [Releases](../../releases/latest) y mira el
 > [CHANGELOG](CHANGELOG.md). Lo que aún falta probar en teléfonos reales está en
 > [Problemas conocidos](#-problemas-conocidos).
 
@@ -55,7 +55,7 @@ reproduce en segundo plano con **Media3 / ExoPlayer**.
 
 - Barra superior con ☰ · lupa · ⋮, **pestañas deslizables** (Selección rápida, Canciones, Álbumes, Artistas, Géneros,
   Listas, Carpetas y **YT Music**) y menú lateral; los detalles se apilan y "atrás" vuelve a la pantalla anterior.
-- Identidad DEZZNUTS: **morado** `#BB86FC` y turquesa sobre negro; **6 temas a elegir**: DEZZNUTS (morado, por defecto), **Omarchy** (verde pixel), **Premium** (caramelo), AMOLED, claro y Material You.
+- Identidad DEZZNUTS: **morado** `#BB86FC` y turquesa sobre negro; **10 temas a elegir**: DEZZNUTS (morado, por defecto), **Omarchy** (verde pixel), **Premium** (caramelo), Sakura, Océano, Synthwave, Brasa, AMOLED, claro y Material You.
 - Pantalla de **Opciones** completa; textos en **español e inglés**.
 - Reproductor a pantalla completa: portada, título y favorito, progreso, controles, pestaña de **letras**
   sincronizadas (LRCLIB) y fondo animado con la carátula. Se abre deslizando el mini-reproductor hacia arriba y

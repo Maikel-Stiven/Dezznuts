@@ -11,14 +11,14 @@
 ![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.2-7F52FF?logo=kotlin&logoColor=white)
 ![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?logo=jetpackcompose&logoColor=white)
-![Version](https://img.shields.io/badge/version-1.0.0-brightgreen)
+![Version](https://img.shields.io/badge/version-1.1.0-brightgreen)
 ![PRs](https://img.shields.io/badge/PRs-welcome-brightgreen)
 
 </div>
 
 Features other players lock behind a paywall (auto-tagging, audio cutter, equalizer, sleep timer…), offered freely, "just for the love of it".
 
-> ✅ **Version 1.0.0**: first stable release. Grab the APK from [Releases](../../releases/latest) and read the [CHANGELOG](CHANGELOG.md). What still needs real-phone testing is in [Known issues](#-known-issues).
+> ✅ **Version 1.1.0**. Grab the APK from [Releases](../../releases/latest) and read the [CHANGELOG](CHANGELOG.md). What still needs real-phone testing is in [Known issues](#-known-issues).
 
 ## 📸 Screenshots
 
@@ -47,7 +47,7 @@ A native Android app written in **Kotlin + Jetpack Compose** that scans the musi
 | Area | Detail |
 |------|--------|
 | **Navigation** | Top bar ☰ · search · ⋮, swipeable tabs (Quick picks, Songs, Albums, Artists, Genres, Playlists, Folders, YT Music) and a side menu; detail screens stack, so Back returns to the previous one. |
-| **Design** | DEZZNUTS identity: **purple** `#BB86FC` and teal on black, top tabs + side menu; **6 themes to choose from**: DEZZNUTS (purple, default), **Omarchy** (pixel green), **Premium** (caramel), AMOLED, light and Material You; full-screen Options; Spanish and English. |
+| **Design** | DEZZNUTS identity: **purple** `#BB86FC` and teal on black, top tabs + side menu; **10 themes to choose from**: DEZZNUTS (purple, default), **Omarchy** (pixel green), **Premium** (caramel), Sakura, Ocean, Synthwave, Ember, AMOLED, light and Material You; full-screen Options; Spanish and English. |
 | **Player** | Cover, title & favorite, seek bar, controls, synced **lyrics** (LRCLIB), animated cover backdrop. Swipe the mini-player up to open, drag down to close, swipe sideways to skip. |
 | **Library** | Songs (filters + **sorting**), Albums, Artists, Playlists, Genres, Folders; Home with recent, most played, favorites and moods. |
 | **Queue** | **Play next**, add to queue, drag to reorder, remove. |

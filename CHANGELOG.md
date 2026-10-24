@@ -2,7 +2,7 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versionado semántico.
 
-## [Sin publicar]
+## [1.1.0] - 2026-10-24
 
 ### Novedades
 - **YouTube Music**: la portada es la oficial (cuadrada, de iTunes) en vez del fotograma del video, con lo que también
@@ -11,11 +11,19 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 - **Sigue con las recomendadas de YouTube** al terminar una canción (opción, activada por defecto); el botón siguiente
   de la notificación también funciona.
 - **Búsqueda**: debajo de lo local aparece «También en YouTube Music» (sin mover lo de arriba mientras carga).
-- **Inicio de sesión de YouTube Music** a pantalla completa dentro de la app, con barra propia y progreso.
 - **Letra palabra por palabra** con halo luminoso (opción). El reparto es estimado: LRCLIB solo da el tiempo de cada línea.
 - **4 temas nuevos** (Sakura, Océano, Synthwave y Brasa) y selector por muestras de color en el menú lateral y en Opciones.
+- **Portada animada** más acertada: prueba el álbum sin sufijos de edición («Remastered», «Deluxe», «- Single») y los
+  álbumes en los que iTunes tiene la canción; los fallos del servicio ya no se guardan como «no hay».
+- **Inicio de sesión** dentro de la ventana de la app (ya no es una ventana aparte) y con la página precargada.
 - Pulido visual: logotipo tipográfico, pestañas con el acento solo en la activa, menú lateral más sobrio y sin textos
   cortados, cuadrículas de 2 columnas en teléfonos pequeños, «Ver todo» en vez de mayúsculas, textos de Opciones más cortos.
+
+### Correcciones
+- Las canciones de YouTube Music en «Reproducción reciente» (y en Más reproducidas o la cola) ya se reproducen.
+- Una canción de YT ya no pisa la última canción local ni su posición al reabrir la app.
+- Búsqueda: sin indicador eterno si no hay red; la precarga de YT no se pide dos veces.
+- Letra: sin fotogramas innecesarios en pausa y barrido más fluido.
 
 ## [1.0.0] - 2026-10-24
 
