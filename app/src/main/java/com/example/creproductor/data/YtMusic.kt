@@ -49,13 +49,33 @@ object YtMusic {
         }
     }
 
-    /** Dirección directa del mejor audio de la canción. Caduca en unas horas: resolver justo antes de reproducir. */
-    fun audioUrl(trackUrl: String): String {
-        init
-        val audio = StreamInfo.getInfo(ServiceList.YouTube, trackUrl).audioStreams
-        // Preferimos el de más bitrate; ExoPlayer reproduce tanto Opus/WebM como AAC/M4A.
-        return audio.maxByOrNull { it.averageBitrate }?.content ?: throw IOException("Sin audio disponible")
+    /** Lo que sale de abrir una canción: el audio y las recomendadas de YouTube ("a continuación"). */
+    class Resolved(val audioUrl: String, val related: List<YtTrack>, val at: Long = System.currentTimeMillis())
+
+    // Las direcciones de audio duran horas: volver a una canción ya abierta (o la siguiente, que se prepara antes de
+    // que acabe la actual) no repite la ida y vuelta a YouTube, que es lo que más tarda.
+    private val cache = object : LinkedHashMap<String, Resolved>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Resolved>) = size > 40
     }
+    private const val TTL_MS = 3L * 3600 * 1000
+
+    /** Audio + recomendadas en una sola petición. Caduca en unas horas. Bloquea: llamar fuera del hilo principal. */
+    fun resolve(trackUrl: String): Resolved {
+        synchronized(cache) { cache[trackUrl]?.takeIf { System.currentTimeMillis() - it.at < TTL_MS }?.let { return it } }
+        init
+        val info = StreamInfo.getInfo(ServiceList.YouTube, trackUrl)
+        // Preferimos el de más bitrate; ExoPlayer reproduce tanto Opus/WebM como AAC/M4A.
+        val audio = info.audioStreams.maxByOrNull { it.averageBitrate }?.content ?: throw IOException("Sin audio disponible")
+        val related = info.relatedItems.filterIsInstance<StreamInfoItem>().map {
+            YtTrack(it.url, it.name, it.uploaderName.orEmpty(), it.duration, it.thumbnails.maxByOrNull { t -> t.width }?.url)
+        }
+        return Resolved(audio, related).also { synchronized(cache) { cache[trackUrl] = it } }
+    }
+
+    fun audioUrl(trackUrl: String): String = resolve(trackUrl).audioUrl
+
+    /** "Artista - Topic" / "ArtistaVEVO" → "Artista", para buscar la portada oficial. */
+    fun cleanArtist(raw: String) = raw.replace(Regex("(?i)\\s*-\\s*topic$"), "").replace(Regex("(?i)vevo$"), "").trim()
 
     /** Descargador mínimo que pide el extractor. */
     private object Http : Downloader() {

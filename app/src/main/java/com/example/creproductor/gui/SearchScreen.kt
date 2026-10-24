@@ -282,6 +282,16 @@ fun SearchOverlayScreen(
             val onYtTab = ytEnabled && selectedTabItem == SearchSubTab.entries.size
             val currentSubTab = SearchSubTab.entries[selectedTabItem.coerceAtMost(SearchSubTab.entries.lastIndex)]
 
+            // Resultados de YouTube Music debajo de los locales: llegan solos tras una pausa al escribir y no mueven nada
+            // de lo de arriba mientras cargan. Solo con YouTube Music activado.
+            val ytInline by produceState<List<com.example.creproductor.data.YtTrack>?>(null, searchQuery, ytEnabled) {
+                value = null
+                if (!ytEnabled || searchQuery.trim().length < 2) return@produceState
+                delay(700)
+                value = withContext(Dispatchers.IO) {
+                    runCatching { com.example.creproductor.data.YtMusic.search(searchQuery).take(5) }.getOrNull()
+                }
+            }
             if (onYtTab) {
                 YtMusicResults(searchQuery) { keyboardController?.hide(); onYtPlay(it) }
             } else LazyColumn(
@@ -417,6 +427,38 @@ fun SearchOverlayScreen(
                         )
                     }
                 }
+                if (ytEnabled && searchQuery.trim().length >= 2 && (currentSubTab == SearchSubTab.ALL || currentSubTab == SearchSubTab.SONGS)) {
+                    item(key = "yt_header") {
+                        Row(
+                            Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                tr("También en YouTube Music"), style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f)
+                            )
+                            if (ytInline == null) CircularProgressIndicator(Modifier.size(18.dp).padding(end = 2.dp), strokeWidth = 2.dp)
+                            else TextButton(onClick = { selectedTabItem = SearchSubTab.entries.size }) { Text(tr("Ver todo")) }
+                        }
+                    }
+                    items(ytInline.orEmpty(), key = { "yt_${it.url}" }) { t ->
+                        ListItem(
+                            headlineContent = { Text(t.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            supportingContent = { Text("${t.artist} · %d:%02d".format(t.durationSec / 60, t.durationSec % 60), maxLines = 1) },
+                            leadingContent = {
+                                AsyncImage(
+                                    model = t.thumbnail, contentDescription = null, contentScale = ContentScale.Crop,
+                                    modifier = Modifier.size(48.dp).clip(MaterialTheme.shapes.small)
+                                )
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier.clickable {
+                                if (searchQuery.isNotBlank()) onAddSearchHistory(searchQuery)
+                                keyboardController?.hide(); onYtPlay(t)
+                            }
+                        )
+                    }
+                }
             }
         }
     }
@@ -545,6 +587,9 @@ internal fun YtMusicResults(query: String, onPlay: (com.example.creproductor.dat
         value = null
         delay(600)
         value = withContext(Dispatchers.IO) { runCatching { com.example.creproductor.data.YtMusic.search(query) } }
+        // El primer resultado es el que casi siempre se toca: se abre ya (queda en caché) y de paso se calienta
+        // lo más lento de YouTube, que la primera vez tarda ~3 s más que las siguientes.
+        value?.getOrNull()?.firstOrNull()?.let { withContext(Dispatchers.IO) { runCatching { com.example.creproductor.data.YtMusic.resolve(it.url) } } }
     }
     val list = result?.getOrNull()
     when {

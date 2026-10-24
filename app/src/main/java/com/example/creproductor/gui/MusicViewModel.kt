@@ -48,6 +48,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.async
+import com.example.creproductor.data.isYoutube
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -432,7 +433,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
 
                             if (foundSong !== null){
                                 _currentSong.value = foundSong
-                                registerSongPlay(foundSong)
+                                if (foundSong.isYoutube) ytContinue(foundSong) else registerSongPlay(foundSong)
                             }
                         }
                         // Un cambio de cola (incluida la restauración inicial de setMediaItems) no es una
@@ -784,37 +785,82 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         }
     }
 
+    private val ytPlayed = LinkedHashSet<String>()
+
+    private fun ytSong(track: com.example.creproductor.data.YtTrack, meta: com.example.creproductor.data.RemoteMetaDataResult?) = Song(
+        id = -(1L shl 62) - (track.url.hashCode().toLong() and 0xFFFFFFFFL),
+        title = track.title, artist = com.example.creproductor.data.YtMusic.cleanArtist(track.artist),
+        album = meta?.album?.takeIf { it.isNotBlank() } ?: "YouTube Music",
+        duration = track.durationSec * 1000, contentUri = Uri.parse(track.url),
+        // La miniatura de YouTube es un fotograma de video (16:9, con bordes): la portada oficial es cuadrada y limpia.
+        albumArtUri = (meta?.highResCoverUrl ?: track.thumbnail)?.let(Uri::parse), genre = "YouTube Music"
+    )
+
+    private suspend fun ytMeta(track: com.example.creproductor.data.YtTrack) = kotlinx.coroutines.withTimeoutOrNull(2500) {
+        com.example.creproductor.data.CoverFetcher.fetchOfficialCover(track.title, com.example.creproductor.data.YtMusic.cleanArtist(track.artist))
+    }
+
+    private fun ytItem(song: Song, audioUrl: String) = MediaItem.Builder().setMediaId(song.id.toString()).setUri(audioUrl)
+        .setMediaMetadata(androidx.media3.common.MediaMetadata.Builder()
+            .setTitle(song.title).setArtist(song.artist).setAlbumTitle(song.album).setArtworkUri(song.albumArtUri).build())
+        .build()
+
     /**
-     * Reproduce una canción de YouTube Music. Su dirección de audio caduca, así que se pide justo ahora; la pista
-     * suena sola (sin cola de la biblioteca) y no se guarda como "última canción" ni en recientes porque no vive en
-     * MediaStore. Id sintético muy negativo: no choca con los de MediaStore (>0) ni con los de CUE (pequeños y negativos).
+     * Reproduce una canción de YouTube Music. Su dirección de audio caduca, así que se pide justo ahora. La canción y
+     * su portada se muestran al instante y la portada oficial (iTunes) se busca a la vez que la dirección. No se guarda
+     * como "última canción" ni en recientes porque no vive en MediaStore. Al empezar se prepara la siguiente
+     * recomendada por YouTube y se añade a la cola del reproductor, así que sigue sola (y el botón siguiente de la
+     * notificación funciona). Id sintético muy negativo: no choca con los de MediaStore (>0) ni con los de CUE.
      */
     fun playYt(track: com.example.creproductor.data.YtTrack) {
         val app = getApplication<Application>()
         viewModelScope.launch {
-            val url = runCatching { withContext(Dispatchers.IO) { com.example.creproductor.data.YtMusic.audioUrl(track.url) } }
+            val t0 = SystemClock.elapsedRealtime()
+            ytPlayed.clear(); ytPlayed += track.url
+            val quick = ytSong(track, null)
+            _currentQueue.value = listOf(quick)
+            _currentSong.value = quick
+            _currentPositionMs.value = 0L
+            val meta = async { ytMeta(track) }
+            val resolved = runCatching { withContext(Dispatchers.IO) { com.example.creproductor.data.YtMusic.resolve(track.url) } }
                 .getOrElse {
                     Toast.makeText(app, com.example.creproductor.i18n.I18n.tr(app, "No se pudo abrir la canción de YouTube Music"), Toast.LENGTH_SHORT).show()
                     return@launch
                 }
-            val song = Song(
-                id = -(1L shl 62) - (track.url.hashCode().toLong() and 0xFFFFFFFFL),
-                title = track.title, artist = track.artist, album = "YouTube Music",
-                duration = track.durationSec * 1000, contentUri = Uri.parse(track.url),
-                albumArtUri = track.thumbnail?.let(Uri::parse), genre = "YouTube Music"
-            )
+            val song = ytSong(track, meta.await())
             val controller = mediaController ?: return@launch
             _currentQueue.value = listOf(song)
             _currentSong.value = song
-            _currentPositionMs.value = 0L
-            controller.setMediaItem(
-                MediaItem.Builder().setMediaId(song.id.toString()).setUri(url)
-                    .setMediaMetadata(androidx.media3.common.MediaMetadata.Builder()
-                        .setTitle(song.title).setArtist(song.artist).setArtworkUri(song.albumArtUri).build())
-                    .build()
-            )
+            controller.setMediaItem(ytItem(song, resolved.audioUrl))
             controller.prepare()
             controller.play()
+            Log.i("DezzYt", "[+${SystemClock.elapsedRealtime() - t0} ms] lista para sonar: ${song.title}")
+            ytQueueNext(song, resolved)
+        }
+    }
+
+    /** Añade al final de la cola la siguiente recomendada por YouTube (si sigues en esta canción cuando esté lista). */
+    private fun ytQueueNext(current: Song, resolved: com.example.creproductor.data.YtMusic.Resolved) {
+        viewModelScope.launch {
+            val next = resolved.related.firstOrNull { it.url !in ytPlayed && it.durationSec in 60..900 } ?: return@launch
+            ytPlayed += next.url
+            val nextResolved = runCatching { withContext(Dispatchers.IO) { com.example.creproductor.data.YtMusic.resolve(next.url) } }.getOrNull() ?: return@launch
+            val song = ytSong(next, ytMeta(next))
+            val controller = mediaController ?: return@launch
+            if (controller.currentMediaItem?.mediaId != current.id.toString()) return@launch
+            controller.addMediaItem(ytItem(song, nextResolved.audioUrl))
+            _currentQueue.value = _currentQueue.value + song
+            Log.i("DezzYt", "siguiente recomendada en cola: ${song.title}")
+        }
+    }
+
+    /** Al pasar a una canción de YouTube que es la última de la cola, prepara la siguiente (la dirección ya está en caché). */
+    private fun ytContinue(song: Song) {
+        val controller = mediaController ?: return
+        if (controller.currentMediaItemIndex != controller.mediaItemCount - 1) return
+        viewModelScope.launch {
+            val resolved = runCatching { withContext(Dispatchers.IO) { com.example.creproductor.data.YtMusic.resolve(song.contentUri.toString()) } }.getOrNull() ?: return@launch
+            ytQueueNext(song, resolved)
         }
     }
 
