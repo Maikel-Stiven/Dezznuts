@@ -225,6 +225,8 @@ fun FullScreenPlayer(
             .graphicsLayer { translationY = dragY },
         color = MaterialTheme.colorScheme.background
     ) {
+        val coverContext = LocalContext.current
+        val (tiltX, tiltY) = rememberCoverTilt(remember { isCoverMotionOn(coverContext) })
         Box(Modifier.fillMaxSize()) {
         CoverBackdrop(song, isPlaying)
         Column(
@@ -302,6 +304,11 @@ fun FullScreenPlayer(
                             val scale = (1f - (pageOffset * 0.12f)).coerceIn(0.88f, 1f)
                             scaleX = scale
                             scaleY = scale
+                            if (page == pagerState.currentPage) {
+                                cameraDistance = 16f * density
+                                rotationX = tiltX.value
+                                rotationY = -tiltY.value
+                            }
                         }
                         .shadow(24.dp, MaterialTheme.shapes.large)
                         .clip(MaterialTheme.shapes.large)
