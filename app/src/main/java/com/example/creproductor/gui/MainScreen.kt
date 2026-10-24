@@ -46,28 +46,26 @@ import com.example.creproductor.data.Song
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.activity.compose.BackHandler
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.LibraryMusic
-import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.mutableStateListOf
 
-/** Secciones de la barra inferior. */
-enum class AppSection(val title: String, val icon: ImageVector) {
-    HOME("Inicio", Icons.Default.Home),
-    LIBRARY("Biblioteca", Icons.Default.LibraryMusic),
-    SEARCH("Buscar", Icons.Default.Search),
-    SETTINGS("Ajustes", Icons.Default.Settings)
-}
+/** Pantalla principal (pestañas + menú hamburguesa, como en la maqueta) o la búsqueda que se abre desde la lupa. */
+enum class AppSection { HOME, SEARCH }
 
-/** Pestañas de la Biblioteca. */
+/** Pestañas de la pantalla principal, en el orden de la maqueta. */
 enum class AppTab(val title: String){
+    QUICK("Selección rápida"),
     SONGS("Canciones"),
     ALBUMS("Álbumes"),
     ARTISTS("Artistas"),
-    PLAYLISTS("Listas"),
     GENRES("Géneros"),
+    PLAYLISTS("Listas de reproducción"),
     FOLDERS("Carpetas")
 }
 
@@ -86,7 +84,8 @@ fun MainScreen(
     viewModel: MusicViewModel,
     section: AppSection,
     onSectionChange: (AppSection) -> Unit,
-    settingsContent: @Composable () -> Unit,
+    versionName: String,
+    onAction: (AppAction) -> Unit,
     onExportPlaylist: (Playlist) -> Unit = {},
     onEditSong: (Song) -> Unit = {}
 ){
@@ -143,8 +142,13 @@ fun MainScreen(
         if (list.isNotEmpty()) { val shuffled = list.shuffled(); viewModel.playSong(shuffled.first(), customQueue = shuffled) }
     }
 
-    // Atrás en la raíz de Biblioteca o Ajustes vuelve a Inicio en vez de salir de la app.
+    // Atrás en la búsqueda vuelve a la pantalla principal, y en una pestaña distinta de la primera vuelve a "Selección rápida".
     BackHandler(enabled = stack.isEmpty() && section != AppSection.HOME) { onSectionChange(AppSection.HOME) }
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    BackHandler(enabled = stack.isEmpty() && section == AppSection.HOME && drawerState.isOpen) { coroutineScope.launch { drawerState.close() } }
+    BackHandler(enabled = stack.isEmpty() && section == AppSection.HOME && !drawerState.isOpen && pagerState.currentPage != 0) {
+        coroutineScope.launch { pagerState.animateScrollToPage(0) }
+    }
 
     when (val detail = stack.lastOrNull()) {
         is Detail.Category -> QuickSelectDetailScreen(
@@ -230,25 +234,6 @@ fun MainScreen(
             }
         }
         null -> when (section) {
-            AppSection.HOME -> Scaffold(
-                topBar = {
-                    TopAppBar(
-                        title = { Text("DEZZNUTS", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold) },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
-                    )
-                },
-                // La barra inferior ya reserva el espacio de la barra de gestos.
-                contentWindowInsets = WindowInsets(0)
-            ) { innerPadding ->
-                Box(Modifier.padding(innerPadding)) {
-                    QuickSelectionScreen(
-                        viewModel = viewModel,
-                        onSongClick = { song, queue -> viewModel.playSong(song, customQueue = queue)},
-                        onSeeAllCategoryClick = {type, categorySongs -> open(Detail.Category(type.title, categorySongs)) },
-                        onMoodClick = { mood, moodSongs -> open(Detail.Category(mood.label, moodSongs)) }
-                    )
-                }
-            }
             AppSection.SEARCH -> SearchOverlayScreen(
                 onEditSong = onEditSong,
                 searchQuery = searchQuery,
@@ -273,15 +258,42 @@ fun MainScreen(
                     onSectionChange(AppSection.HOME)
                 }
             )
-            AppSection.SETTINGS -> settingsContent()
-            AppSection.LIBRARY -> Scaffold(
+            AppSection.HOME -> ModalNavigationDrawer(
+                drawerState = drawerState,
+                // El deslizamiento lateral es de las pestañas; el menú se abre con la hamburguesa y se cierra deslizando.
+                gesturesEnabled = drawerState.isOpen,
+                drawerContent = {
+                    AppDrawerContent(versionName, onAction, onCloseDrawer = { coroutineScope.launch { drawerState.close() } })
+                }
+            ) {
+            Scaffold(
                 topBar = {
+                    var showOverflow by remember { mutableStateOf(false) }
                     TopAppBar(
-                        title = { Text("Biblioteca", style = MaterialTheme.typography.headlineSmall) },
+                        navigationIcon = {
+                            IconButton(onClick = { coroutineScope.launch { drawerState.open() } }) {
+                                Icon(Icons.Default.Menu, contentDescription = "Abrir menú")
+                            }
+                        },
+                        title = { Text("DEZZNUTS", fontWeight = FontWeight.ExtraBold) },
+                        actions = {
+                            IconButton(onClick = { onSectionChange(AppSection.SEARCH) }) {
+                                Icon(Icons.Default.Search, contentDescription = "Buscar")
+                            }
+                            Box {
+                                IconButton(onClick = { showOverflow = true }) {
+                                    Icon(Icons.Default.MoreVert, contentDescription = "Más opciones")
+                                }
+                                DropdownMenu(expanded = showOverflow, onDismissRequest = { showOverflow = false }) {
+                                    listOf(AppAction.ScanFiles, AppAction.SleepTimer, AppAction.Options, AppAction.About).forEach { action ->
+                                        DropdownMenuItem(text = { Text(action.title) }, onClick = { showOverflow = false; onAction(action) })
+                                    }
+                                }
+                            }
+                        },
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
                     )
                 },
-                // La barra inferior ya reserva el espacio de la barra de gestos.
                 contentWindowInsets = WindowInsets(0)
             ) { innerPadding ->
                 Column(
@@ -308,6 +320,12 @@ fun MainScreen(
                         modifier = Modifier.weight(1f)
                     ) { page ->
                          when (AppTab.entries[page]){
+                             AppTab.QUICK -> QuickSelectionScreen(
+                                 viewModel = viewModel,
+                                 onSongClick = { song, queue -> viewModel.playSong(song, customQueue = queue)},
+                                 onSeeAllCategoryClick = {type, categorySongs -> open(Detail.Category(type.title, categorySongs)) },
+                                 onMoodClick = { mood, moodSongs -> open(Detail.Category(mood.label, moodSongs)) }
+                             )
                              AppTab.SONGS -> Column(modifier = Modifier.fillMaxSize()) {
                                  Row(verticalAlignment = Alignment.CenterVertically) {
                                      Row(
@@ -381,6 +399,7 @@ fun MainScreen(
                          }
                      }
                 }
+            }
             }
         }
     }

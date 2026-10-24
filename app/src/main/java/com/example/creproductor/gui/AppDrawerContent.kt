@@ -1,23 +1,30 @@
 package com.example.creproductor.gui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
-/** Acciones de la pantalla de Ajustes (las ejecuta MainActivity, que es quien abre los diálogos). */
+/** Acciones del menú lateral (las ejecuta MainActivity, que es quien abre los diálogos). */
 sealed class AppAction(
     val title: String,
     val subtitle: String,
@@ -35,62 +42,65 @@ sealed class AppAction(
     object ImportM3u : AppAction("Importar lista M3U", "Traer una lista de otro reproductor", Icons.Default.PlaylistAdd)
     object ClearImageCache : AppAction("Borrar caché de imágenes", "Carátulas y fotos de artistas descargadas", Icons.Default.DeleteSweep)
     object About: AppAction("Acerca de", "Versión, licencia y créditos", Icons.Default.Info)
+    object Options : AppAction("Opciones", "Portada con movimiento, color de la carátula, funciones en línea", Icons.Default.Tune)
     object SendFeedback : AppAction("Enviar comentarios", "Reportar un fallo o pedir una función en GitHub", Icons.AutoMirrored.Filled.HelpOutline)
 }
 
-private val SETTINGS_GROUPS = listOf(
-    "Audio" to listOf(AppAction.Equalizer, AppAction.HiFiAudio),
+
+/** Grupos del menú hamburguesa de la maqueta (Ecualizador, Escanear, Duplicados, Cortador, Acerca de, Opiniones, Temporizador…). */
+private val DRAWER_GROUPS = listOf(
+    null to listOf(AppAction.Equalizer, AppAction.HiFiAudio),
     "Biblioteca" to listOf(AppAction.ScanFiles, AppAction.SearchDuplicates, AppAction.FixUnknownArtists),
     "Herramientas" to listOf(AppAction.AudioCutter, AppAction.SleepTimer),
     "Copia de seguridad" to listOf(AppAction.ExportBackup, AppAction.ImportBackup, AppAction.ImportM3u),
-    "Almacenamiento" to listOf(AppAction.ClearImageCache),
-    "Información" to listOf(AppAction.About, AppAction.SendFeedback)
+    "Más" to listOf(AppAction.Options, AppAction.ClearImageCache, AppAction.About, AppAction.SendFeedback)
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(
-    versionName: String,
-    onAction: (AppAction) -> Unit
-){
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Ajustes", style = MaterialTheme.typography.headlineSmall) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
-            )
-        },
-        contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0)
-    ) { innerPadding ->
-        LazyColumn(Modifier.fillMaxSize().padding(innerPadding)) {
-            SETTINGS_GROUPS.forEach { (group, actions) ->
-                item(key = group) {
-                    Text(
-                        text = group,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 24.dp, top = 20.dp, bottom = 4.dp)
+fun AppDrawerContent(versionName: String, onAction: (AppAction) -> Unit, onCloseDrawer: () -> Unit) {
+    ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surface, modifier = Modifier.width(300.dp)) {
+        Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                Text(
+                    text = "DEZZNUTS",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(vertical = 24.dp, horizontal = 12.dp)
+                )
+                HorizontalDivider(Modifier.padding(bottom = 8.dp))
+                DRAWER_GROUPS.forEach { (group, actions) ->
+                    if (group != null) Text(
+                        group, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp)
                     )
-                }
-                actions.forEach { action ->
-                    item(key = action.title) {
-                        ListItem(
-                            headlineContent = { Text(action.title, style = MaterialTheme.typography.titleSmall) },
-                            supportingContent = { Text(action.subtitle) },
-                            leadingContent = { Icon(action.icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                            colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
-                            modifier = Modifier.clickable { onAction(action) }.padding(horizontal = 8.dp)
+                    actions.forEach { item ->
+                        NavigationDrawerItem(
+                            label = { Text(item.title) },
+                            icon = { Icon(item.icon, contentDescription = null) },
+                            selected = false,
+                            onClick = { onCloseDrawer(); onAction(item) },
+                            modifier = Modifier.padding(vertical = 2.dp)
                         )
                     }
                 }
             }
-            item(key = "appearance") {
-                Text(
-                    text = "Apariencia",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 24.dp, top = 20.dp, bottom = 4.dp)
-                )
+            Column(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                HorizontalDivider(Modifier.padding(bottom = 12.dp))
+                Text("DEZZNUTS Player $versionName", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+/** Opciones con interruptor (todas apagadas por defecto): lo visual y lo que usa internet. */
+@Composable
+fun OptionsDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Opciones") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 PrefSwitch(
                     "Color de la carátula en el reproductor", "Los botones y el progreso toman el tono de la portada. Apagado: siempre el morado de DEZZNUTS",
                     Icons.Default.Palette, ::isCoverAccentOn, ::setCoverAccent
@@ -103,34 +113,18 @@ fun SettingsScreen(
                     "Portada animada (en línea)", "Bucle de video del álbum cuando existe, solo con Wi-Fi. Consulta artwork.boidu.dev (servicio comunitario, no oficial) con título, artista y álbum",
                     Icons.Default.Movie, ::isAnimatedCoverOn, ::setAnimatedCover
                 )
-            }
-            item(key = "ytmusic") {
-                Text(
-                    text = "YouTube Music",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 24.dp, top = 20.dp, bottom = 4.dp)
-                )
                 PrefSwitch(
                     "Buscar y reproducir en YouTube Music", "Función no oficial (NewPipeExtractor): puede dejar de funcionar sin aviso y va contra los términos de YouTube. Usa internet y no necesita cuenta",
                     Icons.Default.CloudQueue, com.example.creproductor.data.YtMusic::isEnabled, com.example.creproductor.data.YtMusic::setEnabled
                 )
             }
-            item {
-                Text(
-                    text = "DEZZNUTS $versionName · libre y gratuito",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 28.dp)
-                )
-            }
-        }
-    }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Listo") } }
+    )
 }
 
 @Composable
-private fun PrefSwitch(
+internal fun PrefSwitch(
     title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector,
     read: (android.content.Context) -> Boolean, write: (android.content.Context, Boolean) -> Unit
 ) {

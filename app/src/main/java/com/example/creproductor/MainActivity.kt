@@ -58,7 +58,7 @@ import com.example.creproductor.data.coverModel
 import com.example.creproductor.gui.AboutDialog
 import com.example.creproductor.gui.AppAction
 import com.example.creproductor.gui.AppSection
-import com.example.creproductor.gui.SettingsScreen
+import com.example.creproductor.gui.OptionsDialog
 import com.example.creproductor.gui.StatusScreen
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.creproductor.gui.LocalAnimationsEnabled
@@ -198,6 +198,7 @@ class MainActivity : ComponentActivity() {
                         viewModel.loadSongs(silent = true)
                     }
                     var section by rememberSaveable { mutableStateOf(AppSection.HOME) }
+                    var showOptionsDialog by remember { mutableStateOf(false) }
                     // Copia de seguridad y M3U: el usuario elige el archivo con el selector del sistema (sin permisos extra).
                     val saveBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
                         uri?.let(viewModel::exportBackup)
@@ -232,6 +233,7 @@ class MainActivity : ComponentActivity() {
                             AppAction.ClearImageCache -> showClearImageCacheDialog = true
                             AppAction.HiFiAudio -> showHiFiAudioDialog = true
                             AppAction.About -> showAboutDialog = true
+                            AppAction.Options -> showOptionsDialog = true
                             AppAction.SendFeedback -> {
                                 // Los comentarios van a los "issues" del repositorio.
                                 runCatching {
@@ -288,26 +290,12 @@ class MainActivity : ComponentActivity() {
                                     Box(modifier = Modifier.fillMaxSize()) {
                                         // Lo que queda bajo el reproductor a pantalla completa no anima (no se ve).
                                         CompositionLocalProvider(LocalAnimationsEnabled provides !isPlayerFullScreenVisible) {
-                                        // Horizontal en apaisado: el recorte (notch) o la barra lateral no deben tapar el contenido.
-                                        // En pantallas bajas (teléfono en horizontal) la navegación pasa a un riel lateral: abajo se
-                                        // comía la mitad de la altura entre mini-reproductor y barra.
-                                        val compactHeight = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp < 480
+                                        // Recorte y barras del sistema: a los lados en apaisado y abajo (barra de gestos/3 botones), que el
+                                        // mini-reproductor ya no comparte con una barra de navegación propia.
                                         Row(modifier = Modifier.fillMaxSize().windowInsetsPadding(
                                             androidx.compose.foundation.layout.WindowInsets.displayCutout.union(androidx.compose.foundation.layout.WindowInsets.systemBars)
-                                                .only(androidx.compose.foundation.layout.WindowInsetsSides.Horizontal)
+                                                .only(androidx.compose.foundation.layout.WindowInsetsSides.Horizontal + androidx.compose.foundation.layout.WindowInsetsSides.Bottom)
                                         )) {
-                                        if (compactHeight) {
-                                            androidx.compose.material3.NavigationRail(containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
-                                                AppSection.entries.forEach { item ->
-                                                    androidx.compose.material3.NavigationRailItem(
-                                                        selected = section == item,
-                                                        onClick = { section = item },
-                                                        icon = { Icon(item.icon, contentDescription = item.title) },
-                                                        alwaysShowLabel = false
-                                                    )
-                                                }
-                                            }
-                                        }
                                         Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
                                             Box(modifier = Modifier.weight(1f)) {
                                                 MainScreen(
@@ -316,9 +304,8 @@ class MainActivity : ComponentActivity() {
                                                     onSectionChange = { section = it },
                                                     onEditSong = editSong,
                                                     onExportPlaylist = { playlistToExport = it; saveM3u.launch("${it.name}.m3u8") },
-                                                    settingsContent = {
-                                                        SettingsScreen(versionName = versionName, onAction = ::runAction)
-                                                    }
+                                                    versionName = versionName,
+                                                    onAction = ::runAction
                                                 )
                                             }
 
@@ -341,23 +328,6 @@ class MainActivity : ComponentActivity() {
                                                 }
                                             }
 
-                                            // Con el texto del sistema muy grande las etiquetas se partían ("Bibliot-eca"): la barra
-                                            // admite hasta 1,2× y cada etiqueta va en una sola línea.
-                                            val navDensity = LocalDensity.current
-                                            if (!compactHeight) CompositionLocalProvider(
-                                                LocalDensity provides Density(navDensity.density, fontScale = navDensity.fontScale.coerceAtMost(1.2f))
-                                            ) {
-                                                NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
-                                                    AppSection.entries.forEach { item ->
-                                                        NavigationBarItem(
-                                                            selected = section == item,
-                                                            onClick = { section = item },
-                                                            icon = { Icon(item.icon, contentDescription = null) },
-                                                            label = { Text(item.title, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis) }
-                                                        )
-                                                    }
-                                                }
-                                            }
                                         }
                                         }
                                         }
@@ -482,6 +452,7 @@ class MainActivity : ComponentActivity() {
                         }
 
                         if (showAboutDialog) AboutDialog(versionName) { showAboutDialog = false }
+                        if (showOptionsDialog) OptionsDialog { showOptionsDialog = false }
 
                         if (showClearImageCacheDialog) {
                             ClearImageCacheDialog(onDismiss = { showClearImageCacheDialog = false })

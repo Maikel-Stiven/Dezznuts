@@ -1,16 +1,13 @@
 package com.example.creproductor.ui.theme
 
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 
 /**
  * Identidad DEZZNUTS: el morado de siempre (#BB86FC) sobre negro neutro, con turquesa de acento. Es la base de toda la
- * app; lo "premium" sale de la tipografía, los radios y el cuidado del detalle, no de cambiar de color.
+ * app; la estructura y el estilo son los de la maqueta (Material estándar).
  * El color de la carátula en el reproductor es opcional (Ajustes → Apariencia) y está apagado por defecto.
  */
 private val DezzColors = darkColorScheme(
@@ -39,21 +36,10 @@ private val DezzColors = darkColorScheme(
     outlineVariant = Color(0xFF3A3640),
 )
 
-/** Cuatro radios para toda la app (antes había once distintos). */
-val DezzShapes = Shapes(
-    extraSmall = RoundedCornerShape(6.dp),
-    small = RoundedCornerShape(10.dp),
-    medium = RoundedCornerShape(14.dp),
-    large = RoundedCornerShape(20.dp),
-    extraLarge = RoundedCornerShape(28.dp),
-)
-
 @Composable
 fun DEZZNUTStheme(content: @Composable () -> Unit){
     MaterialTheme(
         colorScheme = DezzColors,
-        typography = Typography,
-        shapes = DezzShapes,
         content = content
     )
 }
