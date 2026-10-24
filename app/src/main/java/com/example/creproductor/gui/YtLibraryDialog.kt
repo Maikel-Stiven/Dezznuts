@@ -4,11 +4,21 @@ import com.example.creproductor.i18n.tr
 
 import android.annotation.SuppressLint
 import android.webkit.CookieManager
+import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -44,21 +54,43 @@ import com.example.creproductor.data.YtTrack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** Ventana web a pantalla completa; al llegar a music.youtube.com con la sesión iniciada guarda la cookie y se cierra. */
+/**
+ * Inicio de sesión de Google. Google no permite formularios propios (la contraseña, la verificación en dos pasos y los
+ * avisos de seguridad solo existen en su página), así que se muestra su página dentro de la app, a pantalla completa y
+ * con la barra de la app: sin barra de direcciones, con progreso y con "atrás" que retrocede en la página antes de
+ * cerrar. Al llegar a music.youtube.com con la sesión iniciada guarda la cookie y se cierra sola.
+ */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 internal fun YtLoginWindow(onDone: () -> Unit, onCancel: () -> Unit) {
     val context = LocalContext.current
-    Dialog(onDismissRequest = onCancel, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = true)) {
-        Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-            TextButton(onClick = onCancel, modifier = Modifier.padding(4.dp)) { Text(tr("Cancelar")) }
+    var progress by remember { mutableStateOf(0) }
+    var web by remember { mutableStateOf<WebView?>(null) }
+    Dialog(onDismissRequest = onCancel, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        androidx.activity.compose.BackHandler { if (web?.canGoBack() == true) web?.goBack() else onCancel() }
+        Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).systemBarsPadding()) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onCancel) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("Cancelar")) }
+                Column(Modifier.padding(start = 4.dp)) {
+                    Text(tr("Iniciar sesión"), style = MaterialTheme.typography.titleLarge)
+                    Text(tr("YouTube Music · cuenta de Google"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Box(Modifier.fillMaxWidth().height(3.dp)) {
+                if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxSize())
+            }
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { ctx ->
                     WebView(ctx).apply {
+                        web = this
+                        setBackgroundColor(android.graphics.Color.TRANSPARENT)
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
                         settings.userAgentString = YtLibrary.USER_AGENT
+                        webChromeClient = object : WebChromeClient() {
+                            override fun onProgressChanged(view: WebView, newProgress: Int) { progress = newProgress }
+                        }
                         webViewClient = object : WebViewClient() {
                             override fun onPageFinished(view: WebView, url: String) {
                                 if (!url.startsWith("https://music.youtube.com")) return

@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.creproductor.data.Lrc
@@ -154,23 +155,72 @@ private fun LyricsList(lyrics: Lyrics, currentPositionMs: () -> Long, onSeekTo: 
                 else androidx.compose.runtime.rememberUpdatedState(targetAlpha)
             val scale by if (effects) androidx.compose.animation.core.animateFloatAsState(targetScale, androidx.compose.animation.core.tween(300), label = "lyricScale")
                 else androidx.compose.runtime.rememberUpdatedState(targetScale)
-            Text(
+            val lineModifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer {
+                    this.alpha = alpha
+                    scaleX = scale; scaleY = scale
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
+                }
+                .let { if (lyrics.synced) it.clickable { onSeekTo(line.timeMs) } else it }
+            // Sombra suave: se lee bien aunque la carátula (y por tanto el fondo) sea clara.
+            val lineStyle = (if (lyrics.synced) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.bodyLarge)
+                .copy(shadow = androidx.compose.ui.graphics.Shadow(Color.Black.copy(alpha = 0.35f), blurRadius = 10f))
+            if (current && lyrics.synced && effects && line.text.isNotEmpty()) {
+                SingAlongLine(line.text, line.timeMs, lyrics.lines.getOrNull(i + 1)?.timeMs, currentPositionMs, lineStyle, lineModifier)
+            } else Text(
                 text = line.text.ifEmpty { "♪" },
-                // Sombra suave: se lee bien aunque la carátula (y por tanto el fondo) sea clara.
-                style = (if (lyrics.synced) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.bodyLarge)
-                    .copy(shadow = androidx.compose.ui.graphics.Shadow(Color.Black.copy(alpha = 0.35f), blurRadius = 10f)),
+                style = lineStyle,
                 fontWeight = if (current || !lyrics.synced) FontWeight.Bold else FontWeight.SemiBold,
                 color = Color.White,
                 textAlign = TextAlign.Start,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .graphicsLayer {
-                        this.alpha = alpha
-                        scaleX = scale; scaleY = scale
-                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
-                    }
-                    .let { if (lyrics.synced) it.clickable { onSeekTo(line.timeMs) } else it }
+                modifier = lineModifier
             )
         }
     }
+}
+
+/**
+ * Línea activa palabra por palabra, como el karaoke de Apple Music: lo ya cantado queda blanco y brillante (con un
+ * halo suave), la palabra en curso se ilumina poco a poco y lo que falta sigue tenue. LRCLIB solo da el instante de
+ * cada línea, no el de cada palabra: el reparto dentro de la línea se estima por la longitud de las palabras y se
+ * deja un margen al final por si se canta antes de la línea siguiente.
+ */
+@Composable
+private fun SingAlongLine(
+    text: String, startMs: Long, nextStartMs: Long?, currentPositionMs: () -> Long,
+    style: androidx.compose.ui.text.TextStyle, modifier: Modifier
+) {
+    val words = remember(text) { text.split(' ').filter { it.isNotEmpty() } }
+    // Reparto del tiempo: cada palabra pesa su longitud (+1 por la pausa), acumulado en fracciones 0..1.
+    val edges = remember(words) {
+        val w = words.map { it.length + 1f }
+        val total = w.sum()
+        var acc = 0f
+        listOf(0f) + w.map { acc += it; acc / total }
+    }
+    val sweepMs = remember(startMs, nextStartMs) { (((nextStartMs ?: (startMs + 4000)) - startMs).coerceIn(600, 9000) * 0.88f) }
+    var pos by remember(startMs) { mutableStateOf(currentPositionMs()) }
+    LaunchedEffect(startMs) {
+        while (true) {
+            androidx.compose.runtime.withFrameNanos { }
+            pos = currentPositionMs()
+        }
+    }
+    val f = ((pos - startMs) / sweepMs).coerceIn(0f, 1f)
+    val glow = Color.White
+    val dim = 0.42f
+    val annotated = androidx.compose.ui.text.buildAnnotatedString {
+        words.forEachIndexed { i, word ->
+            val p = ((f - edges[i]) / (edges[i + 1] - edges[i])).coerceIn(0f, 1f)
+            withStyle(
+                androidx.compose.ui.text.SpanStyle(
+                    color = Color.White.copy(alpha = dim + (1f - dim) * p),
+                    shadow = androidx.compose.ui.graphics.Shadow(glow.copy(alpha = 0.6f * p), blurRadius = 26f * p + 2f)
+                )
+            ) { append(word) }
+            if (i < words.lastIndex) append(" ")
+        }
+    }
+    Text(text = annotated, style = style, fontWeight = FontWeight.Bold, textAlign = TextAlign.Start, modifier = modifier)
 }

@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 
 /**
  * Identidad DEZZNUTS: el morado de siempre (#BB86FC) sobre negro neutro, con turquesa de acento. Es la base de toda la
@@ -99,9 +100,35 @@ private val OmarchyColors = darkColorScheme(
     outline = Color(0xFF3F5A40), outlineVariant = Color(0xFF243324)
 )
 
+/**
+ * Esquema oscuro a partir de un fondo y dos acentos: las superficies suben desde el fondo hacia el tono del texto, así
+ * cada tema nuevo cuesta tres colores y no veinte. [text] es el color del texto principal.
+ */
+private fun tinted(bg: Long, text: Long, primary: Long, secondary: Long, onPrimary: Long = 0xFF101010) = run {
+    val b = Color(bg); val t = Color(text); val p = Color(primary); val sec = Color(secondary)
+    fun up(f: Float) = lerp(b, t, f)
+    darkColorScheme(
+        primary = p, onPrimary = Color(onPrimary),
+        primaryContainer = lerp(b, p, 0.28f), onPrimaryContainer = lerp(p, Color.White, 0.55f),
+        secondary = sec, onSecondary = Color(onPrimary),
+        secondaryContainer = lerp(b, sec, 0.28f), onSecondaryContainer = lerp(sec, Color.White, 0.55f),
+        tertiary = lerp(p, sec, 0.5f),
+        background = b, onBackground = t, surface = b, onSurface = t,
+        surfaceVariant = up(0.12f), onSurfaceVariant = up(0.68f),
+        surfaceContainerLowest = lerp(b, Color.Black, 0.35f), surfaceContainerLow = up(0.04f), surfaceContainer = up(0.07f),
+        surfaceContainerHigh = up(0.10f), surfaceContainerHighest = up(0.14f),
+        outline = up(0.42f), outlineVariant = up(0.2f)
+    )
+}
+
+private val SakuraColors = tinted(0xFF160E12, 0xFFF6E8EE, 0xFFFF8FB1, 0xFFC9A7FF, 0xFF3A0F20)
+private val OceanColors = tinted(0xFF0A1218, 0xFFE3F1F8, 0xFF5CC8F5, 0xFF4FE3C1, 0xFF00263A)
+private val SynthwaveColors = tinted(0xFF120B1F, 0xFFF1E9FF, 0xFFFF4FD8, 0xFF3DE1FF, 0xFF2B0033)
+private val EmberColors = tinted(0xFF140D0A, 0xFFF5E9E2, 0xFFFF7A45, 0xFFFFC857, 0xFF3A1200)
+
 /** Tema de la app. DEZZNUTS (morado) es el de siempre; los demás son opciones en Opciones. */
 enum class ThemeMode(val label: String) {
-    DEZZ("DEZZNUTS"), OMARCHY("Omarchy"), PREMIUM("Premium"), AMOLED("Negro AMOLED"), LIGHT("Claro"), DYNAMIC("Material You")
+    DEZZ("DEZZNUTS"), OMARCHY("Omarchy"), PREMIUM("Premium"), SAKURA("Sakura"), OCEAN("Océano"), SYNTHWAVE("Synthwave"), EMBER("Brasa"), AMOLED("Negro AMOLED"), LIGHT("Claro"), DYNAMIC("Material You")
 }
 
 object ThemeSetting {
@@ -130,6 +157,10 @@ fun DEZZNUTStheme(content: @Composable () -> Unit){
     val scheme = when {
         mode == ThemeMode.OMARCHY -> OmarchyColors
         mode == ThemeMode.PREMIUM -> PremiumColors
+        mode == ThemeMode.SAKURA -> SakuraColors
+        mode == ThemeMode.OCEAN -> OceanColors
+        mode == ThemeMode.SYNTHWAVE -> SynthwaveColors
+        mode == ThemeMode.EMBER -> EmberColors
         mode == ThemeMode.AMOLED -> AmoledColors
         mode == ThemeMode.LIGHT -> LightColors
         mode == ThemeMode.DYNAMIC && ThemeSetting.dynamicAvailable -> dynamicDarkColorScheme(context)
