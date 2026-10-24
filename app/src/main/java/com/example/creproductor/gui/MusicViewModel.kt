@@ -433,7 +433,8 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
 
                             if (foundSong !== null){
                                 _currentSong.value = foundSong
-                                if (foundSong.isYoutube) ytContinue(foundSong) else registerSongPlay(foundSong)
+                                registerSongPlay(foundSong)
+                                if (foundSong.isYoutube) ytContinue(foundSong)
                             }
                         }
                         // Un cambio de cola (incluida la restauración inicial de setMediaItems) no es una
@@ -735,7 +736,8 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
             }
 
             saveRecentIds(updatedRecent.map {it.id})
-            prefs.edit { putLong("last_song_id", song.id) }
+            // Las de YouTube no existen en la biblioteca: al reabrir la app no se podrían restaurar.
+            if (!song.isYoutube) prefs.edit { putLong("last_song_id", song.id) }
         }
     }
 
@@ -746,6 +748,14 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     }
 
     fun playSong(song: Song, customQueue: List<Song>? = null){
+        // Una canción de YouTube Music no tiene archivo: su "uri" es la dirección de la página y el audio se pide al
+        // abrirla. Así también suenan desde Reproducción reciente, Más reproducidas o la cola.
+        if (song.isYoutube) {
+            playYt(com.example.creproductor.data.YtTrack(
+                song.contentUri.toString(), song.title, song.artist, song.duration / 1000, song.albumArtUri?.toString()
+            ))
+            return
+        }
 
         val queueToUse= if (!customQueue.isNullOrEmpty()) customQueue else (_uiState.value as? UiState.Success)?.songs ?: listOf(song)
 

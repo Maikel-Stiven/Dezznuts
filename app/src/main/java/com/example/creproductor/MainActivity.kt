@@ -140,6 +140,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
+                    com.example.creproductor.gui.YtLoginHost()
                     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                     val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
                     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()

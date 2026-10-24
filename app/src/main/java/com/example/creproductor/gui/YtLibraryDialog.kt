@@ -2,6 +2,17 @@ package com.example.creproductor.gui
 
 import com.example.creproductor.i18n.tr
 
+import android.content.Context
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.zIndex
 import android.annotation.SuppressLint
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
@@ -46,68 +57,100 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.example.creproductor.data.YtLibrary
 import com.example.creproductor.data.YtTrack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/** Estado compartido del inicio de sesión de YouTube Music: lo pide la pestaña YT y lo dibuja [YtLoginHost]. */
+object YtLogin {
+    var open by mutableStateOf(false)
+    /** Sube al iniciar sesión: las pantallas que dependen de la sesión lo observan para refrescarse. */
+    var authVersion by mutableIntStateOf(0)
+    /** La pestaña YT lo activa para ir cargando la página de Google antes de que el usuario pulse. */
+    var warm by mutableStateOf(false)
+}
+
 /**
- * Inicio de sesión de Google. Google no permite formularios propios (la contraseña, la verificación en dos pasos y los
- * avisos de seguridad solo existen en su página), así que se muestra su página dentro de la app, a pantalla completa y
- * con la barra de la app: sin barra de direcciones, con progreso y con "atrás" que retrocede en la página antes de
- * cerrar. Al llegar a music.youtube.com con la sesión iniciada guarda la cookie y se cierra sola.
+ * La página de Google vive en un WebView que se crea y empieza a cargar en cuanto se abre la pestaña YT (precarga), de
+ * modo que al pulsar «Iniciar sesión» ya está lista. Al llegar a music.youtube.com con la sesión iniciada guarda la
+ * cookie y avisa.
  */
 @SuppressLint("SetJavaScriptEnabled")
+internal class YtLoginSession(private val context: Context, private val onSuccess: () -> Unit) {
+    var progress by mutableIntStateOf(0)
+    private var web: WebView? = null
+
+    fun ensure(): WebView = web ?: WebView(context).apply {
+        web = this
+        setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        settings.javaScriptEnabled = true
+        settings.domStorageEnabled = true
+        settings.userAgentString = YtLibrary.USER_AGENT
+        webChromeClient = object : WebChromeClient() {
+            override fun onProgressChanged(view: WebView, newProgress: Int) { this@YtLoginSession.progress = newProgress }
+        }
+        webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView, url: String) {
+                if (!url.startsWith("https://music.youtube.com")) return
+                val cookie = CookieManager.getInstance().getCookie("https://music.youtube.com").orEmpty()
+                if (cookie.contains("SAPISID=") || cookie.contains("__Secure-3PAPISID=")) {
+                    YtLibrary.saveCookie(context, cookie)
+                    destroy()
+                    onSuccess()
+                }
+            }
+        }
+        loadUrl(
+            "https://accounts.google.com/ServiceLogin?ltmpl=music&service=youtube&passive=true&continue=" +
+                "https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26next%3Dhttps%253A%252F%252Fmusic.youtube.com%252F"
+        )
+    }
+
+    fun canGoBack() = web?.canGoBack() == true
+    fun goBack() { web?.goBack() }
+
+    fun destroy() {
+        web?.let { (it.parent as? android.view.ViewGroup)?.removeView(it); it.destroy() }
+        web = null
+        progress = 0
+    }
+}
+
+/**
+ * Pantalla de inicio de sesión dentro de la propia ventana de la app (no un diálogo aparte): sube desde abajo sobre
+ * todo lo demás, con la barra de la app y el progreso. Google no permite formularios propios (contraseña, verificación
+ * en dos pasos y avisos de seguridad solo existen en su página), por eso se muestra su página.
+ */
 @Composable
-internal fun YtLoginWindow(onDone: () -> Unit, onCancel: () -> Unit) {
+fun YtLoginHost() {
     val context = LocalContext.current
-    var progress by remember { mutableStateOf(0) }
-    var web by remember { mutableStateOf<WebView?>(null) }
-    Dialog(onDismissRequest = onCancel, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        androidx.activity.compose.BackHandler { if (web?.canGoBack() == true) web?.goBack() else onCancel() }
+    val session = remember { YtLoginSession(context) { YtLogin.open = false; YtLogin.authVersion++ } }
+    DisposableEffect(Unit) { onDispose { session.destroy() } }
+    LaunchedEffect(YtLogin.warm) { if (YtLogin.warm) session.ensure() }
+    // Cerrar sin terminar no destruye la página: se conserva para reabrirla al instante.
+    AnimatedVisibility(
+        visible = YtLogin.open,
+        enter = slideInVertically(tween(260)) { it / 4 } + fadeIn(tween(260)),
+        exit = slideOutVertically(tween(200)) { it / 4 } + fadeOut(tween(200)),
+        modifier = Modifier.zIndex(100f)
+    ) {
+        androidx.activity.compose.BackHandler { if (session.canGoBack()) session.goBack() else YtLogin.open = false }
         Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).systemBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onCancel) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("Cancelar")) }
+                IconButton(onClick = { YtLogin.open = false }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("Cancelar")) }
                 Column(Modifier.padding(start = 4.dp)) {
                     Text(tr("Iniciar sesión"), style = MaterialTheme.typography.titleLarge)
                     Text(tr("YouTube Music · cuenta de Google"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Box(Modifier.fillMaxWidth().height(3.dp)) {
-                if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxSize())
+                if (session.progress in 1..99) LinearProgressIndicator(progress = { session.progress / 100f }, modifier = Modifier.fillMaxSize())
             }
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
-                factory = { ctx ->
-                    WebView(ctx).apply {
-                        web = this
-                        setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                        settings.javaScriptEnabled = true
-                        settings.domStorageEnabled = true
-                        settings.userAgentString = YtLibrary.USER_AGENT
-                        webChromeClient = object : WebChromeClient() {
-                            override fun onProgressChanged(view: WebView, newProgress: Int) { progress = newProgress }
-                        }
-                        webViewClient = object : WebViewClient() {
-                            override fun onPageFinished(view: WebView, url: String) {
-                                if (!url.startsWith("https://music.youtube.com")) return
-                                val cookie = CookieManager.getInstance().getCookie("https://music.youtube.com").orEmpty()
-                                if (cookie.contains("SAPISID=") || cookie.contains("__Secure-3PAPISID=")) {
-                                    YtLibrary.saveCookie(context, cookie)
-                                    onDone()
-                                }
-                            }
-                        }
-                        loadUrl(
-                            "https://accounts.google.com/ServiceLogin?ltmpl=music&service=youtube&passive=true&continue=" +
-                                "https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26next%3Dhttps%253A%252F%252Fmusic.youtube.com%252F"
-                        )
-                    }
-                },
-                onRelease = { it.destroy() }
+                factory = { session.ensure().also { v -> (v.parent as? android.view.ViewGroup)?.removeView(v) } }
             )
         }
     }

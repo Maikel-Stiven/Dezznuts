@@ -42,7 +42,6 @@ fun YtMusicScreen(onPlay: (YtTrack) -> Unit) {
     val context = LocalContext.current
     var enabled by remember { mutableStateOf(YtMusic.isEnabled(context)) }
     var loggedIn by remember { mutableStateOf(YtLibrary.isLoggedIn(context)) }
-    var showLogin by remember { mutableStateOf(false) }
     var reload by remember { mutableStateOf(0) }
     var query by remember { mutableStateOf("") }
 
@@ -59,9 +58,11 @@ fun YtMusicScreen(onPlay: (YtTrack) -> Unit) {
         }
         return
     }
-    if (showLogin) {
-        YtLoginWindow(onDone = { loggedIn = YtLibrary.isLoggedIn(context); showLogin = false; reload++ }, onCancel = { showLogin = false })
+    // Refresca al volver de iniciar sesión; y mientras no haya sesión, va cargando la página de Google por adelantado.
+    androidx.compose.runtime.LaunchedEffect(YtLogin.authVersion) {
+        if (YtLogin.authVersion > 0) { loggedIn = YtLibrary.isLoggedIn(context); reload++ }
     }
+    androidx.compose.runtime.LaunchedEffect(loggedIn) { YtLogin.warm = !loggedIn }
 
     Column(Modifier.fillMaxSize()) {
         OutlinedTextField(
@@ -92,7 +93,7 @@ fun YtMusicScreen(onPlay: (YtTrack) -> Unit) {
                             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
                         )
-                        Button(onClick = { showLogin = true }) { Text(tr("Iniciar sesión")) }
+                        Button(onClick = { YtLogin.open = true }) { Text(tr("Iniciar sesión")) }
                     }
                 }
                 Text(
