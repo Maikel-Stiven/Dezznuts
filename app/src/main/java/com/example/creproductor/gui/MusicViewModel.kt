@@ -787,6 +787,12 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
 
     private val ytPlayed = LinkedHashSet<String>()
 
+    private fun sameTitle(a: String, b: String): Boolean {
+        fun n(t: String) = t.lowercase().substringBefore("(").filter { it.isLetterOrDigit() }
+        val x = n(a); val y = n(b)
+        return x.isNotEmpty() && y.isNotEmpty() && (x.contains(y) || y.contains(x))
+    }
+
     private fun ytSong(track: com.example.creproductor.data.YtTrack, meta: com.example.creproductor.data.RemoteMetaDataResult?) = Song(
         id = -(1L shl 62) - (track.url.hashCode().toLong() and 0xFFFFFFFFL),
         title = track.title, artist = com.example.creproductor.data.YtMusic.cleanArtist(track.artist),
@@ -835,19 +841,23 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
             controller.prepare()
             controller.play()
             Log.i("DezzYt", "[+${SystemClock.elapsedRealtime() - t0} ms] lista para sonar: ${song.title}")
-            ytQueueNext(song, resolved)
+            // La siguiente recomendada la prepara ytContinue al empezar esta (onMediaItemTransition).
         }
     }
 
     /** Añade al final de la cola la siguiente recomendada por YouTube (si sigues en esta canción cuando esté lista). */
     private fun ytQueueNext(current: Song, resolved: com.example.creproductor.data.YtMusic.Resolved) {
         viewModelScope.launch {
-            val next = resolved.related.firstOrNull { it.url !in ytPlayed && it.durationSec in 60..900 } ?: return@launch
+            // Otra subida de la misma canción (o la que ya sonó) no cuenta como recomendada.
+            val next = resolved.related.firstOrNull {
+                it.url !in ytPlayed && it.durationSec in 60..900 && !sameTitle(it.title, current.title)
+            } ?: return@launch
             ytPlayed += next.url
             val nextResolved = runCatching { withContext(Dispatchers.IO) { com.example.creproductor.data.YtMusic.resolve(next.url) } }.getOrNull() ?: return@launch
             val song = ytSong(next, ytMeta(next))
             val controller = mediaController ?: return@launch
             if (controller.currentMediaItem?.mediaId != current.id.toString()) return@launch
+            if (controller.currentMediaItemIndex != controller.mediaItemCount - 1) return@launch
             controller.addMediaItem(ytItem(song, nextResolved.audioUrl))
             _currentQueue.value = _currentQueue.value + song
             Log.i("DezzYt", "siguiente recomendada en cola: ${song.title}")

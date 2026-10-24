@@ -1,6 +1,16 @@
 package com.example.creproductor.gui
 
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import com.example.creproductor.i18n.tr
+import com.example.creproductor.ui.theme.swatch
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,8 +46,8 @@ sealed class AppAction(
     object Equalizer : AppAction("Ecualizador", "Bandas, presets y perfiles por salida", Icons.Default.Equalizer)
     object HiFiAudio : AppAction("Audio Hi/Res", "Salida float, offload, bit-perfect, ReplayGain y fundidos", Icons.Default.GraphicEq)
     object ScanFiles : AppAction("Escanear archivos", "Buscar música nueva y filtrar audios cortos", Icons.Default.Radar)
-    object SearchDuplicates : AppAction("Duplicados y audios de WhatsApp", "Encontrar copias para liberar espacio", Icons.Default.FindInPage)
-    object FixUnknownArtists : AppAction("Corregir artistas desconocidos", "Deducir artista y título del nombre del archivo", Icons.Default.AutoFixHigh)
+    object SearchDuplicates : AppAction("Duplicados y WhatsApp", "Encontrar copias para liberar espacio", Icons.Default.FindInPage)
+    object FixUnknownArtists : AppAction("Artistas desconocidos", "Deducir artista y título del nombre del archivo", Icons.Default.AutoFixHigh)
     object AudioCutter : AppAction("Cortador de audio", "Recortar la canción que suena (tonos, fragmentos)", Icons.Default.ContentCut)
     object SleepTimer: AppAction("Temporizador", "Pausar la música pasado un tiempo", Icons.Default.Timer)
     object ExportBackup : AppAction("Guardar copia de seguridad", "Favoritas, reproducciones y listas en un archivo", Icons.Default.Backup)
@@ -60,38 +70,76 @@ private val DRAWER_GROUPS = listOf(
     "Más" to listOf(AppAction.Options, AppAction.ClearImageCache, AppAction.About, AppAction.SendFeedback)
 )
 
+/** Selector de tema de un vistazo: un círculo por tema (fondo + acento); el elegido lleva anillo. */
+@Composable
+fun ThemeSwatches(modifier: Modifier = Modifier) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.foundation.layout.FlowRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        com.example.creproductor.ui.theme.ThemeMode.entries
+            .filter { it != com.example.creproductor.ui.theme.ThemeMode.DYNAMIC || com.example.creproductor.ui.theme.ThemeSetting.dynamicAvailable }
+            .forEach { m ->
+                val (bg, accent) = m.swatch()
+                val selected = com.example.creproductor.ui.theme.ThemeSetting.mode == m
+                val name = tr(m.label)
+                androidx.compose.foundation.layout.Box(
+                    Modifier
+                        .size(40.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .border(if (selected) 2.dp else 1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, androidx.compose.foundation.shape.CircleShape)
+                        .background(bg)
+                        .clickable(onClickLabel = name) { com.example.creproductor.ui.theme.ThemeSetting.set(context, m) }
+                        .semantics { contentDescription = name; this.selected = selected }
+                ) {
+                    androidx.compose.foundation.layout.Box(
+                        Modifier.align(Alignment.Center).size(16.dp).clip(androidx.compose.foundation.shape.CircleShape).background(accent)
+                    )
+                }
+            }
+    }
+}
+
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun AppDrawerContent(versionName: String, onAction: (AppAction) -> Unit, onCloseDrawer: () -> Unit) {
-    ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surface, modifier = Modifier.width(300.dp)) {
-        Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-                Text(
-                    text = tr("DEZZNUTS"),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(vertical = 24.dp, horizontal = 12.dp)
-                )
-                HorizontalDivider(Modifier.padding(bottom = 8.dp))
+    ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surface, modifier = Modifier.width(312.dp)) {
+        Column(Modifier.fillMaxSize()) {
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp)) {
+                // Cabecera sobria: logotipo en tipografía y una línea de descripción, sin marco ni degradado.
+                Column(Modifier.padding(start = 16.dp, top = 28.dp, bottom = 20.dp)) {
+                    Text(
+                        tr("DEZZNUTS"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
+                        letterSpacing = 4.sp, color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        "${tr("Tu música, sin vueltas")} · v$versionName",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
                 DRAWER_GROUPS.forEach { (group, actions) ->
                     if (group != null) Text(
-                        tr(group), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp)
+                        tr(group), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 16.dp, top = 18.dp, bottom = 4.dp)
                     )
                     actions.forEach { item ->
                         NavigationDrawerItem(
-                            label = { Text(tr(item.title)) },
-                            icon = { Icon(item.icon, contentDescription = null) },
+                            label = { Text(tr(item.title), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
+                            icon = { Icon(item.icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp)) },
                             selected = false,
                             onClick = { onCloseDrawer(); onAction(item) },
-                            modifier = Modifier.padding(vertical = 2.dp)
+                            modifier = Modifier.height(48.dp)
                         )
                     }
                 }
             }
-            Column(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                HorizontalDivider(Modifier.padding(bottom = 12.dp))
-                Text("DEZZNUTS Player $versionName", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            HorizontalDivider()
+            Column(Modifier.padding(horizontal = 28.dp, vertical = 14.dp)) {
+                Text(tr("Tema"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 10.dp))
+                ThemeSwatches()
             }
         }
     }

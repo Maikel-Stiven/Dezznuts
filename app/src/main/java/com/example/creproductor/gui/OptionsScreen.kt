@@ -2,6 +2,7 @@ package com.example.creproductor.gui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -92,10 +93,9 @@ fun OptionsScreen(versionName: String, onAction: (AppAction) -> Unit, onClose: (
                     leadingContent = { Icon(Icons.Default.ColorLens, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                     headlineContent = { Text(tr("Tema"), style = MaterialTheme.typography.titleSmall) },
                     supportingContent = {
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                            ThemeMode.entries.filter { it != ThemeMode.DYNAMIC || ThemeSetting.dynamicAvailable }.forEach { m ->
-                                FilterChip(selected = ThemeSetting.mode == m, onClick = { ThemeSetting.set(context, m) }, label = { Text(tr(m.label)) })
-                            }
+                        Column(Modifier.padding(top = 10.dp)) {
+                            ThemeSwatches()
+                            Text(tr(ThemeSetting.mode.label), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
                         }
                     },
                     colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background)

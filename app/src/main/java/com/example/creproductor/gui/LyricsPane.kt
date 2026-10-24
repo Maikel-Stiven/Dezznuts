@@ -166,8 +166,8 @@ private fun LyricsList(lyrics: Lyrics, currentPositionMs: () -> Long, onSeekTo: 
             // Sombra suave: se lee bien aunque la carátula (y por tanto el fondo) sea clara.
             val lineStyle = (if (lyrics.synced) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.bodyLarge)
                 .copy(shadow = androidx.compose.ui.graphics.Shadow(Color.Black.copy(alpha = 0.35f), blurRadius = 10f))
-            if (current && lyrics.synced && effects && line.text.isNotEmpty()) {
-                SingAlongLine(line.text, line.timeMs, lyrics.lines.getOrNull(i + 1)?.timeMs, currentPositionMs, lineStyle, lineModifier)
+            if (current && lyrics.synced && line.text.isNotEmpty()) {
+                SingAlongLine(line.text, line.timeMs, lyrics.lines.getOrNull(i + 1)?.timeMs, currentPositionMs, effects, lineStyle, lineModifier)
             } else Text(
                 text = line.text.ifEmpty { "♪" },
                 style = lineStyle,
@@ -184,11 +184,12 @@ private fun LyricsList(lyrics: Lyrics, currentPositionMs: () -> Long, onSeekTo: 
  * Línea activa palabra por palabra, como el karaoke de Apple Music: lo ya cantado queda blanco y brillante (con un
  * halo suave), la palabra en curso se ilumina poco a poco y lo que falta sigue tenue. LRCLIB solo da el instante de
  * cada línea, no el de cada palabra: el reparto dentro de la línea se estima por la longitud de las palabras y se
- * deja un margen al final por si se canta antes de la línea siguiente.
+ * deja un margen al final por si se canta antes de la línea siguiente. Sin efectos visuales ([smooth] falso) el
+ * avance es por pasos pero igual de legible.
  */
 @Composable
 private fun SingAlongLine(
-    text: String, startMs: Long, nextStartMs: Long?, currentPositionMs: () -> Long,
+    text: String, startMs: Long, nextStartMs: Long?, currentPositionMs: () -> Long, smooth: Boolean,
     style: androidx.compose.ui.text.TextStyle, modifier: Modifier
 ) {
     val words = remember(text) { text.split(' ').filter { it.isNotEmpty() } }
@@ -203,7 +204,8 @@ private fun SingAlongLine(
     var pos by remember(startMs) { mutableStateOf(currentPositionMs()) }
     LaunchedEffect(startMs) {
         while (true) {
-            androidx.compose.runtime.withFrameNanos { }
+            // Fotograma a fotograma con efectos; en equipos modestos o con ahorro de batería, ocho veces por segundo.
+            if (smooth) androidx.compose.runtime.withFrameNanos { } else kotlinx.coroutines.delay(125)
             pos = currentPositionMs()
         }
     }

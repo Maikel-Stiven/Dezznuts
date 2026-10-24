@@ -80,13 +80,26 @@ fun YtMusicScreen(onPlay: (YtTrack) -> Unit) {
                 }
                 YtLikedList(reload, onPlay)
             }
-            else -> Column(Modifier.fillMaxSize().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            else -> Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                androidx.compose.material3.Surface(
+                    shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(tr("Tus Me gusta, a mano"), style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            tr("Inicia sesión para ver tus canciones con Me gusta. La sesión se guarda solo en este teléfono y puedes cerrarla cuando quieras."),
+                            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
+                        )
+                        Button(onClick = { showLogin = true }) { Text(tr("Iniciar sesión")) }
+                    }
+                }
                 Text(
-                    tr("Inicia sesión para ver las canciones que te gustan. La sesión se guarda solo en este teléfono y puedes cerrarla cuando quieras."),
-                    textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    tr("Busca una canción y, al terminar, seguirá sola con las recomendadas de YouTube."),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 4.dp)
                 )
-                Button(onClick = { showLogin = true }, modifier = Modifier.padding(top = 16.dp)) { Text(tr("Iniciar sesión")) }
-                Text(tr("o escribe arriba para buscar"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 12.dp))
             }
         }
     }

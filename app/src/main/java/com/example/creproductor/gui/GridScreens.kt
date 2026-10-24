@@ -101,8 +101,8 @@ fun AlbumsGridScreen(
         }
     }else{
         LazyVerticalGrid(
-            // Adaptable: 2 columnas en un teléfono, más en tablets o en horizontal (mismas tarjetas, ~160 dp).
-            columns = GridCells.Adaptive(minSize = 160.dp),
+            // Adaptable: 2 columnas en un teléfono, más en tablets o en horizontal (mismas tarjetas, ~140 dp).
+            columns = GridCells.Adaptive(minSize = 140.dp),
             state = gridState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
@@ -213,8 +213,8 @@ fun GenresGridScreen(
     }else{
         LazyVerticalGrid(
             state = gridState,
-            // Adaptable: 2 columnas en un teléfono, más en tablets o en horizontal (mismas tarjetas, ~160 dp).
-            columns = GridCells.Adaptive(minSize = 160.dp),
+            // Adaptable: 2 columnas en un teléfono, más en tablets o en horizontal (mismas tarjetas, ~140 dp).
+            columns = GridCells.Adaptive(minSize = 140.dp),
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),

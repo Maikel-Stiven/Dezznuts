@@ -42,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.creproductor.SongListScreen
 import com.example.creproductor.data.Playlist
 import com.example.creproductor.data.Song
@@ -285,7 +286,13 @@ fun MainScreen(
                                 Icon(Icons.Default.Menu, contentDescription = tr("Abrir menú"))
                             }
                         },
-                        title = { Text(tr("DEZZNUTS"), fontWeight = FontWeight.ExtraBold) },
+                        title = {
+                            // Logotipo en tipografía, no un título más: espaciado amplio y el color de la marca.
+                            Text(
+                                tr("DEZZNUTS"), style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold, letterSpacing = 3.sp, color = MaterialTheme.colorScheme.primary
+                            )
+                        },
                         actions = {
                             IconButton(onClick = { onSectionChange(AppSection.SEARCH) }) {
                                 Icon(Icons.Default.Search, contentDescription = tr("Buscar"))
@@ -321,7 +328,9 @@ fun MainScreen(
                             Tab(
                                 selected = pagerState.currentPage == index,
                                 onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
-                                text = {Text(tr(tab.title))}
+                                selectedContentColor = MaterialTheme.colorScheme.onSurface,
+                                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                text = { Text(tr(tab.title), style = MaterialTheme.typography.titleSmall) }
                             )
                         }
                     }

@@ -131,6 +131,20 @@ enum class ThemeMode(val label: String) {
     DEZZ("DEZZNUTS"), OMARCHY("Omarchy"), PREMIUM("Premium"), SAKURA("Sakura"), OCEAN("Océano"), SYNTHWAVE("Synthwave"), EMBER("Brasa"), AMOLED("Negro AMOLED"), LIGHT("Claro"), DYNAMIC("Material You")
 }
 
+/** Fondo y acento de cada tema, para elegirlo de un vistazo sin abrir nada. */
+fun ThemeMode.swatch(): Pair<Color, Color> = when (this) {
+    ThemeMode.DEZZ -> Color(0xFF121212) to Color(0xFFBB86FC)
+    ThemeMode.OMARCHY -> Color(0xFF0B100C) to Color(0xFF8FE388)
+    ThemeMode.PREMIUM -> Color(0xFF0F0D0C) to Color(0xFFF2B36B)
+    ThemeMode.SAKURA -> Color(0xFF160E12) to Color(0xFFFF8FB1)
+    ThemeMode.OCEAN -> Color(0xFF0A1218) to Color(0xFF5CC8F5)
+    ThemeMode.SYNTHWAVE -> Color(0xFF120B1F) to Color(0xFFFF4FD8)
+    ThemeMode.EMBER -> Color(0xFF140D0A) to Color(0xFFFF7A45)
+    ThemeMode.AMOLED -> Color.Black to Color(0xFFBB86FC)
+    ThemeMode.LIGHT -> Color(0xFFFBF9FD) to Color(0xFF6A3FC4)
+    ThemeMode.DYNAMIC -> Color(0xFF1F1F1F) to Color(0xFF8AB4F8)
+}
+
 object ThemeSetting {
     private const val KEY = "theme_mode"
     var mode by mutableStateOf(ThemeMode.DEZZ)

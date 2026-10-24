@@ -142,10 +142,10 @@ fun SectionRow(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // El título cede espacio (y se recorta) antes que "VER TODOS", que nunca se parte en líneas.
+            // El título cede espacio (y se recorta) antes que "Ver todo", que nunca se parte en líneas.
             Text(text = tr(title), style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             TextButton(onClick = onSeeAllClick) {
-                Text(tr("VER TODOS"), style = MaterialTheme.typography.labelMedium, maxLines = 1, softWrap = false)
+                Text(tr("Ver todo"), style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false)
             }
         }
 
