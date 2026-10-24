@@ -21,6 +21,8 @@ import android.os.SystemClock
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
+import androidx.glance.appwidget.updateAll
+import kotlinx.coroutines.launch
 import androidx.media3.common.C
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaItem
@@ -289,6 +291,21 @@ class MusicService : MediaLibraryService(){
      * Al cambiar de canción hay que recalcular si el nuevo tema es favorito,
      * para que el botón de la notificación muestre el estado correcto.
      */
+    /** Guarda qué suena y si está sonando, y refresca los widgets de pantalla de inicio (si hay alguno colocado). */
+    private fun publishWidget(player: ExoPlayer) {
+        val meta = player.currentMediaItem?.mediaMetadata
+        prefs.edit()
+            .putString("widget_title", meta?.title?.toString())
+            .putString("widget_artist", meta?.artist?.toString())
+            .putBoolean("widget_playing", player.isPlaying)
+            .apply()
+        val manager = android.appwidget.AppWidgetManager.getInstance(this)
+        if (manager.getAppWidgetIds(android.content.ComponentName(this, com.example.creproductor.widget.DezzWidgetReceiver::class.java)).isEmpty()) return
+        widgetScope.launch { com.example.creproductor.widget.DezzWidget().updateAll(this@MusicService) }
+    }
+
+    private val widgetScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default)
+
     private fun attachPlayerListener(player: ExoPlayer) {
         // "Al final de la canción": el reproductor ya se pausó solo; se limpia el estado del temporizador.
         player.addListener(object : Player.Listener {
@@ -328,11 +345,13 @@ class MusicService : MediaLibraryService(){
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 updateNotificationLayout()
                 updateFade()
+                publishWidget(player)
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 if (isPlaying) resumeAt = SystemClock.elapsedRealtime()
                 updateFade()
+                publishWidget(player)
             }
 
             override fun onPositionDiscontinuity(

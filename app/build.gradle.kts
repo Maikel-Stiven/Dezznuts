@@ -60,6 +60,7 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer:$media3Version")
     implementation("androidx.media3:media3-session:$media3Version")
     implementation("androidx.media3:media3-exoplayer-hls:$media3Version")
+    implementation("androidx.glance:glance-appwidget:1.1.1")
     implementation("androidx.compose.material:material-icons-extended-android:1.7.8")
     implementation("io.coil-kt:coil-compose:2.7.0")
     //
