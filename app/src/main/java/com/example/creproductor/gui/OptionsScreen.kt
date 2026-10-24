@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import androidx.compose.material.icons.filled.Radio
+import androidx.compose.material.icons.filled.Lyrics
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -114,6 +116,13 @@ fun OptionsScreen(versionName: String, onAction: (AppAction) -> Unit, onClose: (
                 )
             }
 
+            item {
+                PrefSwitch(
+                    "Letra palabra por palabra", "La línea que suena se ilumina palabra a palabra, con un halo suave. El reparto es estimado: las letras solo traen el tiempo de cada línea",
+                    Icons.Default.Lyrics, ::isWordLyricsOn, ::setWordLyrics
+                )
+            }
+
             item { SectionTitle("En línea (opcional)") }
             item {
                 PrefSwitch(
@@ -125,6 +134,12 @@ fun OptionsScreen(versionName: String, onAction: (AppAction) -> Unit, onClose: (
                 PrefSwitch(
                     "Buscar y reproducir en YouTube Music", "Función no oficial (NewPipeExtractor): puede dejar de funcionar sin aviso y va contra los términos de YouTube. Usa internet y no necesita cuenta",
                     Icons.Default.CloudQueue, YtMusic::isEnabled, { c, on -> YtMusic.setEnabled(c, on); ytEnabled = on }
+                )
+            }
+            if (ytEnabled) item {
+                PrefSwitch(
+                    "Seguir con las recomendadas de YouTube", "Al terminar una canción de YT Music pasa sola a la siguiente que recomienda YouTube",
+                    Icons.Default.Radio, YtMusic::isAutoNext, YtMusic::setAutoNext
                 )
             }
             if (ytEnabled) item {

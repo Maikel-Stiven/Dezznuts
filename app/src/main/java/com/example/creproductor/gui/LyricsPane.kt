@@ -45,6 +45,15 @@ import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+private const val KEY_WORD_LYRICS = "lyrics_words"
+
+/** Letra palabra por palabra (por defecto sí); apagada, la línea activa se resalta entera. */
+fun isWordLyricsOn(context: android.content.Context): Boolean =
+    context.getSharedPreferences("dezznuts_prefs", android.content.Context.MODE_PRIVATE).getBoolean(KEY_WORD_LYRICS, true)
+
+fun setWordLyrics(context: android.content.Context, on: Boolean) =
+    context.getSharedPreferences("dezznuts_prefs", android.content.Context.MODE_PRIVATE).edit().putBoolean(KEY_WORD_LYRICS, on).apply()
+
 private sealed interface LyricsState {
     data object Loading : LyricsState
     data class Found(val lyrics: Lyrics) : LyricsState
@@ -123,6 +132,8 @@ private fun LyricsList(lyrics: Lyrics, currentPositionMs: () -> Long, onSeekTo: 
     // Los efectos (suavizado de la línea activa, desplazamiento animado) siguen la regla única de la app: en equipos
     // modestos o con ahorro de batería la línea cambia al instante.
     val effects = rememberVisualEffectsEnabled()
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val wordByWord = remember { isWordLyricsOn(ctx) }
     // La línea activa queda a un tercio de la altura (no pegada arriba) para ver también lo que viene.
     LaunchedEffect(active) {
         if (active < 0) return@LaunchedEffect
@@ -166,7 +177,7 @@ private fun LyricsList(lyrics: Lyrics, currentPositionMs: () -> Long, onSeekTo: 
             // Sombra suave: se lee bien aunque la carátula (y por tanto el fondo) sea clara.
             val lineStyle = (if (lyrics.synced) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.bodyLarge)
                 .copy(shadow = androidx.compose.ui.graphics.Shadow(Color.Black.copy(alpha = 0.35f), blurRadius = 10f))
-            if (current && lyrics.synced && line.text.isNotEmpty()) {
+            if (current && lyrics.synced && wordByWord && line.text.isNotEmpty()) {
                 SingAlongLine(line.text, line.timeMs, lyrics.lines.getOrNull(i + 1)?.timeMs, currentPositionMs, effects, lineStyle, lineModifier)
             } else Text(
                 text = line.text.ifEmpty { "♪" },

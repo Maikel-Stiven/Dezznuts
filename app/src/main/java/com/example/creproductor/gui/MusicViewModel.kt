@@ -847,6 +847,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
 
     /** Añade al final de la cola la siguiente recomendada por YouTube (si sigues en esta canción cuando esté lista). */
     private fun ytQueueNext(current: Song, resolved: com.example.creproductor.data.YtMusic.Resolved) {
+        if (!com.example.creproductor.data.YtMusic.isAutoNext(getApplication())) return
         viewModelScope.launch {
             // Otra subida de la misma canción (o la que ya sonó) no cuenta como recomendada.
             val next = resolved.related.firstOrNull {

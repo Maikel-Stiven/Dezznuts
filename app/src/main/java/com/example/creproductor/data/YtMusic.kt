@@ -37,6 +37,13 @@ object YtMusic {
     fun setEnabled(context: android.content.Context, on: Boolean) =
         context.getSharedPreferences("dezznuts_prefs", android.content.Context.MODE_PRIVATE).edit().putBoolean(KEY, on).apply()
 
+    /** Seguir con la siguiente recomendada de YouTube al terminar una canción de YT (por defecto sí). */
+    fun isAutoNext(context: android.content.Context) =
+        context.getSharedPreferences("dezznuts_prefs", android.content.Context.MODE_PRIVATE).getBoolean("yt_autonext", true)
+
+    fun setAutoNext(context: android.content.Context, on: Boolean) =
+        context.getSharedPreferences("dezznuts_prefs", android.content.Context.MODE_PRIVATE).edit().putBoolean("yt_autonext", on).apply()
+
     private val init by lazy { NewPipe.init(Http) }
 
     /** Canciones que coinciden con [query] (hasta ~20 de la primera página). Lanza [IOException] si no hay red. */

@@ -10,6 +10,22 @@ import hashlib, os, re
 ROOT = os.path.join(os.path.dirname(__file__), "..", "app", "src", "main", "res")
 
 EN = {
+"Ver todo": "See all", "Tu música, sin vueltas": "Your music, no fuss", "Tema": "Theme", "Omarchy": "Omarchy",
+"Premium": "Premium", "Sakura": "Sakura", "Océano": "Ocean", "Synthwave": "Synthwave", "Brasa": "Ember",
+"Duplicados y WhatsApp": "Duplicates & WhatsApp", "Artistas desconocidos": "Unknown artists",
+"También en YouTube Music": "Also on YouTube Music", "Iniciar sesión": "Sign in",
+"YouTube Music · cuenta de Google": "YouTube Music · Google account",
+"Tus Me gusta, a mano": "Your Likes, at hand",
+"Inicia sesión para ver tus canciones con Me gusta. La sesión se guarda solo en este teléfono y puedes cerrarla cuando quieras.":
+  "Sign in to see your liked songs. The session is stored only on this phone and you can sign out any time.",
+"Busca una canción y, al terminar, seguirá sola con las recomendadas de YouTube.":
+  "Search for a song and, when it ends, it will carry on with YouTube's recommendations.",
+"Letra palabra por palabra": "Word-by-word lyrics",
+"La línea que suena se ilumina palabra a palabra, con un halo suave. El reparto es estimado: las letras solo traen el tiempo de cada línea":
+  "The playing line lights up word by word with a soft glow. Timing is estimated: lyrics only carry each line's time",
+"Seguir con las recomendadas de YouTube": "Carry on with YouTube's recommendations",
+"Al terminar una canción de YT Music pasa sola a la siguiente que recomienda YouTube":
+  "When a YT Music song ends, the next one YouTube recommends plays on its own",
 "Abrir menú": "Open menu", "Acerca de": "About", "Activar aleatorio": "Turn shuffle on", "Activo": "On",
 "Agregada a la cola": "Added to the queue", "Agregada a la lista": "Added to the list",
 "Agregar a la cola de reproducción actual": "Add to the current queue", "Agregar a una playlist": "Add to a playlist",
