@@ -2,6 +2,7 @@ package com.example.creproductor
 
 import com.example.creproductor.gui.CoverAccentTheme
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.foundation.shape.CircleShape
@@ -287,7 +288,10 @@ class MainActivity : ComponentActivity() {
                                     Box(modifier = Modifier.fillMaxSize()) {
                                         // Lo que queda bajo el reproductor a pantalla completa no anima (no se ve).
                                         CompositionLocalProvider(LocalAnimationsEnabled provides !isPlayerFullScreenVisible) {
-                                        Column(modifier = Modifier.fillMaxSize()) {
+                                        // Horizontal en apaisado: el recorte (notch) o la barra lateral no deben tapar el contenido.
+                                        Column(modifier = Modifier.fillMaxSize().windowInsetsPadding(
+                                            androidx.compose.foundation.layout.WindowInsets.displayCutout.only(androidx.compose.foundation.layout.WindowInsetsSides.Horizontal)
+                                        )) {
                                             Box(modifier = Modifier.weight(1f)) {
                                                 MainScreen(
                                                     viewModel = viewModel,
@@ -320,14 +324,21 @@ class MainActivity : ComponentActivity() {
                                                 }
                                             }
 
-                                            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
-                                                AppSection.entries.forEach { item ->
-                                                    NavigationBarItem(
-                                                        selected = section == item,
-                                                        onClick = { section = item },
-                                                        icon = { Icon(item.icon, contentDescription = null) },
-                                                        label = { Text(item.title) }
-                                                    )
+                                            // Con el texto del sistema muy grande las etiquetas se partían ("Bibliot-eca"): la barra
+                                            // admite hasta 1,2× y cada etiqueta va en una sola línea.
+                                            val navDensity = LocalDensity.current
+                                            CompositionLocalProvider(
+                                                LocalDensity provides Density(navDensity.density, fontScale = navDensity.fontScale.coerceAtMost(1.2f))
+                                            ) {
+                                                NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
+                                                    AppSection.entries.forEach { item ->
+                                                        NavigationBarItem(
+                                                            selected = section == item,
+                                                            onClick = { section = item },
+                                                            icon = { Icon(item.icon, contentDescription = null) },
+                                                            label = { Text(item.title, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis) }
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
@@ -344,6 +355,12 @@ class MainActivity : ComponentActivity() {
                                             // únicamente la barra de progreso, así el resto del reproductor no se recompone cada 500 ms.
                                             val currentPositionMs by viewModel.currentPositionMs.collectAsStateWithLifecycle()
 
+                                            // El reproductor reparte la altura entre portada y controles: con texto del sistema muy grande
+                                            // la portada desaparecía, así que aquí el texto admite hasta 1,15×.
+                                            val playerDensity = LocalDensity.current
+                                            CompositionLocalProvider(
+                                                LocalDensity provides Density(playerDensity.density, fontScale = playerDensity.fontScale.coerceAtMost(1.15f))
+                                            ) {
                                             CoverAccentTheme(playingSong) {
                                             FullScreenPlayer(
                                                 song = playingSong,
@@ -367,6 +384,7 @@ class MainActivity : ComponentActivity() {
                                                 onDismiss = { isPlayerFullScreenVisible = false },
                                                 onToggleFavorite = { song -> viewModel.toggleFavorite(song) }
                                             )
+                                            }
                                             }
                                         }
                                     }
