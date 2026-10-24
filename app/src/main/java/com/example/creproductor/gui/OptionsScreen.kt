@@ -105,20 +105,20 @@ fun OptionsScreen(versionName: String, onAction: (AppAction) -> Unit, onClose: (
             }
             item {
                 PrefSwitch(
-                    "Color de la carátula en el reproductor", "Los botones y el progreso toman el tono de la portada. Apagado: siempre el morado de DEZZNUTS",
+                    "Color de la carátula en el reproductor", "Botones y progreso toman el tono de la portada",
                     Icons.Default.Palette, ::isCoverAccentOn, ::setCoverAccent
                 )
             }
             item {
                 PrefSwitch(
-                    "Portada con movimiento", "La portada se inclina con el teléfono (se desactiva sola en equipos modestos o con ahorro de batería)",
+                    "Portada con movimiento", "La portada se inclina con el teléfono",
                     Icons.Default.ScreenRotation, ::isCoverMotionOn, ::setCoverMotion
                 )
             }
 
             item {
                 PrefSwitch(
-                    "Letra palabra por palabra", "La línea que suena se ilumina palabra a palabra, con un halo suave. El reparto es estimado: las letras solo traen el tiempo de cada línea",
+                    "Letra palabra por palabra", "Ilumina cada palabra de la línea que suena (tiempo estimado)",
                     Icons.Default.Lyrics, ::isWordLyricsOn, ::setWordLyrics
                 )
             }
@@ -126,19 +126,19 @@ fun OptionsScreen(versionName: String, onAction: (AppAction) -> Unit, onClose: (
             item { SectionTitle("En línea (opcional)") }
             item {
                 PrefSwitch(
-                    "Portada animada (en línea)", "Bucle de video del álbum cuando existe, solo con Wi-Fi. Consulta artwork.boidu.dev (servicio comunitario, no oficial) con título, artista y álbum",
+                    "Portada animada (en línea)", "Bucle de video del álbum, solo con Wi-Fi (servicio comunitario artwork.boidu.dev)",
                     Icons.Default.Movie, ::isAnimatedCoverOn, ::setAnimatedCover
                 )
             }
             item {
                 PrefSwitch(
-                    "Buscar y reproducir en YouTube Music", "Función no oficial (NewPipeExtractor): puede dejar de funcionar sin aviso y va contra los términos de YouTube. Usa internet y no necesita cuenta",
+                    "Buscar y reproducir en YouTube Music", "No oficial: puede dejar de funcionar y va contra los términos de YouTube",
                     Icons.Default.CloudQueue, YtMusic::isEnabled, { c, on -> YtMusic.setEnabled(c, on); ytEnabled = on }
                 )
             }
             if (ytEnabled) item {
                 PrefSwitch(
-                    "Seguir con las recomendadas de YouTube", "Al terminar una canción de YT Music pasa sola a la siguiente que recomienda YouTube",
+                    "Seguir con las recomendadas de YouTube", "Al terminar una canción pasa a la siguiente recomendada",
                     Icons.Default.Radio, YtMusic::isAutoNext, YtMusic::setAutoNext
                 )
             }

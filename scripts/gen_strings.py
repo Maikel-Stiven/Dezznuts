@@ -10,6 +10,12 @@ import hashlib, os, re
 ROOT = os.path.join(os.path.dirname(__file__), "..", "app", "src", "main", "res")
 
 EN = {
+"Al terminar una canción pasa a la siguiente recomendada": "When a song ends, the next recommended one plays",
+"No oficial: puede dejar de funcionar y va contra los términos de YouTube": "Unofficial: may stop working and goes against YouTube's terms",
+"Bucle de video del álbum, solo con Wi-Fi (servicio comunitario artwork.boidu.dev)": "Album video loop, Wi-Fi only (community service artwork.boidu.dev)",
+"Ilumina cada palabra de la línea que suena (tiempo estimado)": "Lights up each word of the playing line (estimated timing)",
+"La portada se inclina con el teléfono": "The cover tilts with the phone",
+"Botones y progreso toman el tono de la portada": "Buttons and progress take the cover's tone",
 "Ver todo": "See all", "Tu música, sin vueltas": "Your music, no fuss", "Tema": "Theme", "Omarchy": "Omarchy",
 "Premium": "Premium", "Sakura": "Sakura", "Océano": "Ocean", "Synthwave": "Synthwave", "Brasa": "Ember",
 "Duplicados y WhatsApp": "Duplicates & WhatsApp", "Artistas desconocidos": "Unknown artists",
@@ -21,11 +27,7 @@ EN = {
 "Busca una canción y, al terminar, seguirá sola con las recomendadas de YouTube.":
   "Search for a song and, when it ends, it will carry on with YouTube's recommendations.",
 "Letra palabra por palabra": "Word-by-word lyrics",
-"La línea que suena se ilumina palabra a palabra, con un halo suave. El reparto es estimado: las letras solo traen el tiempo de cada línea":
-  "The playing line lights up word by word with a soft glow. Timing is estimated: lyrics only carry each line's time",
 "Seguir con las recomendadas de YouTube": "Carry on with YouTube's recommendations",
-"Al terminar una canción de YT Music pasa sola a la siguiente que recomienda YouTube":
-  "When a YT Music song ends, the next one YouTube recommends plays on its own",
 "Abrir menú": "Open menu", "Acerca de": "About", "Activar aleatorio": "Turn shuffle on", "Activo": "On",
 "Agregada a la cola": "Added to the queue", "Agregada a la lista": "Added to the list",
 "Agregar a la cola de reproducción actual": "Add to the current queue", "Agregar a una playlist": "Add to a playlist",
@@ -46,8 +48,6 @@ EN = {
 "Aún no tienes canciones favoritas": "You don't have favorite songs yet", "Banda": "Band",
 "Bandas, presets y perfiles por salida": "Bands, presets and per-output profiles", "Biblioteca": "Library",
 "Borrando…": "Deleting…", "Borrar": "Delete", "Borrar caché de imágenes": "Clear image cache",
-"Bucle de video del álbum cuando existe, solo con Wi-Fi. Consulta artwork.boidu.dev (servicio comunitario, no oficial) con título, artista y álbum":
-  "Album video loop when one exists, on Wi-Fi only. Queries artwork.boidu.dev (community service, unofficial) with title, artist and album",
 "Busca en toda tu biblioteca por título, artista o álbum.": "Search your whole library by title, artist or album.",
 "Buscando en LRCLIB…": "Searching LRCLIB…", "Buscando tu música…": "Looking for your music…", "Buscando…": "Searching…",
 "Buscar": "Search", "Buscar de nuevo": "Search again", "Buscar en internet (LRCLIB)": "Search online (LRCLIB)",
@@ -87,8 +87,6 @@ EN = {
 "Ese archivo no es una copia de DEZZNUTS": "That file is not a DEZZNUTS backup", "Estadísticas": "Statistics",
 "Exportar M3U": "Export M3U", "Favoritas": "Favorites", "Favoritas, reproducciones y listas en un archivo": "Favorites, plays and playlists in one file",
 "Favoritos": "Favorites", "Favoritos ❤": "Favorites ❤", "Fiesta": "Party", "Frecuencia": "Frequency",
-"Función no oficial (NewPipeExtractor): puede dejar de funcionar sin aviso y va contra los términos de YouTube. Usa internet y no necesita cuenta":
-  "Unofficial feature (NewPipeExtractor): it may stop working without notice and goes against YouTube's terms. Uses the internet and needs no account",
 "Función no oficial: puede dejar de funcionar sin aviso y va contra los términos de YouTube.":
   "Unofficial feature: it may stop working without notice and goes against YouTube's terms.",
 "Fundido de entrada y salida": "Fade in and out", "Galeria": "Gallery", "Ganancia": "Gain", "Guardar": "Save",
@@ -103,15 +101,11 @@ EN = {
 "Iniciar sesión": "Sign in", "Iniciar sesión y ver tus canciones con Me gusta": "Sign in and see your liked songs",
 "Ir al artista": "Go to artist", "Ir al álbum": "Go to album", "LISTO": "DONE",
 "LRCLIB no tiene la letra de esta canción.": "LRCLIB doesn't have the lyrics for this song.",
-"La portada se inclina con el teléfono (se desactiva sola en equipos modestos o con ahorro de batería)":
-  "The cover tilts with the phone (turns itself off on modest devices or in battery saver)",
 "La primera vez puede tardar unos segundos si tienes muchas canciones.": "The first time it can take a few seconds if you have many songs.",
 "Las pistas de una hoja CUE no se pueden cortar": "Tracks from a CUE sheet can't be cut", "Letra": "Lyrics",
 "Limpiar": "Clear", "Limpiar busqueda": "Clear search", "Lista agregada a la cola": "List added to the queue",
 "Lista importada": "Imported list", "Listas de reproducción": "Playlists", "Listo": "Done",
 "Lo más escuchado y las horas de música": "Most played and hours of music",
-"Los botones y el progreso toman el tono de la portada. Apagado: siempre el morado de DEZZNUTS":
-  "Buttons and progress take the cover's color. Off: always DEZZNUTS purple",
 "Material You": "Material You", "Melancólico": "Melancholic", "Mi YouTube Music": "My YouTube Music",
 "Mueve la curva para guardar el tuyo": "Move the curve to save your own", "Más": "More", "Más opciones": "More options",
 "Más reproducidas": "Most played", "Negro AMOLED": "AMOLED black", "No": "No", "No encontramos música": "We couldn't find any music",

@@ -2,6 +2,21 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versionado semántico.
 
+## [Sin publicar]
+
+### Novedades
+- **YouTube Music**: la portada es la oficial (cuadrada, de iTunes) en vez del fotograma del video, con lo que también
+  funcionan la portada animada y el fondo «cristal»; abrir una canción tarda ≈ 1,2 s (antes ≈ 4,4 s la primera vez):
+  se muestra al instante, la dirección de audio se guarda en caché y el primer resultado se prepara solo.
+- **Sigue con las recomendadas de YouTube** al terminar una canción (opción, activada por defecto); el botón siguiente
+  de la notificación también funciona.
+- **Búsqueda**: debajo de lo local aparece «También en YouTube Music» (sin mover lo de arriba mientras carga).
+- **Inicio de sesión de YouTube Music** a pantalla completa dentro de la app, con barra propia y progreso.
+- **Letra palabra por palabra** con halo luminoso (opción). El reparto es estimado: LRCLIB solo da el tiempo de cada línea.
+- **4 temas nuevos** (Sakura, Océano, Synthwave y Brasa) y selector por muestras de color en el menú lateral y en Opciones.
+- Pulido visual: logotipo tipográfico, pestañas con el acento solo en la activa, menú lateral más sobrio y sin textos
+  cortados, cuadrículas de 2 columnas en teléfonos pequeños, «Ver todo» en vez de mayúsculas, textos de Opciones más cortos.
+
 ## [1.0.0] - 2026-10-24
 
 Primera versión estable: DEZZNUTS sale de alfa y beta.

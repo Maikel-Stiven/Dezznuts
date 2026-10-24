@@ -23,7 +23,7 @@
     <string name="s_b5fdd6ab36">Agregar al final de la cola</string>
     <string name="s_962b3b7614">Agregar pistas</string>
     <string name="s_fc1bd603dc">Al terminar la canción</string>
-    <string name="s_cf60f00a83">Al terminar una canción de YT Music pasa sola a la siguiente que recomienda YouTube</string>
+    <string name="s_72637db2e5">Al terminar una canción pasa a la siguiente recomendada</string>
     <string name="s_a7567a43eb">Aleatorio</string>
     <string name="s_0ff010fdfa">Alegre</string>
     <string name="s_ff934581d9">Almacenamiento</string>
@@ -58,8 +58,9 @@
     <string name="s_f48076e5cc">Borrando…</string>
     <string name="s_d7b82b2125">Borrar</string>
     <string name="s_519bf6d6fc">Borrar caché de imágenes</string>
+    <string name="s_3d7a44fbea">Botones y progreso toman el tono de la portada</string>
     <string name="s_ef7a7252e2">Brasa</string>
-    <string name="s_ac5de325eb">Bucle de video del álbum cuando existe, solo con Wi-Fi. Consulta artwork.boidu.dev (servicio comunitario, no oficial) con título, artista y álbum</string>
+    <string name="s_ed8807bfa5">Bucle de video del álbum, solo con Wi-Fi (servicio comunitario artwork.boidu.dev)</string>
     <string name="s_6b0c1969c7">Busca en toda tu biblioteca por título, artista o álbum.</string>
     <string name="s_5e94e4c84a">Busca una canción y, al terminar, seguirá sola con las recomendadas de YouTube.</string>
     <string name="s_0b0c03e1e6">Buscando en LRCLIB…</string>
@@ -154,7 +155,6 @@
     <string name="s_f1217350a8">Favoritos ❤</string>
     <string name="s_f6fc3bae6c">Fiesta</string>
     <string name="s_57f1dd05b5">Frecuencia</string>
-    <string name="s_aaf0a24f7c">Función no oficial (NewPipeExtractor): puede dejar de funcionar sin aviso y va contra los términos de YouTube. Usa internet y no necesita cuenta</string>
     <string name="s_61e5f39fe7">Función no oficial: puede dejar de funcionar sin aviso y va contra los términos de YouTube.</string>
     <string name="s_6ca8924c6a">Fundido de entrada y salida</string>
     <string name="s_96dcc168d8">Galeria</string>
@@ -171,6 +171,7 @@
     <string name="s_1d6d593f6c">Ignorar archivos de menos de (KB)</string>
     <string name="s_d5e215e0fc">Ignorar archivos de menos de (segundos)</string>
     <string name="s_b7673cd41c">Ignorar archivos y carpetas ocultos</string>
+    <string name="s_65079b3a27">Ilumina cada palabra de la línea que suena (tiempo estimado)</string>
     <string name="s_8fa121a8b1">Importar lista M3U</string>
     <string name="s_45332d6d5d">Información</string>
     <string name="s_6e0832aded">Información técnica</string>
@@ -182,8 +183,7 @@
     <string name="s_e87b4364dc">Ir al álbum</string>
     <string name="s_f7c71d363f">LISTO</string>
     <string name="s_e12d9f188d">LRCLIB no tiene la letra de esta canción.</string>
-    <string name="s_65a86d41f4">La línea que suena se ilumina palabra a palabra, con un halo suave. El reparto es estimado: las letras solo traen el tiempo de cada línea</string>
-    <string name="s_4272aef9c5">La portada se inclina con el teléfono (se desactiva sola en equipos modestos o con ahorro de batería)</string>
+    <string name="s_40ebb02b43">La portada se inclina con el teléfono</string>
     <string name="s_86e2a342aa">La primera vez puede tardar unos segundos si tienes muchas canciones.</string>
     <string name="s_caba50770a">Las pistas de una hoja CUE no se pueden cortar</string>
     <string name="s_6e7c6f3dc7">Letra</string>
@@ -195,7 +195,6 @@
     <string name="s_00ac32ebe9">Listas de reproducción</string>
     <string name="s_91acde292c">Listo</string>
     <string name="s_d968292229">Lo más escuchado y las horas de música</string>
-    <string name="s_0a768ebcdd">Los botones y el progreso toman el tono de la portada. Apagado: siempre el morado de DEZZNUTS</string>
     <string name="s_66eb000113">Material You</string>
     <string name="s_1f2b6ac990">Melancólico</string>
     <string name="s_c0af43ec1e">Mi YouTube Music</string>
@@ -217,6 +216,7 @@
     <string name="s_a8b66b8fcf">No hay listas borradas para restaurar.</string>
     <string name="s_434613d98d">No hay navegador para abrir el enlace</string>
     <string name="s_8bac82d759">No hay otras listas de reproducción creadas</string>
+    <string name="s_6578ab5a64">No oficial: puede dejar de funcionar y va contra los términos de YouTube</string>
     <string name="s_fad124fd12">No se encontraron artistas</string>
     <string name="s_1ddcf49d6e">No se encontraron carpetas</string>
     <string name="s_d79a05b31b">No se encontraron géneros</string>

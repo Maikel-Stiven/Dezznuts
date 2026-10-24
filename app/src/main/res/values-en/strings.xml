@@ -22,7 +22,7 @@
     <string name="s_b5fdd6ab36">Add to the end of the queue</string>
     <string name="s_962b3b7614">Add tracks</string>
     <string name="s_fc1bd603dc">At the end of the song</string>
-    <string name="s_cf60f00a83">When a YT Music song ends, the next one YouTube recommends plays on its own</string>
+    <string name="s_72637db2e5">When a song ends, the next recommended one plays</string>
     <string name="s_a7567a43eb">Shuffle</string>
     <string name="s_0ff010fdfa">Happy</string>
     <string name="s_ff934581d9">Storage</string>
@@ -57,8 +57,9 @@
     <string name="s_f48076e5cc">Deleting…</string>
     <string name="s_d7b82b2125">Delete</string>
     <string name="s_519bf6d6fc">Clear image cache</string>
+    <string name="s_3d7a44fbea">Buttons and progress take the cover\'s tone</string>
     <string name="s_ef7a7252e2">Ember</string>
-    <string name="s_ac5de325eb">Album video loop when one exists, on Wi-Fi only. Queries artwork.boidu.dev (community service, unofficial) with title, artist and album</string>
+    <string name="s_ed8807bfa5">Album video loop, Wi-Fi only (community service artwork.boidu.dev)</string>
     <string name="s_6b0c1969c7">Search your whole library by title, artist or album.</string>
     <string name="s_5e94e4c84a">Search for a song and, when it ends, it will carry on with YouTube\'s recommendations.</string>
     <string name="s_0b0c03e1e6">Searching LRCLIB…</string>
@@ -153,7 +154,6 @@
     <string name="s_f1217350a8">Favorites ❤</string>
     <string name="s_f6fc3bae6c">Party</string>
     <string name="s_57f1dd05b5">Frequency</string>
-    <string name="s_aaf0a24f7c">Unofficial feature (NewPipeExtractor): it may stop working without notice and goes against YouTube\'s terms. Uses the internet and needs no account</string>
     <string name="s_61e5f39fe7">Unofficial feature: it may stop working without notice and goes against YouTube\'s terms.</string>
     <string name="s_6ca8924c6a">Fade in and out</string>
     <string name="s_96dcc168d8">Gallery</string>
@@ -170,6 +170,7 @@
     <string name="s_1d6d593f6c">Ignore files smaller than (KB)</string>
     <string name="s_d5e215e0fc">Ignore files shorter than (seconds)</string>
     <string name="s_b7673cd41c">Ignore hidden files and folders</string>
+    <string name="s_65079b3a27">Lights up each word of the playing line (estimated timing)</string>
     <string name="s_8fa121a8b1">Import M3U playlist</string>
     <string name="s_45332d6d5d">About</string>
     <string name="s_6e0832aded">Technical info</string>
@@ -181,8 +182,7 @@
     <string name="s_e87b4364dc">Go to album</string>
     <string name="s_f7c71d363f">DONE</string>
     <string name="s_e12d9f188d">LRCLIB doesn\'t have the lyrics for this song.</string>
-    <string name="s_65a86d41f4">The playing line lights up word by word with a soft glow. Timing is estimated: lyrics only carry each line\'s time</string>
-    <string name="s_4272aef9c5">The cover tilts with the phone (turns itself off on modest devices or in battery saver)</string>
+    <string name="s_40ebb02b43">The cover tilts with the phone</string>
     <string name="s_86e2a342aa">The first time it can take a few seconds if you have many songs.</string>
     <string name="s_caba50770a">Tracks from a CUE sheet can\'t be cut</string>
     <string name="s_6e7c6f3dc7">Lyrics</string>
@@ -194,7 +194,6 @@
     <string name="s_00ac32ebe9">Playlists</string>
     <string name="s_91acde292c">Done</string>
     <string name="s_d968292229">Most played and hours of music</string>
-    <string name="s_0a768ebcdd">Buttons and progress take the cover\'s color. Off: always DEZZNUTS purple</string>
     <string name="s_66eb000113">Material You</string>
     <string name="s_1f2b6ac990">Melancholic</string>
     <string name="s_c0af43ec1e">My YouTube Music</string>
@@ -216,6 +215,7 @@
     <string name="s_a8b66b8fcf">No deleted playlists to restore.</string>
     <string name="s_434613d98d">No browser to open the link</string>
     <string name="s_8bac82d759">There are no other playlists</string>
+    <string name="s_6578ab5a64">Unofficial: may stop working and goes against YouTube\'s terms</string>
     <string name="s_fad124fd12">No artists found</string>
     <string name="s_1ddcf49d6e">No folders found</string>
     <string name="s_d79a05b31b">No genres found</string>
