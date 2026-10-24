@@ -6,6 +6,7 @@ import androidx.activity.compose.BackHandler
 import com.example.creproductor.data.coverModel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,8 +23,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -62,6 +61,14 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.zIndex
 
 private enum class PlaylistFilter(val label: String) {
     ALL("Todas"), FAVORITES("Favoritos"), RECENT("Reproducidas recientemente")
@@ -73,6 +80,7 @@ fun PlaylistScreenDetail(
     playlistSongs: List<Song>,
     currentSongId: Long?= null,
     isPlaying: Boolean = false,
+    allPlaylists: List<Playlist> = emptyList(),
     onSongClick: (Song) -> Unit,
     onPlayAllClick: () -> Unit,
     onShuffleClick: () -> Unit,
@@ -80,7 +88,17 @@ fun PlaylistScreenDetail(
     onRestoreClick: () -> Unit,
     onBackClick: () -> Unit,
     onRemoveSongFromPlaylist: (Song) -> Unit = {},
-    recentSongs: List<Song> = emptyList()
+    onMoveSong: (fromIndex: Int, toIndex: Int) -> Unit = {_, _ ->},
+    recentSongs: List<Song> = emptyList(),
+    onPlayNext: (Song) -> Unit = {},
+    onAddToQueue: (Song) -> Unit = {},
+    onAddToPlaylist: (song: Song ,targetPlaylistId: String) -> Unit = {_, _ ->},
+    onGoToAlbum: (Song) -> Unit = {},
+    onGoToArtist: (Song) -> Unit = {},
+    onEditTags: (Song) -> Unit = {},
+    onAbout: (Song) -> Unit = {},
+    onAudioCutter: (Song) -> Unit = {},
+    onDeleteSong: (Song) -> Unit = {}
 ){
     BackHandler {
         onBackClick()
@@ -89,6 +107,17 @@ fun PlaylistScreenDetail(
     // Filtros de la maqueta: Todas / Favoritos / Reproducidas recientemente, y búsqueda dentro de la lista.
     var filter by remember { mutableStateOf(PlaylistFilter.ALL) }
     var query by remember { mutableStateOf("") }
+    var selectedSongForMenu by remember { mutableStateOf<Song?>(null) }
+    var isDraggingSong by remember { mutableStateOf(false) }
+    var songToEditTags by remember { mutableStateOf<Song?>(null) }
+
+    LaunchedEffect(songToEditTags) {
+        val song = songToEditTags ?: return@LaunchedEffect
+        onEditTags(song)
+        songToEditTags = null
+    }
+    val isReorderable = filter == PlaylistFilter.ALL && query.isBlank()
+
     val visibleSongs = remember(playlistSongs, recentSongs, filter, query) {
         val base = when (filter) {
             PlaylistFilter.ALL -> playlistSongs
@@ -113,7 +142,7 @@ fun PlaylistScreenDetail(
 
         val songCountText = if (playlistSongs.size == 1) "1 canción" else "${playlistSongs.size} canciones"
         val timeText = if (hours > 0) "$hours h $mins min" else "$mins min"
-        "${songCountText} • ${timeText}"
+        "$songCountText • $timeText"
     }
 
     Box(modifier = Modifier.fillMaxSize()){
@@ -147,6 +176,7 @@ fun PlaylistScreenDetail(
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
+                userScrollEnabled = !isDraggingSong,
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
                 item {
@@ -198,7 +228,7 @@ fun PlaylistScreenDetail(
                             Text(
                                 text = formattedTotalDuration,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.surfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
                             Spacer(modifier = Modifier.height(16.dp))
@@ -285,7 +315,10 @@ fun PlaylistScreenDetail(
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(Modifier.horizontalScroll(rememberScrollState())
+                                .padding(vertical = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
                                 PlaylistFilter.entries.forEach { f ->
                                     FilterChip(selected = filter == f, onClick = { filter = f }, label = { Text(tr(f.label)) })
                                 }
@@ -302,15 +335,22 @@ fun PlaylistScreenDetail(
                             )
                         }
                     }
-                   itemsIndexed(visibleSongs, key = { _, song -> "playlist_song_${song.id}" }) {_, song ->
+                   itemsIndexed(visibleSongs, key = { _, song -> "playlist_song_${song.id}" }) {index, song ->
                        val isSelected = song.id == currentSongId
 
                        PlaylistTrackItem(
                            song = song,
                            isSelected = isSelected,
                            isPlaying = isSelected && isPlaying,
+                           isReorderable = isReorderable,
+                           canMoveUp = index > 0,
+                           canMoveDown = index < visibleSongs.size - 1,
                            onClick = {onSongClick(song)},
-                           onRemoveClick = {onRemoveSongFromPlaylist(song)}
+                           onOptionsClick = { selectedSongForMenu = song },
+                           onMoveUp = {onMoveSong(index, index -1)},
+                           onMoveDown = {onMoveSong(index, index + 1)},
+                           onDragStart = {isDraggingSong = true},
+                           onDragEnd = {isDraggingSong = false}
                        )
                    }
                 }
@@ -331,6 +371,28 @@ fun PlaylistScreenDetail(
                 )
             }
         }
+
+        selectedSongForMenu?.let { song ->
+            PlaylistSongMenuSheet(
+                song = song,
+                playlist = allPlaylists,
+                actions = PlaylistSongMenuActions (
+                    onPlayNext = {selectedSongForMenu = null; onPlayNext(song)},
+                    onAddToQueue = {selectedSongForMenu = null; onAddToQueue(song)},
+                    onAddToPlaylist = { targetPlaylistId ->
+                        selectedSongForMenu = null
+                        onAddToPlaylist(song, targetPlaylistId)},
+                    onRemoveFromPlaylist = { selectedSongForMenu = null; onRemoveSongFromPlaylist(song)},
+                    onGoToAlbum = {selectedSongForMenu = null; onGoToAlbum(song)},
+                    onGoToArtist = {selectedSongForMenu = null; onGoToArtist(song)},
+                    onEditTags = {selectedSongForMenu = null; onEditTags(song)},
+                    onAbout = {selectedSongForMenu = null; onAbout(song)},
+                    onAudioCutter = {selectedSongForMenu = null; onAudioCutter(song)},
+                    onDeleteFromDevice = { selectedSongForMenu = null; onDeleteSong(song)}
+                ),
+                onDismiss = {selectedSongForMenu = null}
+            )
+        }
     }
 }
 
@@ -339,8 +401,15 @@ private fun  PlaylistTrackItem(
     song: Song,
     isSelected: Boolean,
     isPlaying: Boolean,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
+    isReorderable: Boolean,
     onClick: () -> Unit,
-    onRemoveClick: () -> Unit
+    onOptionsClick: () -> Unit,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit,
+    onDragStart: () -> Unit,
+    onDragEnd: () -> Unit
 ){
     val backgroundColor = if (isSelected){
         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
@@ -348,14 +417,75 @@ private fun  PlaylistTrackItem(
         MaterialTheme.colorScheme.background
     }
 
+    val currentCanMoveUp by rememberUpdatedState(canMoveUp)
+    val currentCanMoveDown by rememberUpdatedState(canMoveDown)
+    val currentOnMoveUp by rememberUpdatedState(onMoveUp)
+    val currentOnMoveDown by rememberUpdatedState(onMoveDown)
+    val currentOnDragStart by rememberUpdatedState(onDragStart)
+    val currentOnDragEnd by rememberUpdatedState(onDragEnd)
+
+    val density = LocalDensity.current
+    var offsetY by remember { mutableFloatStateOf(0f) }
+    var isDraggingThisItem by remember { mutableStateOf(false) }
+
+    val elevation = if (isDraggingThisItem) 8.dp else 0.dp
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .zIndex(if (isDraggingThisItem) 1f else 0f)
+            .graphicsLayer{
+                translationY = offsetY
+                shadowElevation = with(density) {elevation.toPx()}
+            }
             .background(backgroundColor)
-            .clickable(onClick = onClick)
+            .clickable(enabled = !isDraggingThisItem,onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+
+        if (isReorderable){
+            val itemHeightPx = with(density) {68.dp.toPx()}
+            Icon(
+                imageVector = Icons.Default.DragHandle,
+                contentDescription = "Reordenar",
+                tint = if (isDraggingThisItem) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                modifier = Modifier
+                    .padding(end = 12.dp)
+                    .size(22.dp)
+                    .pointerInput(Unit){
+                        detectDragGestures(
+                            onDragStart = {
+                                offsetY = 0f
+                                isDraggingThisItem = true
+                                currentOnDragStart()
+                            },
+                            onDrag = {change, dragAmount ->
+                                change.consume()
+                                offsetY += dragAmount.y
+                                if (offsetY > itemHeightPx / 2f && currentCanMoveDown){
+                                    currentOnMoveDown()
+                                    offsetY -= itemHeightPx
+                                }else if (offsetY < -itemHeightPx / 2f && currentCanMoveUp){
+                                    currentOnMoveUp()
+                                    offsetY += itemHeightPx
+                                }
+                            },
+                            onDragEnd = {
+                                offsetY = 0f
+                                isDraggingThisItem = false
+                                currentOnDragEnd()
+                            },
+                            onDragCancel = {
+                                offsetY = 0f
+                                isDraggingThisItem = false
+                                currentOnDragEnd()
+                            }
+                        )
+                    }
+            )
+        }
+
         Box(
             modifier = Modifier
                 .size(48.dp)
@@ -420,7 +550,7 @@ private fun  PlaylistTrackItem(
         }
 
         IconButton(
-            onClick  = onRemoveClick,
+            onClick  = onOptionsClick,
             modifier = Modifier.size(32.dp)
         ) {
             Icon(

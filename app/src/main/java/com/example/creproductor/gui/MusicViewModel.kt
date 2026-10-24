@@ -1256,6 +1256,16 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "Canciones añadidas a la playlist"), Toast.LENGTH_SHORT).show()
     }
 
+    fun updatedPlaylist(playlistId: String, newName: String, newCoverUri: String?){
+        val updated = _playlists.value.map { playlist ->
+            if (playlist.id == playlistId){
+                playlist.copy(name = newName, coverUri = newCoverUri)
+            }else playlist
+        }
+        _playlists.value = updated
+        savePlaylists(updated)
+    }
+
     /** Elimina IDs duplicadas (canciones) dentro de la playlist */
     fun removeDuplicatesFromPlaylist(playlistId: String){
         val updated = _playlists.value.map { playlist ->
@@ -1288,6 +1298,22 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                 loadSongs(silent = true)
             }
         }
+    }
+
+    /** Mueve la posición de una canción dentro de una playlist y guarda el cambio. */
+    fun movePlaylistSong(playlistId: String, fromIndex: Int, toIndex: Int){
+        val updated = _playlists.value.map { playlist ->
+            if (playlist.id == playlistId){
+                val currentList = playlist.songIds.toMutableList()
+                if (fromIndex in currentList.indices && toIndex in currentList.indices){
+                    val moveId = currentList.removeAt(fromIndex)
+                    currentList.add(toIndex, moveId)
+                    playlist.copy(songIds = currentList)
+                }else playlist
+            }else playlist
+        }
+        _playlists.value = updated
+        savePlaylists(updated)
     }
 
 }
