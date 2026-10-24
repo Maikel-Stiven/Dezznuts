@@ -13,6 +13,7 @@
     <string name="s_ef544be6cf">ALEATORIO</string>
     <string name="s_256a5c2ab3">Abrir menú</string>
     <string name="s_8669f0380c">Acerca de</string>
+    <string name="s_10a0f5b1f9">Activar YouTube Music</string>
     <string name="s_3a9cab04c1">Activar aleatorio</string>
     <string name="s_10140fb91e">Activo</string>
     <string name="s_26b9e8736c">Agregada a la cola</string>
@@ -24,10 +25,12 @@
     <string name="s_fc1bd603dc">Al terminar la canción</string>
     <string name="s_a7567a43eb">Aleatorio</string>
     <string name="s_0ff010fdfa">Alegre</string>
+    <string name="s_ff934581d9">Almacenamiento</string>
     <string name="s_008c76d9dd">Almacenamiento interno</string>
     <string name="s_bc663d8b93">Ancho de banda (Q)</string>
     <string name="s_d97f1097b8">Anterior</string>
     <string name="s_892a534334">Apagado · señal sin tocar</string>
+    <string name="s_4b819e3f3d">Apariencia</string>
     <string name="s_6a2262aa75">Archivo</string>
     <string name="s_467bed2d82">Arrastra los puntos sobre la curva. Sin efecto con audio offload.</string>
     <string name="s_5eb846492d">Arrastra y pellizca para encuadrar (1:1)</string>
@@ -35,6 +38,7 @@
     <string name="s_3c0cf14a7c">Artista desconocido</string>
     <string name="s_0677904445">Artistas</string>
     <string name="s_ef51b8f69e">Artistas más escuchados</string>
+    <string name="s_acdac205f5">Audio</string>
     <string name="s_3e5dedf3ba">Audio Hi/Res</string>
     <string name="s_980a92c105">Avanzado</string>
     <string name="s_392b32127f">Añadir a favoritos</string>
@@ -59,6 +63,7 @@
     <string name="s_9870b9e569">Buscando…</string>
     <string name="s_a62405e2ce">Buscar</string>
     <string name="s_e31bed9e71">Buscar de nuevo</string>
+    <string name="s_fa6fc818fa">Buscar en YouTube Music</string>
     <string name="s_815a6d8447">Buscar en internet (LRCLIB)</string>
     <string name="s_374a1d20f1">Buscar música nueva y filtrar audios cortos</string>
     <string name="s_e8531fcb8c">Buscar y reproducir en YouTube Music</string>
@@ -95,6 +100,7 @@
     <string name="s_194c94e91d">Cortando…</string>
     <string name="s_e4ff026224">Crear lista</string>
     <string name="s_977d0eed0c">Crear lista de reproducción</string>
+    <string name="s_fe1efd2ad4">Cuenta de YouTube Music</string>
     <string name="s_3c369a756d">Curva del ecualizador: arrastra los puntos para cambiar frecuencia y ganancia</string>
     <string name="s_c0664e4020">DEZZNUTS necesita permiso para leer los archivos de audio de este teléfono. No sube nada a internet.</string>
     <string name="s_462fc3b8c4">Deducir artista y título del nombre del archivo</string>
@@ -125,6 +131,7 @@
     <string name="s_12e6133f12">Eliminar playlist</string>
     <string name="s_2fff43e470">Elimnar canciones</string>
     <string name="s_ccc298c5fa">En Android 10 o anterior, borra los archivos desde el gestor de archivos.</string>
+    <string name="s_b82decc02d">En línea (opcional)</string>
     <string name="s_c8ec1cb2b9">Encontrar copias para liberar espacio</string>
     <string name="s_0ac5b9db1d">Energía</string>
     <string name="s_776e6c66ee">Enfoque</string>
@@ -161,6 +168,7 @@
     <string name="s_d5e215e0fc">Ignorar archivos de menos de (segundos)</string>
     <string name="s_b7673cd41c">Ignorar archivos y carpetas ocultos</string>
     <string name="s_8fa121a8b1">Importar lista M3U</string>
+    <string name="s_45332d6d5d">Información</string>
     <string name="s_6e0832aded">Información técnica</string>
     <string name="s_27478f924e">Inicia sesión para ver las canciones que te gustan. La sesión se guarda solo en este teléfono y puedes cerrarla cuando quieras.</string>
     <string name="s_9c18b1ef16">Iniciar sesión</string>
@@ -258,11 +266,13 @@
     <string name="s_f3852d02dd">Se enviará a lrclib.net el título, artista, álbum y duración. Se guarda para usarla sin conexión.</string>
     <string name="s_f7b4423ea6">Se guarda como archivo nuevo en Música/DEZZNUTS; el original no se modifica.</string>
     <string name="s_8973c434ac">Selección rápida</string>
+    <string name="s_60f9315dce">Sesión iniciada en este teléfono</string>
     <string name="s_c4d83a3b6d">Siguiente</string>
     <string name="s_d46fe1067c">Sin canciones</string>
     <string name="s_fa13d000c8">Sin conexión. Inténtalo de nuevo con internet.</string>
     <string name="s_7656cdb783">Sin permiso no se puede guardar el corte</string>
     <string name="s_997ae1ca61">Sin resultados.</string>
+    <string name="s_a10ee623b6">Sin sesión: inicia desde la pestaña YT Music</string>
     <string name="s_dc1f058c8c">Suena a continuación</string>
     <string name="s_873caab4d0">Sí</string>
     <string name="s_b2b2c54d5c">Tarjeta SD</string>
@@ -271,14 +281,17 @@
     <string name="s_8a3c344036">Todas</string>
     <string name="s_40454f1544">Traer una lista de otro reproductor</string>
     <string name="s_7e3125dccb">Tu música, sin anuncios ni suscripciones</string>
+    <string name="s_c0f68f8187">Tus canciones con Me gusta</string>
     <string name="s_98a5efa60b">Título</string>
     <string name="s_7963ef51f2">VER TODOS</string>
     <string name="s_dd6ef1b2c3">Ver más</string>
     <string name="s_e1fb15444a">Versión, licencia y créditos</string>
     <string name="s_84a715a785">Volver</string>
+    <string name="s_d0edcaa68d">YT Music</string>
     <string name="s_f717723ab9">cerrar búsqueda</string>
     <string name="s_b8bf7a3963">crear</string>
     <string name="s_2a61a6bbe2">no se encontraron álbumes</string>
+    <string name="s_fb23b9ef3a">o escribe arriba para buscar</string>
     <string name="s_b62532159c">opciones</string>
     <string name="s_60ab455fc4">volver</string>
     <string name="s_ab875ef573">¿Eliminar del dispositivo?</string>

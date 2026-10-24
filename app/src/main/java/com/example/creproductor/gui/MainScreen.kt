@@ -68,7 +68,8 @@ enum class AppTab(val title: String){
     ARTISTS("Artistas"),
     GENRES("Géneros"),
     PLAYLISTS("Listas de reproducción"),
-    FOLDERS("Carpetas")
+    FOLDERS("Carpetas"),
+    YT("YT Music")
 }
 
 /** Pantallas de detalle apiladas: "atrás" vuelve a la anterior (Artista → Álbum → atrás = Artista). */
@@ -392,6 +393,7 @@ fun MainScreen(
                                  onPlaylistOptionsClick = { playlistForOptions = it },
                                  onPlaylistClick = { open(Detail.PlaylistDetail(it)) }
                              )
+                             AppTab.YT -> YtMusicScreen(onPlay = { viewModel.playYt(it) })
                              AppTab.FOLDERS -> FoldersListScreen(
                                  songs = songs,
                                  onFolderClick = {folderName, folderSongs ->

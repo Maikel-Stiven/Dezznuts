@@ -39,6 +39,7 @@ import com.example.creproductor.data.Lrc
 import com.example.creproductor.data.Lyrics
 import com.example.creproductor.data.LyricsRepository
 import com.example.creproductor.data.Song
+import com.example.creproductor.data.isYoutube
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -67,6 +68,8 @@ fun LyricsPane(song: Song, currentPositionMs: () -> Long, onSeekTo: (Long) -> Un
     LaunchedEffect(song.id) {
         state = withContext(Dispatchers.IO) { LyricsRepository.local(context, song) }
             ?.let { LyricsState.Found(it) } ?: LyricsState.Missing
+        // Una canción de YouTube Music ya usa internet: la letra se busca sola, sin botón.
+        if (state == LyricsState.Missing && song.isYoutube) searchNonce++
     }
     LaunchedEffect(searchNonce) {
         if (searchNonce == 0) return@LaunchedEffect

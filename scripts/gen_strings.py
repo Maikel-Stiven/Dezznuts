@@ -150,6 +150,11 @@ EN = {
 "Moods:": "Moods:",
 "Exporta la lista como M3U para usarla en otro reproductor, o elimínala (podrás recuperarla con \"Restaurar listas de reproducción\"; las canciones no se borran del dispositivo).":
   "Export the list as M3U to use it in another player, or delete it (you can recover it with \"Restore playlists\"; songs are not deleted from the device).",
+"Activar YouTube Music": "Turn on YouTube Music", "Buscar en YouTube Music": "Search YouTube Music",
+"Tus canciones con Me gusta": "Your liked songs", "o escribe arriba para buscar": "or type above to search", "YT Music": "YT Music",
+"Apariencia": "Appearance", "En línea (opcional)": "Online (optional)", "Audio": "Audio", "Almacenamiento": "Storage", "Información": "About",
+"Cuenta de YouTube Music": "YouTube Music account", "Sesión iniciada en este teléfono": "Signed in on this phone",
+"Sin sesión: inicia desde la pestaña YT Music": "Not signed in: do it from the YT Music tab",
 "1 canción": "1 song", "0 canciones": "0 songs", "1 álbum": "1 album",
 }
 

@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -45,73 +44,10 @@ import com.example.creproductor.data.YtTrack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/**
- * "Mi YouTube Music": inicio de sesión (ventana web de Google) y la lista de canciones que te gustan.
- * La sesión se guarda solo en este teléfono; "Cerrar sesión" la borra.
- */
-@Composable
-fun YtLibraryDialog(onPlay: (YtTrack) -> Unit, onDismiss: () -> Unit) {
-    val context = LocalContext.current
-    var loggedIn by remember { mutableStateOf(YtLibrary.isLoggedIn(context)) }
-    var reload by remember { mutableStateOf(0) }
-    var showLogin by remember { mutableStateOf(false) }
-
-    if (showLogin) {
-        YtLoginWindow(onDone = { loggedIn = YtLibrary.isLoggedIn(context); showLogin = false; reload++ }, onCancel = { showLogin = false })
-        return
-    }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(tr("YouTube Music")) },
-        text = {
-            if (!loggedIn) Column {
-                Text(tr("Inicia sesión para ver las canciones que te gustan. La sesión se guarda solo en este teléfono y puedes cerrarla cuando quieras."))
-                Text(
-                    tr("Función no oficial: puede dejar de funcionar sin aviso y va contra los términos de YouTube."),
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp)
-                )
-            } else {
-                // null = cargando, Result.failure = sin red o la sesión caducó.
-                val result by produceState<Result<List<YtTrack>>?>(null, reload) {
-                    value = null
-                    value = withContext(Dispatchers.IO) { runCatching { YtLibrary.liked(context) } }
-                }
-                val list = result?.getOrNull()
-                when {
-                    result == null -> Box(Modifier.size(120.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-                    list == null -> Text(tr("No se pudo cargar. Revisa la conexión o inicia sesión de nuevo."))
-                    list.isEmpty() -> Text(tr("Aún no tienes canciones con Me gusta."))
-                    else -> LazyColumn(Modifier.size(width = 320.dp, height = 380.dp)) {
-                        items(list, key = { it.url }) { t ->
-                            ListItem(
-                                headlineContent = { Text(t.title, maxLines = 1) },
-                                supportingContent = { Text(t.artist, maxLines = 1) },
-                                leadingContent = {
-                                    AsyncImage(t.thumbnail, null, contentScale = ContentScale.Crop, modifier = Modifier.size(44.dp).clip(RoundedCornerShape(6.dp)))
-                                },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                modifier = Modifier.clickable { onPlay(t); onDismiss() }
-                            )
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            if (!loggedIn) TextButton(onClick = { showLogin = true }) { Text(tr("Iniciar sesión")) }
-            else TextButton(onClick = onDismiss) { Text(tr("Cerrar")) }
-        },
-        dismissButton = {
-            if (loggedIn) TextButton(onClick = { YtLibrary.logout(context); CookieManager.getInstance().removeAllCookies(null); loggedIn = false }) { Text(tr("Cerrar sesión")) }
-            else TextButton(onClick = onDismiss) { Text(tr("Cancelar")) }
-        }
-    )
-}
-
 /** Ventana web a pantalla completa; al llegar a music.youtube.com con la sesión iniciada guarda la cookie y se cierra. */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-private fun YtLoginWindow(onDone: () -> Unit, onCancel: () -> Unit) {
+internal fun YtLoginWindow(onDone: () -> Unit, onCancel: () -> Unit) {
     val context = LocalContext.current
     Dialog(onDismissRequest = onCancel, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = true)) {
         Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -141,6 +77,36 @@ private fun YtLoginWindow(onDone: () -> Unit, onCancel: () -> Unit) {
                 },
                 onRelease = { it.destroy() }
             )
+        }
+    }
+}
+
+/** Tus canciones con "Me gusta" (necesita sesión). [reload] fuerza volver a pedirlas. */
+@Composable
+internal fun YtLikedList(reload: Int, onPlay: (YtTrack) -> Unit, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    // null = cargando, Result.failure = sin red o la sesión caducó.
+    val result by produceState<Result<List<YtTrack>>?>(null, reload) {
+        value = null
+        value = withContext(Dispatchers.IO) { runCatching { YtLibrary.liked(context) } }
+    }
+    val list = result?.getOrNull()
+    when {
+        result == null -> Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        list == null -> Text(tr("No se pudo cargar. Revisa la conexión o inicia sesión de nuevo."), modifier = modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        list.isEmpty() -> Text(tr("Aún no tienes canciones con Me gusta."), modifier = modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        else -> LazyColumn(modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 16.dp)) {
+            items(list, key = { it.url }) { t ->
+                ListItem(
+                    headlineContent = { Text(t.title, maxLines = 1) },
+                    supportingContent = { Text(t.artist, maxLines = 1) },
+                    leadingContent = {
+                        AsyncImage(t.thumbnail, null, contentScale = ContentScale.Crop, modifier = Modifier.size(48.dp).clip(RoundedCornerShape(10.dp)))
+                    },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    modifier = Modifier.clickable { onPlay(t) }
+                )
+            }
         }
     }
 }

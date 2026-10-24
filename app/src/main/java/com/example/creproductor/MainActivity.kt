@@ -60,7 +60,7 @@ import com.example.creproductor.data.coverModel
 import com.example.creproductor.gui.AboutDialog
 import com.example.creproductor.gui.AppAction
 import com.example.creproductor.gui.AppSection
-import com.example.creproductor.gui.OptionsDialog
+import com.example.creproductor.gui.OptionsScreen
 import com.example.creproductor.gui.StatusScreen
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.creproductor.gui.LocalAnimationsEnabled
@@ -201,9 +201,8 @@ class MainActivity : ComponentActivity() {
                         viewModel.loadSongs(silent = true)
                     }
                     var section by rememberSaveable { mutableStateOf(AppSection.HOME) }
-                    var showOptionsDialog by remember { mutableStateOf(false) }
+                    var showOptionsScreen by remember { mutableStateOf(false) }
                     var showStatsDialog by remember { mutableStateOf(false) }
-                    var showYtLibrary by remember { mutableStateOf(false) }
                     // Copia de seguridad y M3U: el usuario elige el archivo con el selector del sistema (sin permisos extra).
                     val saveBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
                         uri?.let(viewModel::exportBackup)
@@ -238,9 +237,8 @@ class MainActivity : ComponentActivity() {
                             AppAction.ClearImageCache -> showClearImageCacheDialog = true
                             AppAction.HiFiAudio -> showHiFiAudioDialog = true
                             AppAction.About -> showAboutDialog = true
-                            AppAction.Options -> showOptionsDialog = true
+                            AppAction.Options -> showOptionsScreen = true
                             AppAction.Stats -> showStatsDialog = true
-                            AppAction.YtLibrary -> showYtLibrary = true
                             AppAction.SendFeedback -> {
                                 // Los comentarios van a los "issues" del repositorio.
                                 runCatching {
@@ -459,8 +457,9 @@ class MainActivity : ComponentActivity() {
                         }
 
                         if (showAboutDialog) AboutDialog(versionName) { showAboutDialog = false }
-                        if (showOptionsDialog) OptionsDialog { showOptionsDialog = false }
-                        if (showYtLibrary) com.example.creproductor.gui.YtLibraryDialog(onPlay = { viewModel.playYt(it) }, onDismiss = { showYtLibrary = false })
+                        if (showOptionsScreen) Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                            OptionsScreen(versionName = versionName, onAction = ::runAction, onClose = { showOptionsScreen = false })
+                        }
                         if (showStatsDialog) com.example.creproductor.gui.StatsDialog((uiState as? UiState.Success)?.songs.orEmpty(), viewModel.playCounts()) { showStatsDialog = false }
 
                         if (showClearImageCacheDialog) {

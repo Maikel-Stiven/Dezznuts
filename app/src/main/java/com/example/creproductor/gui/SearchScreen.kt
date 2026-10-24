@@ -539,7 +539,7 @@ private fun SearchCategoryItem(
 
 /** Resultados de YouTube Music para [query]. Espera a que dejes de escribir antes de preguntar a la red. */
 @Composable
-private fun YtMusicResults(query: String, onPlay: (com.example.creproductor.data.YtTrack) -> Unit) {
+internal fun YtMusicResults(query: String, onPlay: (com.example.creproductor.data.YtTrack) -> Unit) {
     // null = buscando, Result.failure = sin red o YouTube no respondió.
     val result by produceState<Result<List<com.example.creproductor.data.YtTrack>>?>(null, query) {
         value = null

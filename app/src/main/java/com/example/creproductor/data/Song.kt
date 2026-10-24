@@ -53,3 +53,6 @@ fun String.fixEncoding(): String{
         this
     }
 }
+
+/** Canción que viene de YouTube Music (id sintético, ver `MusicViewModel.playYt`): no existe en MediaStore. */
+val Song.isYoutube: Boolean get() = id <= -(1L shl 61)

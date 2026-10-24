@@ -45,7 +45,6 @@ sealed class AppAction(
     object ImportM3u : AppAction("Importar lista M3U", "Traer una lista de otro reproductor", Icons.Default.PlaylistAdd)
     object ClearImageCache : AppAction("Borrar caché de imágenes", "Carátulas y fotos de artistas descargadas", Icons.Default.DeleteSweep)
     object About: AppAction("Acerca de", "Versión, licencia y créditos", Icons.Default.Info)
-    object YtLibrary : AppAction("Mi YouTube Music", "Iniciar sesión y ver tus canciones con Me gusta", Icons.Default.CloudQueue)
     object Stats : AppAction("Estadísticas", "Lo más escuchado y las horas de música", Icons.Default.BarChart)
     object Options : AppAction("Opciones", "Portada con movimiento, color de la carátula, funciones en línea", Icons.Default.Tune)
     object SendFeedback : AppAction("Enviar comentarios", "Reportar un fallo o pedir una función en GitHub", Icons.AutoMirrored.Filled.HelpOutline)
@@ -58,7 +57,7 @@ private val DRAWER_GROUPS = listOf(
     "Biblioteca" to listOf(AppAction.Stats, AppAction.ScanFiles, AppAction.SearchDuplicates, AppAction.FixUnknownArtists),
     "Herramientas" to listOf(AppAction.AudioCutter, AppAction.SleepTimer),
     "Copia de seguridad" to listOf(AppAction.ExportBackup, AppAction.ImportBackup, AppAction.ImportM3u),
-    "Más" to listOf(AppAction.YtLibrary, AppAction.Options, AppAction.ClearImageCache, AppAction.About, AppAction.SendFeedback)
+    "Más" to listOf(AppAction.Options, AppAction.ClearImageCache, AppAction.About, AppAction.SendFeedback)
 )
 
 @Composable
@@ -79,9 +78,7 @@ fun AppDrawerContent(versionName: String, onAction: (AppAction) -> Unit, onClose
                         tr(group), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp)
                     )
-                    // "Mi YouTube Music" solo aparece si activaste YouTube Music en Opciones.
-                    val ytOn = com.example.creproductor.data.YtMusic.isEnabled(androidx.compose.ui.platform.LocalContext.current)
-                    actions.filter { it != AppAction.YtLibrary || ytOn }.forEach { item ->
+                    actions.forEach { item ->
                         NavigationDrawerItem(
                             label = { Text(tr(item.title)) },
                             icon = { Icon(item.icon, contentDescription = null) },
@@ -100,66 +97,6 @@ fun AppDrawerContent(versionName: String, onAction: (AppAction) -> Unit, onClose
     }
 }
 
-/** Opciones con interruptor (todas apagadas por defecto): lo visual y lo que usa internet. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun OptionsDialog(onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(tr("Opciones")) },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                val context = androidx.compose.ui.platform.LocalContext.current
-                Text(tr("Tema"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(bottom = 4.dp))
-                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    com.example.creproductor.ui.theme.ThemeMode.entries
-                        .filter { it != com.example.creproductor.ui.theme.ThemeMode.DYNAMIC || com.example.creproductor.ui.theme.ThemeSetting.dynamicAvailable }
-                        .forEach { m ->
-                            FilterChip(
-                                selected = com.example.creproductor.ui.theme.ThemeSetting.mode == m,
-                                onClick = { com.example.creproductor.ui.theme.ThemeSetting.set(context, m) },
-                                label = { Text(tr(m.label)) }
-                            )
-                        }
-                }
-                PrefSwitch(
-                    "Color de la carátula en el reproductor", "Los botones y el progreso toman el tono de la portada. Apagado: siempre el morado de DEZZNUTS",
-                    Icons.Default.Palette, ::isCoverAccentOn, ::setCoverAccent
-                )
-                PrefSwitch(
-                    "Portada con movimiento", "La portada se inclina con el teléfono (se desactiva sola en equipos modestos o con ahorro de batería)",
-                    Icons.Default.ScreenRotation, ::isCoverMotionOn, ::setCoverMotion
-                )
-                PrefSwitch(
-                    "Portada animada (en línea)", "Bucle de video del álbum cuando existe, solo con Wi-Fi. Consulta artwork.boidu.dev (servicio comunitario, no oficial) con título, artista y álbum",
-                    Icons.Default.Movie, ::isAnimatedCoverOn, ::setAnimatedCover
-                )
-                PrefSwitch(
-                    "Buscar y reproducir en YouTube Music", "Función no oficial (NewPipeExtractor): puede dejar de funcionar sin aviso y va contra los términos de YouTube. Usa internet y no necesita cuenta",
-                    Icons.Default.CloudQueue, com.example.creproductor.data.YtMusic::isEnabled, com.example.creproductor.data.YtMusic::setEnabled
-                )
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Listo")) } }
-    )
-}
-
-@Composable
-internal fun PrefSwitch(
-    title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector,
-    read: (android.content.Context) -> Boolean, write: (android.content.Context, Boolean) -> Unit
-) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    var on by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(read(context)) }
-    ListItem(
-        headlineContent = { Text(tr(title), style = MaterialTheme.typography.titleSmall) },
-        supportingContent = { Text(tr(subtitle)) },
-        leadingContent = { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-        trailingContent = { androidx.compose.material3.Switch(checked = on, onCheckedChange = { on = it; write(context, it) }) },
-        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
-        modifier = Modifier.clickable { on = !on; write(context, on) }.padding(horizontal = 8.dp)
-    )
-}
 
 /** "Tu música en números": reproducciones, horas y los más escuchados. Solo lee lo que ya guarda la app. */
 @Composable

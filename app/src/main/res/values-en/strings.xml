@@ -12,6 +12,7 @@
     <string name="s_ef544be6cf">SHUFFLE</string>
     <string name="s_256a5c2ab3">Open menu</string>
     <string name="s_8669f0380c">About</string>
+    <string name="s_10a0f5b1f9">Turn on YouTube Music</string>
     <string name="s_3a9cab04c1">Turn shuffle on</string>
     <string name="s_10140fb91e">On</string>
     <string name="s_26b9e8736c">Added to the queue</string>
@@ -23,10 +24,12 @@
     <string name="s_fc1bd603dc">At the end of the song</string>
     <string name="s_a7567a43eb">Shuffle</string>
     <string name="s_0ff010fdfa">Happy</string>
+    <string name="s_ff934581d9">Storage</string>
     <string name="s_008c76d9dd">Internal storage</string>
     <string name="s_bc663d8b93">Bandwidth (Q)</string>
     <string name="s_d97f1097b8">Previous</string>
     <string name="s_892a534334">Off · signal untouched</string>
+    <string name="s_4b819e3f3d">Appearance</string>
     <string name="s_6a2262aa75">File</string>
     <string name="s_467bed2d82">Drag the points on the curve. No effect with audio offload.</string>
     <string name="s_5eb846492d">Drag and pinch to frame (1:1)</string>
@@ -34,6 +37,7 @@
     <string name="s_3c0cf14a7c">Unknown artist</string>
     <string name="s_0677904445">Artists</string>
     <string name="s_ef51b8f69e">Most played artists</string>
+    <string name="s_acdac205f5">Audio</string>
     <string name="s_3e5dedf3ba">Hi-Res audio</string>
     <string name="s_980a92c105">Advanced</string>
     <string name="s_392b32127f">Add to favorites</string>
@@ -58,6 +62,7 @@
     <string name="s_9870b9e569">Searching…</string>
     <string name="s_a62405e2ce">Search</string>
     <string name="s_e31bed9e71">Search again</string>
+    <string name="s_fa6fc818fa">Search YouTube Music</string>
     <string name="s_815a6d8447">Search online (LRCLIB)</string>
     <string name="s_374a1d20f1">Find new music and filter out short audio</string>
     <string name="s_e8531fcb8c">Search and play on YouTube Music</string>
@@ -94,6 +99,7 @@
     <string name="s_194c94e91d">Cutting…</string>
     <string name="s_e4ff026224">Create list</string>
     <string name="s_977d0eed0c">Create playlist</string>
+    <string name="s_fe1efd2ad4">YouTube Music account</string>
     <string name="s_3c369a756d">Equalizer curve: drag the points to change frequency and gain</string>
     <string name="s_c0664e4020">DEZZNUTS needs permission to read the audio files on this phone. It uploads nothing to the internet.</string>
     <string name="s_462fc3b8c4">Work out artist and title from the file name</string>
@@ -124,6 +130,7 @@
     <string name="s_12e6133f12">Delete playlist</string>
     <string name="s_2fff43e470">Delete songs</string>
     <string name="s_ccc298c5fa">On Android 10 or older, delete the files from the file manager.</string>
+    <string name="s_b82decc02d">Online (optional)</string>
     <string name="s_c8ec1cb2b9">Find copies to free up space</string>
     <string name="s_0ac5b9db1d">Energy</string>
     <string name="s_776e6c66ee">Focus</string>
@@ -160,6 +167,7 @@
     <string name="s_d5e215e0fc">Ignore files shorter than (seconds)</string>
     <string name="s_b7673cd41c">Ignore hidden files and folders</string>
     <string name="s_8fa121a8b1">Import M3U playlist</string>
+    <string name="s_45332d6d5d">About</string>
     <string name="s_6e0832aded">Technical info</string>
     <string name="s_27478f924e">Sign in to see the songs you like. The session is stored only on this phone and you can sign out whenever you want.</string>
     <string name="s_9c18b1ef16">Sign in</string>
@@ -257,11 +265,13 @@
     <string name="s_f3852d02dd">The title, artist, album and duration will be sent to lrclib.net. It is saved to use offline.</string>
     <string name="s_f7b4423ea6">Saved as a new file in Music/DEZZNUTS; the original is not modified.</string>
     <string name="s_8973c434ac">Quick picks</string>
+    <string name="s_60f9315dce">Signed in on this phone</string>
     <string name="s_c4d83a3b6d">Next</string>
     <string name="s_d46fe1067c">No songs</string>
     <string name="s_fa13d000c8">No connection. Try again with internet.</string>
     <string name="s_7656cdb783">The cut can\'t be saved without permission</string>
     <string name="s_997ae1ca61">No results.</string>
+    <string name="s_a10ee623b6">Not signed in: do it from the YT Music tab</string>
     <string name="s_dc1f058c8c">Plays next</string>
     <string name="s_873caab4d0">Yes</string>
     <string name="s_b2b2c54d5c">SD card</string>
@@ -270,14 +280,17 @@
     <string name="s_8a3c344036">All</string>
     <string name="s_40454f1544">Bring in a playlist from another player</string>
     <string name="s_7e3125dccb">Your music, no ads, no subscriptions</string>
+    <string name="s_c0f68f8187">Your liked songs</string>
     <string name="s_98a5efa60b">Title</string>
     <string name="s_7963ef51f2">SEE ALL</string>
     <string name="s_dd6ef1b2c3">See more</string>
     <string name="s_e1fb15444a">Version, license and credits</string>
     <string name="s_84a715a785">Back</string>
+    <string name="s_d0edcaa68d">YT Music</string>
     <string name="s_f717723ab9">close search</string>
     <string name="s_b8bf7a3963">create</string>
     <string name="s_2a61a6bbe2">no albums found</string>
+    <string name="s_fb23b9ef3a">or type above to search</string>
     <string name="s_b62532159c">options</string>
     <string name="s_60ab455fc4">back</string>
     <string name="s_ab875ef573">Delete from device?</string>
