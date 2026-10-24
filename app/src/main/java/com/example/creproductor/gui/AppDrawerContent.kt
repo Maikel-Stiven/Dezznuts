@@ -43,6 +43,7 @@ sealed class AppAction(
     object ImportM3u : AppAction("Importar lista M3U", "Traer una lista de otro reproductor", Icons.Default.PlaylistAdd)
     object ClearImageCache : AppAction("Borrar caché de imágenes", "Carátulas y fotos de artistas descargadas", Icons.Default.DeleteSweep)
     object About: AppAction("Acerca de", "Versión, licencia y créditos", Icons.Default.Info)
+    object Stats : AppAction("Estadísticas", "Lo más escuchado y las horas de música", Icons.Default.BarChart)
     object Options : AppAction("Opciones", "Portada con movimiento, color de la carátula, funciones en línea", Icons.Default.Tune)
     object SendFeedback : AppAction("Enviar comentarios", "Reportar un fallo o pedir una función en GitHub", Icons.AutoMirrored.Filled.HelpOutline)
 }
@@ -51,7 +52,7 @@ sealed class AppAction(
 /** Grupos del menú hamburguesa de la maqueta (Ecualizador, Escanear, Duplicados, Cortador, Acerca de, Opiniones, Temporizador…). */
 private val DRAWER_GROUPS = listOf(
     null to listOf(AppAction.Equalizer, AppAction.HiFiAudio),
-    "Biblioteca" to listOf(AppAction.ScanFiles, AppAction.SearchDuplicates, AppAction.FixUnknownArtists),
+    "Biblioteca" to listOf(AppAction.Stats, AppAction.ScanFiles, AppAction.SearchDuplicates, AppAction.FixUnknownArtists),
     "Herramientas" to listOf(AppAction.AudioCutter, AppAction.SleepTimer),
     "Copia de seguridad" to listOf(AppAction.ExportBackup, AppAction.ImportBackup, AppAction.ImportM3u),
     "Más" to listOf(AppAction.Options, AppAction.ClearImageCache, AppAction.About, AppAction.SendFeedback)
@@ -152,5 +153,33 @@ internal fun PrefSwitch(
         trailingContent = { androidx.compose.material3.Switch(checked = on, onCheckedChange = { on = it; write(context, it) }) },
         colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
         modifier = Modifier.clickable { on = !on; write(context, on) }.padding(horizontal = 8.dp)
+    )
+}
+
+/** "Tu música en números": reproducciones, horas y los más escuchados. Solo lee lo que ya guarda la app. */
+@Composable
+fun StatsDialog(songs: List<com.example.creproductor.data.Song>, onDismiss: () -> Unit) {
+    val stats = remember(songs) { com.example.creproductor.data.ListeningStats.of(songs) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Estadísticas") },
+        text = {
+            if (stats.plays == 0) Text("Aún no hay reproducciones. Escucha algo de tu biblioteca y vuelve.")
+            else Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                val hours = stats.listenedMs / 3_600_000.0
+                Text("${stats.plays} reproducciones · ${"%.1f".format(hours)} h de música", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                Text("Canciones más escuchadas", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 12.dp))
+                val byId = songs.associateBy { it.id }
+                stats.topSongs.forEachIndexed { i, (id, n) ->
+                    val song = byId[id] ?: return@forEachIndexed
+                    Text("${i + 1}. ${song.title} — ${com.example.creproductor.displayArtist(song.artist)} ($n)")
+                }
+                if (stats.topArtists.isNotEmpty()) {
+                    Text("Artistas más escuchados", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 12.dp))
+                    stats.topArtists.forEachIndexed { i, (artist, n) -> Text("${i + 1}. $artist ($n)") }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } }
     )
 }
