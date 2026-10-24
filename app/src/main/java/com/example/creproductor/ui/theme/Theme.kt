@@ -69,9 +69,39 @@ private val LightColors = lightColorScheme(
     outline = Color(0xFF7A757F), outlineVariant = Color(0xFFCAC4CF)
 )
 
+/** Premium: negro cálido y caramelo (la bellota), con Manrope y esquinas redondeadas. */
+private val PremiumColors = darkColorScheme(
+    primary = Color(0xFFF2B36B), onPrimary = Color(0xFF2B1700),
+    primaryContainer = Color(0xFF5A3A12), onPrimaryContainer = Color(0xFFFFDDB5),
+    secondary = Color(0xFFD7C3AE), onSecondary = Color(0xFF3A2E22),
+    secondaryContainer = Color(0xFF3F352C), onSecondaryContainer = Color(0xFFF3DFC9),
+    tertiary = Color(0xFFA9CFA4), onTertiary = Color(0xFF15361A),
+    background = Color(0xFF0F0D0C), onBackground = Color(0xFFEDE6E0),
+    surface = Color(0xFF0F0D0C), onSurface = Color(0xFFEDE6E0),
+    surfaceVariant = Color(0xFF2A2521), onSurfaceVariant = Color(0xFFBCB1A6),
+    surfaceContainerLowest = Color(0xFF0A0908), surfaceContainerLow = Color(0xFF171412), surfaceContainer = Color(0xFF1C1916),
+    surfaceContainerHigh = Color(0xFF26221F), surfaceContainerHighest = Color(0xFF312C28),
+    outline = Color(0xFF6E645B), outlineVariant = Color(0xFF3D3631)
+)
+
+/** Omarchy: verde terminal sobre casi negro, tipografía pixel y esquinas rectas; el acento rosa queda para reproducir. */
+private val OmarchyColors = darkColorScheme(
+    primary = Color(0xFF8FE388), onPrimary = Color(0xFF062008),
+    primaryContainer = Color(0xFF1B3A1E), onPrimaryContainer = Color(0xFFB7F5B1),
+    secondary = Color(0xFFEF5078), onSecondary = Color.White,
+    secondaryContainer = Color(0xFF4A1A28), onSecondaryContainer = Color(0xFFFFD9E0),
+    tertiary = Color(0xFF7FD6C2), onTertiary = Color(0xFF00201A),
+    background = Color(0xFF0B100C), onBackground = Color(0xFFCFE8CC),
+    surface = Color(0xFF0B100C), onSurface = Color(0xFFCFE8CC),
+    surfaceVariant = Color(0xFF1B241C), onSurfaceVariant = Color(0xFF8AA58A),
+    surfaceContainerLowest = Color(0xFF070A08), surfaceContainerLow = Color(0xFF0F150F), surfaceContainer = Color(0xFF141C15),
+    surfaceContainerHigh = Color(0xFF1A241B), surfaceContainerHighest = Color(0xFF212D22),
+    outline = Color(0xFF3F5A40), outlineVariant = Color(0xFF243324)
+)
+
 /** Tema de la app. DEZZNUTS (morado) es el de siempre; los demás son opciones en Opciones. */
 enum class ThemeMode(val label: String) {
-    DEZZ("DEZZNUTS"), AMOLED("Negro AMOLED"), LIGHT("Claro"), DYNAMIC("Material You")
+    DEZZ("DEZZNUTS"), OMARCHY("Omarchy"), PREMIUM("Premium"), AMOLED("Negro AMOLED"), LIGHT("Claro"), DYNAMIC("Material You")
 }
 
 object ThemeSetting {
@@ -98,6 +128,8 @@ fun DEZZNUTStheme(content: @Composable () -> Unit){
     val context = LocalContext.current
     val mode = ThemeSetting.mode
     val scheme = when {
+        mode == ThemeMode.OMARCHY -> OmarchyColors
+        mode == ThemeMode.PREMIUM -> PremiumColors
         mode == ThemeMode.AMOLED -> AmoledColors
         mode == ThemeMode.LIGHT -> LightColors
         mode == ThemeMode.DYNAMIC && ThemeSetting.dynamicAvailable -> dynamicDarkColorScheme(context)
@@ -109,5 +141,15 @@ fun DEZZNUTStheme(content: @Composable () -> Unit){
         val window = (context as? Activity)?.window ?: return@SideEffect
         WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = mode == ThemeMode.LIGHT
     }
-    MaterialTheme(colorScheme = scheme, content = content)
+    val typography = when (mode) {
+        ThemeMode.OMARCHY -> OmarchyTypography
+        ThemeMode.PREMIUM -> PremiumTypography
+        else -> MaterialTheme.typography
+    }
+    val shapes = when (mode) {
+        ThemeMode.OMARCHY -> OmarchyShapes
+        ThemeMode.PREMIUM -> PremiumShapes
+        else -> MaterialTheme.shapes
+    }
+    MaterialTheme(colorScheme = scheme, typography = typography, shapes = shapes, content = content)
 }

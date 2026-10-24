@@ -1,5 +1,6 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -118,10 +119,10 @@ fun PlaylistSongMenuSheet(
     if (confirmDelete){
         AlertDialog(
             onDismissRequest = {confirmDelete = false},
-            title = {Text("¿Desea eliminar del dispositivo?")},
+            title = {Text(tr("¿Desea eliminar del dispositivo?"))},
             text = {Text("\"${song.title}\" se borrará del dispositivo. No se puede deshacer esta acción ")},
-            confirmButton = {TextButton(onClick = {confirmDelete = false; onDismiss(); actions.onDeleteFromDevice()}) { Text("Eliminar")}},
-            dismissButton = {TextButton(onClick = {confirmDelete = false}) {Text("Cancelar") }}
+            confirmButton = {TextButton(onClick = {confirmDelete = false; onDismiss(); actions.onDeleteFromDevice()}) { Text(tr("Eliminar"))}},
+            dismissButton = {TextButton(onClick = {confirmDelete = false}) {Text(tr("Cancelar")) }}
         )
     }
 }

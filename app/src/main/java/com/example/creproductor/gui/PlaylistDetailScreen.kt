@@ -448,7 +448,7 @@ private fun  PlaylistTrackItem(
             val itemHeightPx = with(density) {68.dp.toPx()}
             Icon(
                 imageVector = Icons.Default.DragHandle,
-                contentDescription = "Reordenar",
+                contentDescription = tr("Reordenar"),
                 tint = if (isDraggingThisItem) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 modifier = Modifier
                     .padding(end = 12.dp)
