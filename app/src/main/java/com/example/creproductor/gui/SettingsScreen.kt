@@ -92,6 +92,10 @@ fun SettingsScreen(
                     modifier = Modifier.padding(start = 24.dp, top = 20.dp, bottom = 4.dp)
                 )
                 PrefSwitch(
+                    "Color de la carátula en el reproductor", "Los botones y el progreso toman el tono de la portada. Apagado: siempre el morado de DEZZNUTS",
+                    Icons.Default.Palette, ::isCoverAccentOn, ::setCoverAccent
+                )
+                PrefSwitch(
                     "Portada con movimiento", "La portada se inclina con el teléfono (se desactiva sola en equipos modestos o con ahorro de batería)",
                     Icons.Default.ScreenRotation, ::isCoverMotionOn, ::setCoverMotion
                 )

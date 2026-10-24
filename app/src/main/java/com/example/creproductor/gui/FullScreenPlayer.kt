@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -259,6 +260,7 @@ fun FullScreenPlayer(
                     Text(
                         text = "REPRODUCIENDO DESDE",
                         style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                     )
                     Text(
@@ -296,10 +298,12 @@ fun FullScreenPlayer(
 
                 val currentPagerSong = songs.getOrNull(page)
 
+                // La portada es el mayor cuadrado que cabe: en pantallas bajas o con texto grande ya no se aplasta ni
+                // se solapa con el selector Canción/Letra.
+                BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f)
+                        .size(minOf(maxWidth, maxHeight))
                         .graphicsLayer {
                             val pageOffset = (pagerState.currentPage - page + pagerState.currentPageOffsetFraction).absoluteValue
                             val scale = (1f - (pageOffset * 0.12f)).coerceIn(0.88f, 1f)
@@ -342,6 +346,7 @@ fun FullScreenPlayer(
                     if (page == pagerState.currentPage) {
                         CoverChips(song, audioInfo, Modifier.align(Alignment.BottomStart).padding(12.dp))
                     }
+                }
                 }
             }
 
@@ -963,7 +968,7 @@ private fun CoverChips(song: Song, audioInfo: String, modifier: Modifier = Modif
 
 /**
  * Tema con el acento de la carátula: sustituye `primary` (botón de reproducir, progreso, favorito…) por el tono
- * dominante de la portada. Sin carátula o si es casi gris se queda el caramelo de la marca. La transición de color
+ * dominante de la portada. Es opcional ([isCoverAccentOn], apagado por defecto): sin ella, o sin carátula, o si es casi gris, se queda el morado de la marca. La transición de color
  * solo se anima donde los efectos visuales están permitidos (ver [rememberVisualEffectsEnabled]).
  */
 @Composable
@@ -972,6 +977,7 @@ fun CoverAccentTheme(song: Song, content: @Composable () -> Unit) {
     val base = MaterialTheme.colorScheme
     var accent by remember { mutableStateOf<Color?>(null) }
     LaunchedEffect(song.coverModel) {
+        if (!isCoverAccentOn(context)) return@LaunchedEffect
         accent = song.coverModel?.let { model ->
             kotlinx.coroutines.withContext(Dispatchers.IO) {
                 val request = ImageRequest.Builder(context).data(model).size(24).allowHardware(false).build()
@@ -984,6 +990,7 @@ fun CoverAccentTheme(song: Song, content: @Composable () -> Unit) {
             }
         }
     }
+    if (!remember { isCoverAccentOn(context) }) { content(); return }
     val target = accent ?: base.primary
     val color = if (rememberVisualEffectsEnabled())
         androidx.compose.animation.animateColorAsState(target, androidx.compose.animation.core.tween(500), label = "acento").value
@@ -991,9 +998,17 @@ fun CoverAccentTheme(song: Song, content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = base.copy(
             primary = color,
-            onPrimary = Color(0xFF14110F),
+            onPrimary = Color(0xFF111111),
             primaryContainer = androidx.compose.ui.graphics.lerp(color, Color.Black, 0.6f)
         ),
         content = content
     )
 }
+
+private const val KEY_COVER_ACCENT = "cover_accent"
+
+fun isCoverAccentOn(context: android.content.Context): Boolean =
+    context.getSharedPreferences("dezznuts_prefs", android.content.Context.MODE_PRIVATE).getBoolean(KEY_COVER_ACCENT, false)
+
+fun setCoverAccent(context: android.content.Context, on: Boolean) =
+    context.getSharedPreferences("dezznuts_prefs", android.content.Context.MODE_PRIVATE).edit().putBoolean(KEY_COVER_ACCENT, on).apply()

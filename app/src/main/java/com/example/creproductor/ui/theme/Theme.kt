@@ -9,33 +9,34 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 /**
- * Identidad DEZZNUTS: negro cálido y caramelo (la bellota), con un verde hoja de acento.
- * El reproductor sustituye `primary` por el color de la carátula (ver `rememberCoverAccent`).
+ * Identidad DEZZNUTS: el morado de siempre (#BB86FC) sobre negro neutro, con turquesa de acento. Es la base de toda la
+ * app; lo "premium" sale de la tipografía, los radios y el cuidado del detalle, no de cambiar de color.
+ * El color de la carátula en el reproductor es opcional (Ajustes → Apariencia) y está apagado por defecto.
  */
 private val DezzColors = darkColorScheme(
-    primary = Color(0xFFF2B36B),
-    onPrimary = Color(0xFF2B1700),
-    primaryContainer = Color(0xFF5A3A12),
-    onPrimaryContainer = Color(0xFFFFDDB5),
-    secondary = Color(0xFFD7C3AE),
-    onSecondary = Color(0xFF3A2E22),
-    secondaryContainer = Color(0xFF3F352C),
-    onSecondaryContainer = Color(0xFFF3DFC9),
-    tertiary = Color(0xFFA9CFA4),
-    onTertiary = Color(0xFF15361A),
-    background = Color(0xFF0F0D0C),
-    onBackground = Color(0xFFEDE6E0),
-    surface = Color(0xFF0F0D0C),
-    onSurface = Color(0xFFEDE6E0),
-    surfaceVariant = Color(0xFF2A2521),
-    onSurfaceVariant = Color(0xFFBCB1A6),
-    surfaceContainerLowest = Color(0xFF0A0908),
-    surfaceContainerLow = Color(0xFF171412),
-    surfaceContainer = Color(0xFF1C1916),
-    surfaceContainerHigh = Color(0xFF26221F),
-    surfaceContainerHighest = Color(0xFF312C28),
-    outline = Color(0xFF6E645B),
-    outlineVariant = Color(0xFF3D3631),
+    primary = Color(0xFFBB86FC),
+    onPrimary = Color(0xFF1F0640),
+    primaryContainer = Color(0xFF4A2A7A),
+    onPrimaryContainer = Color(0xFFEADDFF),
+    secondary = Color(0xFF03DAC6),
+    onSecondary = Color.Black,
+    secondaryContainer = Color(0xFF00504A),
+    onSecondaryContainer = Color(0xFFA7F5EC),
+    tertiary = Color(0xFFEFB8C8),
+    onTertiary = Color(0xFF3B1523),
+    background = Color(0xFF121212),
+    onBackground = Color(0xFFEDEDED),
+    surface = Color(0xFF121212),
+    onSurface = Color(0xFFEDEDED),
+    surfaceVariant = Color(0xFF2C2C2C),
+    onSurfaceVariant = Color(0xFFB0B0B0),
+    surfaceContainerLowest = Color(0xFF0C0C0C),
+    surfaceContainerLow = Color(0xFF181818),
+    surfaceContainer = Color(0xFF1E1E1E),
+    surfaceContainerHigh = Color(0xFF262626),
+    surfaceContainerHighest = Color(0xFF2C2C2C),
+    outline = Color(0xFF7A7580),
+    outlineVariant = Color(0xFF3A3640),
 )
 
 /** Cuatro radios para toda la app (antes había once distintos). */
