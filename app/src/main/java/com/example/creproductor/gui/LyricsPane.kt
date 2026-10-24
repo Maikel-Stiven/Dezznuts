@@ -114,7 +114,15 @@ private fun LyricsList(lyrics: Lyrics, currentPositionMs: () -> Long, onSeekTo: 
     val listState = rememberLazyListState()
     // La lectura de la posición ocurre dentro de derivedStateOf: solo se recompone cuando cambia la línea, no cada tick.
     val active by remember(lyrics) { derivedStateOf { if (lyrics.synced) Lrc.activeIndex(lyrics.lines, currentPositionMs()) else -1 } }
-    LaunchedEffect(active) { if (active >= 0) listState.animateScrollToItem(active) }
+    // Los efectos (suavizado de la línea activa, desplazamiento animado) siguen la regla única de la app: en equipos
+    // modestos o con ahorro de batería la línea cambia al instante.
+    val effects = rememberVisualEffectsEnabled()
+    // La línea activa queda a un tercio de la altura (no pegada arriba) para ver también lo que viene.
+    LaunchedEffect(active) {
+        if (active < 0) return@LaunchedEffect
+        val offset = -(listState.layoutInfo.viewportSize.height / 3)
+        if (effects) listState.animateScrollToItem(active, offset) else listState.scrollToItem(active, offset)
+    }
 
     LazyColumn(
         state = listState,
@@ -134,15 +142,29 @@ private fun LyricsList(lyrics: Lyrics, currentPositionMs: () -> Long, onSeekTo: 
     ) {
         itemsIndexed(lyrics.lines) { i, line ->
             val current = i == active
+            // Cuanto más lejos de la línea activa, más tenue; la activa crece un poco y se aclara con suavidad.
+            val targetAlpha = if (!lyrics.synced || current) 1f else if (kotlin.math.abs(i - active) == 1) 0.6f else 0.35f
+            val targetScale = if (!lyrics.synced || current) 1f else 0.94f
+            val alpha by if (effects) androidx.compose.animation.core.animateFloatAsState(targetAlpha, androidx.compose.animation.core.tween(300), label = "lyricAlpha")
+                else androidx.compose.runtime.rememberUpdatedState(targetAlpha)
+            val scale by if (effects) androidx.compose.animation.core.animateFloatAsState(targetScale, androidx.compose.animation.core.tween(300), label = "lyricScale")
+                else androidx.compose.runtime.rememberUpdatedState(targetScale)
             Text(
                 text = line.text.ifEmpty { "♪" },
                 // Sombra suave: se lee bien aunque la carátula (y por tanto el fondo) sea clara.
                 style = (if (lyrics.synced) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.bodyLarge)
                     .copy(shadow = androidx.compose.ui.graphics.Shadow(Color.Black.copy(alpha = 0.35f), blurRadius = 10f)),
                 fontWeight = if (current || !lyrics.synced) FontWeight.Bold else FontWeight.SemiBold,
-                color = Color.White.copy(alpha = if (!lyrics.synced || current) 1f else 0.4f),
+                color = Color.White,
                 textAlign = TextAlign.Start,
-                modifier = Modifier.fillMaxWidth().let { if (lyrics.synced) it.clickable { onSeekTo(line.timeMs) } else it }
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        this.alpha = alpha
+                        scaleX = scale; scaleY = scale
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
+                    }
+                    .let { if (lyrics.synced) it.clickable { onSeekTo(line.timeMs) } else it }
             )
         }
     }
