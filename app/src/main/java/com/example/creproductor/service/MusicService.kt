@@ -711,6 +711,29 @@ class MusicService : MediaSessionService(){
             )
         }
 
+        /**
+         * El usuario pulsó play desde un auricular Bluetooth, el coche o el panel de medios con la app cerrada: se
+         * reconstruye la última cola desde lo guardado (ids de MediaStore) sin abrir la interfaz.
+         * Las pistas CUE tienen id negativo (no existen en MediaStore) y se omiten.
+         */
+        override fun onPlaybackResumption(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo
+        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+            val lastId = prefs.getLong("last_song_id", -1L)
+            val ids = (prefs.getString("last_queue_ids", "") ?: "").split(",").mapNotNull { it.trim().toLongOrNull() }
+                .filter { it > 0 }.ifEmpty { listOf(lastId).filter { it > 0 } }
+            if (ids.isEmpty()) return Futures.immediateFailedFuture(UnsupportedOperationException("Nada que reanudar"))
+            val items = ids.map {
+                MediaItem.Builder().setMediaId(it.toString())
+                    .setUri(android.content.ContentUris.withAppendedId(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, it))
+                    .build()
+            }
+            val index = ids.indexOf(lastId).coerceAtLeast(0)
+            val position = if (ids.getOrNull(index) == lastId) prefs.getLong("last_position_ms", 0L) else 0L
+            return Futures.immediateFuture(MediaSession.MediaItemsWithStartPosition(items, index, position))
+        }
+
         override fun onCustomCommand(
             session: MediaSession,
             controller: MediaSession.ControllerInfo,
