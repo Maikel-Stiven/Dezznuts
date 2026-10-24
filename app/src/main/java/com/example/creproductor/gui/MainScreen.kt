@@ -119,6 +119,9 @@ fun MainScreen(
     val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
 
+    var playlistToEdit by remember { mutableStateOf<Playlist?>(null) }
+    var playlistForAddSongs by remember { mutableStateOf<Playlist?>(null) }
+
     fun albumSongs(name: String) = songs.filter { it.album == name }.sortedWith(
         compareBy<Song> { if (it.trackNumber > 0) it.trackNumber else Int.MAX_VALUE }.thenBy { it.title }
     )
@@ -195,8 +198,10 @@ fun MainScreen(
         is Detail.PlaylistDetail -> {
             val activePlaylist = playlist.find { it.id == detail.playlist.id } ?: detail.playlist
             val playlistSongs = remember(songs, activePlaylist.songIds) {
-                val ids = activePlaylist.songIds.toHashSet()
-                songs.filter { it.id in ids }
+                val songMap = songs.associateBy { it.id }
+
+                activePlaylist.songIds.mapNotNull { id -> songMap[id] }
+
             }
             PlaylistScreenDetail(
                 playlist = activePlaylist,
@@ -210,24 +215,26 @@ fun MainScreen(
                 onRestoreClick = { showRestoreDialog = true },
                 recentSongs = recentSongs,
                 onBackClick = ::back,
+                onMoveSong = {fromIndex, toIndex ->
+                    viewModel.movePlaylistSong(activePlaylist.id, fromIndex, toIndex)
+                },
                 onRemoveSongFromPlaylist = { song ->
                     viewModel.removeSongFromPlaylist(activePlaylist.id, song.id)
-                }
+                },
+                onPlayNext = {song -> viewModel.playNextInQueue(song)},
+                onAddToQueue = {song -> viewModel.addToQueue(song)},
+                onAddToPlaylist = {song, targetPlaylistId ->
+                    viewModel.addSongToPlaylist(targetPlaylistId, song)
+                },
+                onGoToAlbum = {song ->
+                    open(Detail.Album(song.album, albumSongs(song.album)))
+                },
+                onGoToArtist = {song ->
+                    open(Detail.Artist(song.artist, songs.filter { it.artist == song.artist }))
+                },
+                onEditTags = {song -> onEditSong(song)},
+                onDeleteSong = {song -> viewModel.deleteSongLegacy(song)}
             )
-            if (showAddSongsDialog){
-                AddSongsToPlaylistDialog(
-                    playlistName = activePlaylist.name,
-                    allSongs = songs,
-                    favoriteSongs = favoriteSongs,
-                    recentSongs = recentSongs,
-                    existingSongIds = activePlaylist.songIds,
-                    onDismiss = {showAddSongsDialog = false},
-                    onAddSongs = { selectedIds ->
-                        viewModel.addSongsToPlaylist(activePlaylist.id, selectedIds)
-                        showAddSongsDialog = false
-                    }
-                )
-            }
         }
         null -> when (section) {
             AppSection.HOME -> Scaffold(
@@ -383,14 +390,14 @@ fun MainScreen(
         }
     }
 
-    playlistForOptions?.let {
-            activePlaylist ->
+    playlistForOptions?.let { activePlaylist ->
         PlaylistMenuSheet(
             playlist = activePlaylist,
             allSongs = songs,
             allPlaylist = playlist,
             actions = PlaylistMenuActions(
                 onPlay = {
+                    playlistForOptions = null
                     val songMap = songs.associateBy { it.id }
                     val playlistSongs = activePlaylist.songIds.mapNotNull { songMap[it] }
                     if (playlistSongs.isNotEmpty()) {
@@ -398,18 +405,65 @@ fun MainScreen(
                     }
                 },
                 onAddSongs = {
-                    open(Detail.PlaylistDetail(activePlaylist))
-                    showAddSongsDialog = true
+                    playlistForOptions = null
+                    playlistForAddSongs = activePlaylist
                 },
-                onAddToQueue = { viewModel.addPlaylistToQueue(activePlaylist) },
-                onAddToPlaylist = { targetId -> viewModel.appendPlaylistToPlaylist(activePlaylist, targetId) },
-                onSaveToDevice = { onExportPlaylist(activePlaylist) },
-                onEditTags = { /* Editor de etiquetas */ },
-                onDeletePlaylist = { viewModel.deletePlaylist(activePlaylist.id) },
-                onRemoveDuplicates = { viewModel.removeDuplicatesFromPlaylist(activePlaylist.id) },
-                onDeleteFromDevice = { viewModel.deletePlaylistSongsFromStorage(activePlaylist) }
+                onAddToQueue = {
+                    playlistForOptions = null
+                    viewModel.addPlaylistToQueue(activePlaylist)
+                },
+                onAddToPlaylist = { targetId ->
+                    playlistForOptions = null
+                    viewModel.appendPlaylistToPlaylist(activePlaylist, targetId)
+                },
+                onSaveToDevice = {
+                    playlistForOptions = null
+                    onExportPlaylist(activePlaylist)
+                },
+                onEditTags = {
+                    playlistForOptions = null
+                    playlistToEdit = activePlaylist
+                },
+                onDeletePlaylist = {
+                    playlistForOptions = null
+                    viewModel.deletePlaylist(activePlaylist.id)
+                },
+                onRemoveDuplicates = {
+                    playlistForOptions = null
+                    viewModel.removeDuplicatesFromPlaylist(activePlaylist.id)
+                },
+                onDeleteFromDevice = {
+                    playlistForOptions = null
+                    viewModel.deletePlaylistSongsFromStorage(activePlaylist)
+                }
             ),
             onDismiss = { playlistForOptions = null }
+        )
+    }
+
+    playlistForAddSongs?.let { targetPlaylist ->
+        AddSongsToPlaylistDialog(
+            playlistName = targetPlaylist.name,
+            allSongs = songs,
+            favoriteSongs = favoriteSongs,
+            recentSongs = recentSongs,
+            existingSongIds = targetPlaylist.songIds,
+            onDismiss = {playlistForAddSongs = null},
+            onAddSongs = {selectedIds ->
+                viewModel.addSongsToPlaylist(targetPlaylist.id, selectedIds)
+                playlistForAddSongs = null
+            }
+        )
+    }
+
+    playlistToEdit?.let { targetPlaylist ->
+        EditPlaylistDialog(
+            playlist = targetPlaylist,
+            onDismiss = {playlistToEdit = null},
+            onSave = {newName, newCoverUri ->
+                viewModel.updatedPlaylist(targetPlaylist.id, newName, newCoverUri)
+                playlistToEdit = null
+            }
         )
     }
 
