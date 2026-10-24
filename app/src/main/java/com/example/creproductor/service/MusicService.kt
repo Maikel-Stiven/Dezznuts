@@ -36,7 +36,8 @@ import androidx.media3.extractor.metadata.id3.TextInformationFrame
 import androidx.media3.extractor.metadata.vorbis.VorbisComment
 import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaSession
-import androidx.media3.session.MediaSessionService
+import androidx.media3.session.LibraryResult
+import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import com.example.creproductor.R
@@ -55,8 +56,8 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 
 @OptIn(UnstableApi :: class)
-class MusicService : MediaSessionService(){
-    private var mediaSession: MediaSession? = null
+class MusicService : MediaLibraryService(){
+    private var mediaSession: MediaLibrarySession? = null
     private var isFavorite = false
 
     private val prefs by lazy { getSharedPreferences("dezznuts_prefs", MODE_PRIVATE) }
@@ -188,9 +189,8 @@ class MusicService : MediaSessionService(){
         val player = buildPlayer()
         exoPlayer = player
         attachPlayerListener(player)
-        mediaSession = MediaSession.Builder(this, FadingPlayer(player))
+        mediaSession = MediaLibrarySession.Builder(this, FadingPlayer(player), CustomMediaSessionCallback())
             .setSessionActivity(openPlayerIntent())
-            .setCallback(CustomMediaSessionCallback())
             .build()
 
         updateNotificationLayout()
@@ -651,7 +651,7 @@ class MusicService : MediaSessionService(){
         mediaSession?.setCustomLayout(listOf(closeButton, favoriteButton))
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
             return mediaSession
     }
 
@@ -704,7 +704,39 @@ class MusicService : MediaSessionService(){
     super.onDestroy()
     }
 
-    private inner class CustomMediaSessionCallback : MediaSession.Callback{
+    private val libraryExecutor = com.google.common.util.concurrent.MoreExecutors.listeningDecorator(java.util.concurrent.Executors.newSingleThreadExecutor())
+
+    private inner class CustomMediaSessionCallback : MediaLibrarySession.Callback {
+        // ---- Navegación (Android Auto, asistente, Wear) ----
+        override fun onGetLibraryRoot(
+            session: MediaLibrarySession, browser: MediaSession.ControllerInfo, params: MediaLibraryService.LibraryParams?
+        ): ListenableFuture<LibraryResult<MediaItem>> =
+            Futures.immediateFuture(LibraryResult.ofItem(LibraryBrowser.root(), params))
+
+        override fun onGetChildren(
+            session: MediaLibrarySession, browser: MediaSession.ControllerInfo, parentId: String,
+            page: Int, pageSize: Int, params: MediaLibraryService.LibraryParams?
+        ): ListenableFuture<LibraryResult<com.google.common.collect.ImmutableList<MediaItem>>> =
+            libraryExecutor.submit<LibraryResult<com.google.common.collect.ImmutableList<MediaItem>>> {
+                val all = LibraryBrowser.children(this@MusicService, parentId)
+                    ?: return@submit LibraryResult.ofError(LibraryResult.RESULT_ERROR_BAD_VALUE)
+                val from = (page * pageSize).coerceAtMost(all.size)
+                LibraryResult.ofItemList(all.subList(from, (from + pageSize).coerceAtMost(all.size)), params)
+            }
+
+        override fun onGetItem(session: MediaLibrarySession, browser: MediaSession.ControllerInfo, mediaId: String): ListenableFuture<LibraryResult<MediaItem>> =
+            libraryExecutor.submit<LibraryResult<MediaItem>> {
+                LibraryBrowser.item(this@MusicService, mediaId)?.let { LibraryResult.ofItem(it, null) }
+                    ?: LibraryResult.ofError(LibraryResult.RESULT_ERROR_BAD_VALUE)
+            }
+
+        /** Un cliente externo elige una pista solo por su `mediaId`: aquí se le pone la dirección reproducible. */
+        override fun onAddMediaItems(
+            mediaSession: MediaSession, controller: MediaSession.ControllerInfo, mediaItems: MutableList<MediaItem>
+        ): ListenableFuture<MutableList<MediaItem>> = libraryExecutor.submit<MutableList<MediaItem>> {
+            mediaItems.map { it.localConfiguration?.let { _ -> it } ?: (LibraryBrowser.item(this@MusicService, it.mediaId) ?: it) }.toMutableList()
+        }
+
         override fun onConnect(
             session: MediaSession,
             controller: MediaSession.ControllerInfo,

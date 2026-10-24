@@ -44,6 +44,11 @@
             </intent-filter>
         </activity>
 
+        <!-- Android Auto: la app se anuncia como reproductor de música -->
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
+
         <!-- Conexión con el archivo/servicio "MusicService.kt"-->
         <service
             android:name=".service.MusicService"
@@ -51,6 +56,8 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="androidx.media3.session.MediaSessionService"/>
+                <action android:name="androidx.media3.session.MediaLibraryService"/>
+                <action android:name="android.media.browse.MediaBrowserService"/>
             </intent-filter>
         </service>
         <!-- -->
