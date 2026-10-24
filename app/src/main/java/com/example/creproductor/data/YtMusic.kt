@@ -64,11 +64,14 @@ object YtMusic {
     private val cache = object : LinkedHashMap<String, Resolved>(16, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Resolved>) = size > 40
     }
+    private val locks = java.util.concurrent.ConcurrentHashMap<String, Any>()
     private const val TTL_MS = 3L * 3600 * 1000
 
     /** Audio + recomendadas en una sola petición. Caduca en unas horas. Bloquea: llamar fuera del hilo principal. */
-    fun resolve(trackUrl: String): Resolved {
-        synchronized(cache) { cache[trackUrl]?.takeIf { System.currentTimeMillis() - it.at < TTL_MS }?.let { return it } }
+    fun resolve(trackUrl: String): Resolved = synchronized(locks.getOrPut(trackUrl) { Any() }) {
+        // Un cerrojo por canción: si la precarga de la búsqueda aún está en curso cuando la tocas, esperas a que termine
+        // en vez de pedirla dos veces; otras canciones no se bloquean entre sí.
+        synchronized(cache) { cache[trackUrl]?.takeIf { System.currentTimeMillis() - it.at < TTL_MS }?.let { return@synchronized it } }
         init
         val info = StreamInfo.getInfo(ServiceList.YouTube, trackUrl)
         // Preferimos el de más bitrate; ExoPlayer reproduce tanto Opus/WebM como AAC/M4A.
@@ -76,7 +79,7 @@ object YtMusic {
         val related = info.relatedItems.filterIsInstance<StreamInfoItem>().map {
             YtTrack(it.url, it.name, it.uploaderName.orEmpty(), it.duration, it.thumbnails.maxByOrNull { t -> t.width }?.url)
         }
-        return Resolved(audio, related).also { synchronized(cache) { cache[trackUrl] = it } }
+        Resolved(audio, related).also { synchronized(cache) { cache[trackUrl] = it } }.also { locks.remove(trackUrl) }
     }
 
     fun audioUrl(trackUrl: String): String = resolve(trackUrl).audioUrl

@@ -521,6 +521,8 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     private fun persistPosition() {
         val controller = mediaController ?: return
         val songId = controller.currentMediaItem?.mediaId?.toLongOrNull() ?: return
+        // Una canción de YouTube no se puede restaurar al reabrir: no pisa la última canción local ni su posición.
+        if (songId <= -(1L shl 61)) return
         // Al terminar la pista la posición es la duración; guardar 0 evita reabrir en el final.
         val position = if (controller.playbackState == Player.STATE_ENDED) 0L else controller.currentPosition
         prefs.edit {

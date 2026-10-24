@@ -289,7 +289,7 @@ fun SearchOverlayScreen(
                 if (!ytEnabled || searchQuery.trim().length < 2) return@produceState
                 delay(700)
                 value = withContext(Dispatchers.IO) {
-                    runCatching { com.example.creproductor.data.YtMusic.search(searchQuery).take(5) }.getOrNull()
+                    runCatching { com.example.creproductor.data.YtMusic.search(searchQuery).take(5) }.getOrDefault(emptyList())
                 }
             }
             if (onYtTab) {
@@ -427,7 +427,9 @@ fun SearchOverlayScreen(
                         )
                     }
                 }
-                if (ytEnabled && searchQuery.trim().length >= 2 && (currentSubTab == SearchSubTab.ALL || currentSubTab == SearchSubTab.SONGS)) {
+                // Sin red o sin resultados no se muestra nada (ni un indicador que gire para siempre).
+                if (ytEnabled && searchQuery.trim().length >= 2 && (ytInline == null || ytInline?.isNotEmpty() == true) &&
+                    (currentSubTab == SearchSubTab.ALL || currentSubTab == SearchSubTab.SONGS)) {
                     item(key = "yt_header") {
                         Row(
                             Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 12.dp),

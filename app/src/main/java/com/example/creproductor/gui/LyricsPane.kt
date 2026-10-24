@@ -213,11 +213,18 @@ private fun SingAlongLine(
     }
     val sweepMs = remember(startMs, nextStartMs) { (((nextStartMs ?: (startMs + 4000)) - startMs).coerceIn(600, 9000) * 0.88f) }
     var pos by remember(startMs) { mutableStateOf(currentPositionMs()) }
-    LaunchedEffect(startMs) {
+    LaunchedEffect(startMs, smooth) {
+        // La posición real llega a saltos (cada ~0,2–0,5 s): entre saltos se avanza con el reloj para que el barrido sea
+        // fluido, y si la posición no cambia (pausa) se deja de pedir fotogramas y se vigila con calma.
+        var last = currentPositionMs()
+        var lastChangeNanos = System.nanoTime()
         while (true) {
-            // Fotograma a fotograma con efectos; en equipos modestos o con ahorro de batería, ocho veces por segundo.
-            if (smooth) androidx.compose.runtime.withFrameNanos { } else kotlinx.coroutines.delay(125)
-            pos = currentPositionMs()
+            val moving = (System.nanoTime() - lastChangeNanos) < 600_000_000L
+            if (smooth && moving) androidx.compose.runtime.withFrameNanos { } else kotlinx.coroutines.delay(if (moving) 125 else 250)
+            val now = currentPositionMs()
+            if (now != last) { last = now; lastChangeNanos = System.nanoTime() }
+            val ahead = if (smooth && moving) ((System.nanoTime() - lastChangeNanos) / 1_000_000L).coerceAtMost(450L) else 0L
+            pos = now + ahead
         }
     }
     val f = ((pos - startMs) / sweepMs).coerceIn(0f, 1f)
