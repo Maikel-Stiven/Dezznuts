@@ -15,10 +15,21 @@ android {
         applicationId = "io.github.maikelstiven.dezznuts"
         minSdk = 24
         targetSdk = 37
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // Firma propia solo si el CI aporta la clave (secrets); sin ella se usa la clave debug, como hasta ahora.
+    val releaseKeystore = System.getenv("KEYSTORE_FILE")?.takeIf { it.isNotBlank() }
+    if (releaseKeystore != null) {
+        signingConfigs.create("release") {
+            storeFile = file(releaseKeystore)
+            storePassword = System.getenv("KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("KEY_ALIAS")
+            keyPassword = System.getenv("KEY_PASSWORD")
+        }
     }
 
     buildTypes {
@@ -30,7 +41,7 @@ android {
                 "proguard-rules.pro"
             )
 
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
     compileOptions {

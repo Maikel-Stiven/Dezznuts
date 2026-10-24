@@ -11,7 +11,7 @@
 ![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.2-7F52FF?logo=kotlin&logoColor=white)
 ![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?logo=jetpackcompose&logoColor=white)
-![Estado](https://img.shields.io/badge/estado-alfa%200.0.1-orange)
+![Versión](https://img.shields.io/badge/versi%C3%B3n-1.0.0-brightgreen)
 ![PRs](https://img.shields.io/badge/PRs-bienvenidos-brightgreen)
 
 </div>
@@ -20,8 +20,8 @@ Reproductor de música **local** para Android, open source y gratuito. La idea e
 funciones que otros reproductores suelen cobrar (etiquetado automático, cortador de audio,
 ecualizador, temporizador), "solo por amor al arte".
 
-> ⚠️ **Estado: alfa temprana.** El reproductor base ya funciona y el proyecto compila (con pruebas
-> unitarias y CI). Algunas entradas del menú todavía son solo interfaz; ver
+> ✅ **Versión 1.0.0**: primera versión estable. Descarga el APK en [Releases](../../releases/latest) y mira el
+> [CHANGELOG](CHANGELOG.md). Lo que aún falta probar en teléfonos reales está en
 > [Problemas conocidos](#-problemas-conocidos).
 
 App nativa en **Kotlin + Jetpack Compose** que escanea la música del dispositivo (MediaStore) y la
@@ -38,6 +38,13 @@ reproduce en segundo plano con **Media3 / ExoPlayer**.
 <img src="docs/screenshots/05-opciones.png" alt="Opciones" width="15%" />
 </div>
 
+**Temas a elegir** (el morado es el original): Omarchy, verde terminal con tipografía pixel.
+
+<div align="center">
+<img src="docs/screenshots/08-tema-omarchy.png" alt="Tema Omarchy" width="22%" />
+<img src="docs/screenshots/09-omarchy-reproductor.png" alt="Reproductor en Omarchy" width="22%" />
+</div>
+
 ---
 
 ---
@@ -48,7 +55,7 @@ reproduce en segundo plano con **Media3 / ExoPlayer**.
 
 - Barra superior con ☰ · lupa · ⋮, **pestañas deslizables** (Selección rápida, Canciones, Álbumes, Artistas, Géneros,
   Listas, Carpetas y **YT Music**) y menú lateral; los detalles se apilan y "atrás" vuelve a la pantalla anterior.
-- Identidad DEZZNUTS: **morado** `#BB86FC` y turquesa sobre negro; temas opcionales (AMOLED, claro, Material You).
+- Identidad DEZZNUTS: **morado** `#BB86FC` y turquesa sobre negro; **6 temas a elegir**: DEZZNUTS (morado, por defecto), **Omarchy** (verde pixel), **Premium** (caramelo), AMOLED, claro y Material You.
 - Pantalla de **Opciones** completa; textos en **español e inglés**.
 - Reproductor a pantalla completa: portada, título y favorito, progreso, controles, pestaña de **letras**
   sincronizadas (LRCLIB) y fondo animado con la carátula. Se abre deslizando el mini-reproductor hacia arriba y
@@ -81,6 +88,7 @@ reproduce en segundo plano con **Media3 / ExoPlayer**.
 - Edición de etiquetas (título, artista, álbum, carátula) con **jaudiotagger** y corrección en lote de
   "artista desconocido".
 - Cortador de audio, buscador de duplicados y audios de WhatsApp.
+- **YouTube Music** opcional (buscar, reproducir, «Me gusta») y **portada animada** opcional.
 - Carátulas desde la **API de iTunes** y fotos de artista desde **Deezer**, cacheadas en disco.
 
 ---
@@ -155,7 +163,7 @@ adb logcat -s DezzSeek
 | Componente | Versión / Herramienta |
 |------------|-----------------------|
 | Lenguaje | Kotlin `2.2.10` |
-| UI | Jetpack Compose (BOM `2026.02.01`), Material 3, tipografía de Material |
+| UI | Jetpack Compose (BOM `2026.02.01`), Material 3, tipografía de Material (Manrope y Pixelify Sans, OFL, en sus temas) |
 | Reproductor | AndroidX Media3 `1.9.1` (ExoPlayer + MediaSession) |
 | Imágenes | Coil `2.7.0` |
 | Etiquetas | jaudiotagger `3.0.1` |
@@ -169,7 +177,7 @@ adb logcat -s DezzSeek
 
 ## 🔧 Compilar y probar
 
-Requisitos: **Android Studio** (compatible con AGP 9.x) o **JDK 17+**, y el **Android SDK** con la API 37.
+Requisitos: **Android Studio** (compatible con AGP 9.x) o **JDK 21**, y el **Android SDK** con la API 37.
 
 ```bash
 ./gradlew assembleDebug       # APK de depuración en app/build/outputs/apk/debug/
@@ -180,7 +188,8 @@ Requisitos: **Android Studio** (compatible con AGP 9.x) o **JDK 17+**, y el **An
 Las pruebas cubren la lógica pura: serialización de listas, copia de seguridad y M3U, color de acento de la
 carátula, limpieza de títulos tipo YouTube, reparación de codificación de texto, agrupaciones/búsqueda,
 ecualizador, ReplayGain, hojas CUE, letras LRC y formato de duración. El CI
-(`.github/workflows/android.yml`) corre las pruebas y compila el APK en cada push y PR.
+(`.github/workflows/android.yml`) corre las pruebas y compila el APK en cada push y PR; al subir una etiqueta `v*`,
+`release.yml` compila, firma y publica la release.
 
 > No hay `local.properties` en el repo (está en `.gitignore`); Android Studio lo genera al abrir el proyecto.
 
@@ -194,7 +203,7 @@ app/src/main/java/com/example/creproductor/
 ├── data/                  # Modelos, escaneo (MediaStore), etiquetas, metadatos y preferencias
 ├── service/               # MusicService (reproducción), HiFiRenderersFactory, PlaybackDiagnostics
 ├── gui/                   # Pantallas Compose + MusicViewModel
-└── ui/theme/              # Tema de DEZZNUTS (morado, AMOLED, claro, Material You)
+└── ui/theme/              # Temas (DEZZNUTS, Omarchy, Premium, AMOLED, claro, Material You) y tipografías
 ```
 
 📄 El detalle técnico completo (arquitectura, flujo de datos y notas de desarrollo) está en
@@ -220,8 +229,8 @@ app/src/main/java/com/example/creproductor/
 - **Saltar silencios** y **velocidad** no existen a propósito: la cadena de audio de alta fidelidad
   (`HiFiRenderersFactory`) prescinde de esos procesadores porque solo admiten 16 bits.
 - El campo **género** solo se lee en Android 11+ (`MediaStore.GENRE`); antes aparece como "Desconocido".
-- Los textos están escritos en el código, no en `strings.xml`: la app aún no se puede traducir.
-- Falta probar a fondo en teléfonos reales (lo medido es en emulador).
+- Sin probar en teléfono real: widget colocado, Android Auto y el inicio de sesión de YouTube Music (lo medido es en
+  emulador). Los textos con valores dentro (`"$n canciones"`) siguen solo en español.
 
 ---
 

@@ -2,7 +2,7 @@
 
 Documento de apoyo para quien se incorpora a colaborar. Explica **cómo está construido**, **qué funciona**, **qué falta** y **por dónde empezar**.
 
-- **Última revisión:** rama `fix/bugs-y-conexiones` (arreglos + pruebas sobre `main`).
+- **Última revisión:** versión 1.0.0 (2026-10-24).
 - **Versión interna mostrada en la app:** `DEZZNUTS Player Alpha.0.0.1`.
 - **Tamaño del código Kotlin:** ~7.000 líneas (app + 2 helpers nuevos + 6 archivos de pruebas).
 - **Estado:** el proyecto **compila**, tiene **24 pruebas unitarias** que pasan y **CI** (GitHub Actions).

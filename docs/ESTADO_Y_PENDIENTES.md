@@ -1,8 +1,6 @@
 # Estado del trabajo y por dónde seguir
 
-Foto del **2026-10-24**. La rama de trabajo es **`ajustes-yt-pestana`**: contiene todo lo de abajo (se apila sobre
-`i18n` ← `etapa-5-6` ← `pruebas` ← `portada-viva`, `integracion-sistema` y `ytmusic`). **No está fusionada** en
-`optimizacion` ni en `main`; `main` sigue en `85f9e3a`.
+Foto del **2026-10-24**, versión **1.0.0**, todo en `main`.
 
 ## Reglas que fijó el usuario (no romperlas)
 - **Identidad visual = la maqueta de Canva** ([enlace](https://canva.link/92ckehs775shns8), diseño `DAHW1CovPP0`):
@@ -43,24 +41,16 @@ Foto del **2026-10-24**. La rama de trabajo es **`ajustes-yt-pestana`**: contien
 Widget colocado en la pantalla de inicio · Android Auto / árbol de navegación · inicio de sesión y «Me gusta» de
 YouTube Music con una cuenta real · sentido natural de la inclinación de la portada · Xiaomi (botón de escanear).
 
-## Pendiente, en este orden
-1. **Probar el APK** en el teléfono del usuario y corregir lo que salga.
-2. **Fusionar**: `ajustes-yt-pestana` → `optimizacion` → `main` (`main` trae el menú de playlist de otra persona;
-   se hizo antes de esa fusión, esperar algún conflicto menor en `MainScreen.kt`). Compilar y correr pruebas tras cada paso.
-3. **Optimización adicional «para cualquier celular»**: medir en el AVD `dezznuts_low`; revisar el tamaño del APK
-   (NewPipeExtractor y Glance pesan ~1 MB), el árbol de Android Auto con bibliotecas de miles de canciones y el
-   coste de `tr()` (caché por idioma y texto; revisar que no crezca con títulos de canciones).
-4. **GitHub Actions** (no hecho):
-   - `ci.yml` en push/PR: JDK 21, `./gradlew assembleDebug testDebugUnitTest` (y `lintDebug` si se puede en línea).
-   - `release.yml` al subir una etiqueta `v*`: compilar `assembleRelease`, firmar y publicar la release con el APK.
-     Firma: leer `KEYSTORE_B64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` de los *secrets*; si no existen,
-     usar la clave debug (como hasta ahora). **Decidir con el usuario** la versión de la primera release (hoy
-     `versionName 1.1.0`, `versionCode 2`) y si se firma ya con clave propia (recomendado: guardar la copia en un
-     gestor de contraseñas compartido; perderla impide actualizar).
-5. **README (es y en) con capturas nuevas** y sin la barra inferior ni Manrope. Capturas a tomar (720×1560):
-   Selección rápida, Canciones, pestaña YT Music, reproductor, letras, Opciones, menú lateral. Actualizar también
-   `docs/screenshots/` y quitar lo que ya no aplica.
-6. Después: firma propia, `CHANGELOG.md`, y retirar de `docs/` lo obsoleto.
+## Estado 1.0.0 (2026-10-24)
+Todo lo anterior está fusionado en `main` y publicado como **v1.0.0** (CI: `android.yml`; release: `release.yml` al subir
+una etiqueta `v*`, con firma propia si existen los secrets `KEYSTORE_B64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`).
+Temas: DEZZNUTS (por defecto), Omarchy, Premium, AMOLED, claro y Material You (`ui/theme/Theme.kt` y `Type.kt`).
+
+## Pendiente
+1. Probar en teléfono real (widget, Android Auto, login de YT Music) y corregir lo que salga.
+2. Firma propia (keystore de la organización con copia de seguridad) para poder actualizar sin desinstalar.
+3. Lentitud al abrir una canción recién detectada (medir `loadSongs(silent)` → `publishSongs` antes de tocar).
+4. Textos con valores (`"$n canciones"`) y párrafos de Audio Hi/Res a `strings.xml`.
 
 ## Cómo compilar y probar
 ```bash

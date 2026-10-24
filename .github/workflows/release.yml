@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools platforms;android-37.0 build-tools;36.0.0'
+
+      - name: Pruebas unitarias
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      # Con los secrets KEYSTORE_B64, KEYSTORE_PASSWORD, KEY_ALIAS y KEY_PASSWORD firma con la clave propia;
+      # sin ellos, con la clave debug (el APK instala, pero no actualiza uno firmado con otra clave).
+      - name: Preparar clave de firma
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+          fi
+
+      - name: Compilar APK release
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --stacktrace
+
+      - name: Nombrar el APK
+        run: cp app/build/outputs/apk/release/app-release.apk "dezznuts-${GITHUB_REF_NAME}.apk"
+
+      - name: Publicar release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "dezznuts-${GITHUB_REF_NAME}.apk" \
+            --title "DEZZNUTS ${GITHUB_REF_NAME}" --notes-file RELEASE_NOTES.md
