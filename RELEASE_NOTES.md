@@ -45,4 +45,7 @@ Primera versión estable: DEZZNUTS sale de alfa y beta.
 - `applicationId`: `io.github.maikelstiven.dezznuts`.
 - Sin probar aún en equipo real: widget colocado, Android Auto real y el inicio de sesión de YouTube Music.
 
-Gracias a Maikel (menús y listas) y a Brandon Gil (audio, rendimiento y CI).
+Gracias a quienes lo hicieron posible:
+- **@Pedroj-64**: diseño, interfaz y temas, reproductor, letras, YouTube Music, Android Auto, widget, estadísticas, textos en inglés, optimización y esta release.
+- **@Maikel-Stiven**: menús y listas de reproducción (editar, reordenar en cuadrícula, submenús), persistencia de la cola y arreglos de conexiones.
+- **@AiiwA** (Brandon Gil): audio de alta fidelidad, rendimiento del *seek*, carátulas, pruebas y CI.
