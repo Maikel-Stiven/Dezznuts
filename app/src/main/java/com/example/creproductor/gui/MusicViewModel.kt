@@ -774,6 +774,40 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         }
     }
 
+    /**
+     * Reproduce una canción de YouTube Music. Su dirección de audio caduca, así que se pide justo ahora; la pista
+     * suena sola (sin cola de la biblioteca) y no se guarda como "última canción" ni en recientes porque no vive en
+     * MediaStore. Id sintético muy negativo: no choca con los de MediaStore (>0) ni con los de CUE (pequeños y negativos).
+     */
+    fun playYt(track: com.example.creproductor.data.YtTrack) {
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            val url = runCatching { withContext(Dispatchers.IO) { com.example.creproductor.data.YtMusic.audioUrl(track.url) } }
+                .getOrElse {
+                    Toast.makeText(app, "No se pudo abrir la canción de YouTube Music", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+            val song = Song(
+                id = -(1L shl 62) - (track.url.hashCode().toLong() and 0xFFFFFFFFL),
+                title = track.title, artist = track.artist, album = "YouTube Music",
+                duration = track.durationSec * 1000, contentUri = Uri.parse(track.url),
+                albumArtUri = track.thumbnail?.let(Uri::parse), genre = "YouTube Music"
+            )
+            val controller = mediaController ?: return@launch
+            _currentQueue.value = listOf(song)
+            _currentSong.value = song
+            _currentPositionMs.value = 0L
+            controller.setMediaItem(
+                MediaItem.Builder().setMediaId(song.id.toString()).setUri(url)
+                    .setMediaMetadata(androidx.media3.common.MediaMetadata.Builder()
+                        .setTitle(song.title).setArtist(song.artist).setArtworkUri(song.albumArtUri).build())
+                    .build()
+            )
+            controller.prepare()
+            controller.play()
+        }
+    }
+
     fun togglePlayPause(){
         mediaController?.let { controller ->
             if (controller.isPlaying){

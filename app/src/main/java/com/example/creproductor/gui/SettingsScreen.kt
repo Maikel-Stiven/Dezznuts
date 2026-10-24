@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.*
@@ -81,6 +83,24 @@ fun SettingsScreen(
                         )
                     }
                 }
+            }
+            item(key = "ytmusic") {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                var on by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.example.creproductor.data.YtMusic.isEnabled(context)) }
+                Text(
+                    text = "YouTube Music",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 24.dp, top = 20.dp, bottom = 4.dp)
+                )
+                ListItem(
+                    headlineContent = { Text("Buscar y reproducir en YouTube Music", style = MaterialTheme.typography.titleSmall) },
+                    supportingContent = { Text("Función no oficial (NewPipeExtractor): puede dejar de funcionar sin aviso y va contra los términos de YouTube. Usa internet y no necesita cuenta") },
+                    leadingContent = { Icon(Icons.Default.CloudQueue, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    trailingContent = { androidx.compose.material3.Switch(checked = on, onCheckedChange = { on = it; com.example.creproductor.data.YtMusic.setEnabled(context, it) }) },
+                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
+                    modifier = Modifier.clickable { on = !on; com.example.creproductor.data.YtMusic.setEnabled(context, on) }.padding(horizontal = 8.dp)
+                )
             }
             item {
                 Text(

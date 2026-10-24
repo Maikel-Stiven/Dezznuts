@@ -19,6 +19,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // Solo para NewPipeExtractor (YouTube Music); el resto de grupos sale de Google y Maven Central.
+        maven("https://jitpack.io") { content { includeGroup("com.github.TeamNewPipe") } }
     }
 }
 

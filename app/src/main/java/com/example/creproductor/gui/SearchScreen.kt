@@ -1,5 +1,9 @@
 package com.example.creproductor.gui
 
+import kotlinx.coroutines.delay
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.activity.compose.BackHandler
 import com.example.creproductor.data.coverModel
 import androidx.compose.foundation.background
@@ -93,7 +97,10 @@ fun SearchOverlayScreen(
     onSongClick: (Song, List<Song>) -> Unit,
     onCloseSearch: () -> Unit,
     onAlbumClick: (albumName: String, albumSongs: List<Song>) -> Unit = { _, _ -> },
-    onArtistClick: (artistName: String, artistSongs: List<Song>) -> Unit = { _, _ -> }
+    onArtistClick: (artistName: String, artistSongs: List<Song>) -> Unit = { _, _ -> },
+    /** Pestaña extra "YouTube Music" (opcional, ver [com.example.creproductor.data.YtMusic]). */
+    ytEnabled: Boolean = false,
+    onYtPlay: (com.example.creproductor.data.YtTrack) -> Unit = {}
 ){
 
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -261,11 +268,21 @@ fun SearchOverlayScreen(
                        text = {Text(tab.title)}
                    )
                }
+               if (ytEnabled) {
+                   Tab(
+                       selected = selectedTabItem == SearchSubTab.entries.size,
+                       onClick = { selectedTabItem = SearchSubTab.entries.size },
+                       text = { Text("YouTube Music") }
+                   )
+               }
            }
 
-            val currentSubTab = SearchSubTab.entries[selectedTabItem]
+            val onYtTab = ytEnabled && selectedTabItem == SearchSubTab.entries.size
+            val currentSubTab = SearchSubTab.entries[selectedTabItem.coerceAtMost(SearchSubTab.entries.lastIndex)]
 
-            LazyColumn(
+            if (onYtTab) {
+                YtMusicResults(searchQuery) { keyboardController?.hide(); onYtPlay(it) }
+            } else LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -514,6 +531,42 @@ private fun SearchCategoryItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+        }
+    }
+}
+
+/** Resultados de YouTube Music para [query]. Espera a que dejes de escribir antes de preguntar a la red. */
+@Composable
+private fun YtMusicResults(query: String, onPlay: (com.example.creproductor.data.YtTrack) -> Unit) {
+    // null = buscando, Result.failure = sin red o YouTube no respondió.
+    val result by produceState<Result<List<com.example.creproductor.data.YtTrack>>?>(null, query) {
+        value = null
+        delay(600)
+        value = withContext(Dispatchers.IO) { runCatching { com.example.creproductor.data.YtMusic.search(query) } }
+    }
+    val list = result?.getOrNull()
+    when {
+        result == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        list == null -> Text(
+            "No se pudo consultar YouTube Music. Revisa la conexión o inténtalo más tarde.",
+            modifier = Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        list.isEmpty() -> Text("Sin resultados.", modifier = Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        else -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
+            items(list, key = { it.url }) { t ->
+                ListItem(
+                    headlineContent = { Text(t.title, maxLines = 1) },
+                    supportingContent = { Text("${t.artist} · %d:%02d".format(t.durationSec / 60, t.durationSec % 60), maxLines = 1) },
+                    leadingContent = {
+                        AsyncImage(
+                            model = t.thumbnail, contentDescription = null, contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(48.dp).clip(MaterialTheme.shapes.small)
+                        )
+                    },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    modifier = Modifier.clickable { onPlay(t) }
+                )
+            }
         }
     }
 }

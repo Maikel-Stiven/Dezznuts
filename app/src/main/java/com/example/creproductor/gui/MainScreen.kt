@@ -266,6 +266,8 @@ fun MainScreen(
                 },
                 onAlbumClick = { albumName, albumSongs -> open(Detail.Album(albumName, albumSongs)) },
                 onArtistClick = { artistName, artistSongs -> open(Detail.Artist(artistName, artistSongs)) },
+                ytEnabled = com.example.creproductor.data.YtMusic.isEnabled(androidx.compose.ui.platform.LocalContext.current),
+                onYtPlay = { viewModel.playYt(it) },
                 onCloseSearch = {
                     viewModel.setSearchQuery("")
                     onSectionChange(AppSection.HOME)
