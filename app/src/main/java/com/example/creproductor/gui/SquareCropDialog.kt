@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -69,7 +71,7 @@ fun SquareCropDialog(source: Uri, onCropped: (Uri) -> Unit, onDismiss: () -> Uni
 
     AlertDialog(
         onDismissRequest = { if (!saving) onDismiss() },
-        title = { Text("Editar foto") },
+        title = { Text(tr("Editar foto")) },
         text = {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 val b = bitmap
@@ -96,7 +98,7 @@ fun SquareCropDialog(source: Uri, onCropped: (Uri) -> Unit, onDismiss: () -> Uni
                         }
                     }
                 }
-                Text("Arrastra y pellizca para encuadrar (1:1)", style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
+                Text(tr("Arrastra y pellizca para encuadrar (1:1)"), style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
             }
         },
         confirmButton = {
@@ -108,9 +110,9 @@ fun SquareCropDialog(source: Uri, onCropped: (Uri) -> Unit, onDismiss: () -> Uni
                     // ponytail: recorta en el hilo principal (512 px, ~20 ms); mover a IO si se sube la resolución.
                     onCropped(cropToFile(context, b, ox, oy, scale, boxPx))
                 }
-            ) { Text("Listo") }
+            ) { Text(tr("Listo")) }
         },
-        dismissButton = { TextButton(onClick = onDismiss, enabled = !saving) { Text("Cancelar") } }
+        dismissButton = { TextButton(onClick = onDismiss, enabled = !saving) { Text(tr("Cancelar")) } }
     )
 }
 

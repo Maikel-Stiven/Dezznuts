@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
@@ -16,17 +18,17 @@ import androidx.compose.ui.unit.dp
 fun AboutDialog(versionName: String, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("DEZZNUTS", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) },
+        title = { Text(tr("DEZZNUTS"), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) },
         text = {
             Column {
                 Text("Versión $versionName", style = MaterialTheme.typography.titleSmall)
                 Text(
-                    "Reproductor de música local pensado para sonar bien y gastar poco, también en teléfonos modestos.",
+                    tr("Reproductor de música local pensado para sonar bien y gastar poco, también en teléfonos modestos."),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } }
+        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Cerrar")) } }
     )
 }

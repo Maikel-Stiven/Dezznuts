@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.compose.foundation.background
 import com.example.creproductor.data.coverModel
 import androidx.compose.foundation.clickable
@@ -92,7 +94,7 @@ fun AlbumsGridScreen(
             contentAlignment = Alignment.Center
         ){
             Text(
-                text = "no se encontraron álbumes",
+                text = tr("no se encontraron álbumes"),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -203,7 +205,7 @@ fun GenresGridScreen(
             contentAlignment = Alignment.Center
         ){
             Text(
-                text = "No se encontraron géneros",
+                text = tr("No se encontraron géneros"),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -292,7 +294,7 @@ fun ArtistsListScreen(
             contentAlignment = Alignment.Center
         ){
             Text(
-                text = "No se encontraron artistas",
+                text = tr("No se encontraron artistas"),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -401,7 +403,7 @@ fun FoldersListScreen(
             contentAlignment = Alignment.Center
         ){
             Text(
-                text = "No se encontraron carpetas",
+                text = tr("No se encontraron carpetas"),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

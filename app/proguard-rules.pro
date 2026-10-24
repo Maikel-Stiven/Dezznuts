@@ -17,3 +17,8 @@
 -dontwarn java.beans.**
 -dontwarn javax.script.**
 -dontwarn jdk.dynalink.**
+
+# Widget (Glance) -> WorkManager -> Room: la base de datos generada se instancia por nombre y R8 la quitaba (cierre al abrir).
+-keep class * extends androidx.room.RoomDatabase { *; }
+-keep class androidx.work.impl.WorkDatabase_Impl { *; }
+-keep class androidx.work.impl.** { *; }

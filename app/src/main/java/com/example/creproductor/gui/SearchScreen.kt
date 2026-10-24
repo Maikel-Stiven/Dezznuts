@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import kotlinx.coroutines.delay
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ListItem
@@ -168,13 +170,13 @@ fun SearchOverlayScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onCloseSearch) {
-                    Icon(Icons.Default.Close, contentDescription = "cerrar búsqueda")
+                    Icon(Icons.Default.Close, contentDescription = tr("cerrar búsqueda"))
                 }
 
                 TextField(
                     value = searchQuery,
                     onValueChange = onQueryChange,
-                    placeholder = { Text("Canciones, álbumes o artistas") },
+                    placeholder = { Text(tr("Canciones, álbumes o artistas")) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(
@@ -197,7 +199,7 @@ fun SearchOverlayScreen(
                 if (searchQuery.isNotEmpty()){
                     TextButton(onClick = {onQueryChange("")}) {
                         Text(
-                            text = "Limpiar",
+                            text = tr("Limpiar"),
                             color = MaterialTheme.colorScheme.primary,
                             style = MaterialTheme.typography.labelMedium
                         )
@@ -208,7 +210,7 @@ fun SearchOverlayScreen(
 
         if (searchQuery.isBlank() && searchHistory.isEmpty()) {
             Text(
-                text = "Busca en toda tu biblioteca por título, artista o álbum.",
+                text = tr("Busca en toda tu biblioteca por título, artista o álbum."),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(24.dp)
@@ -247,7 +249,7 @@ fun SearchOverlayScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Eliminar del historial",
+                                contentDescription = tr("Eliminar del historial"),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -265,14 +267,14 @@ fun SearchOverlayScreen(
                    Tab(
                        selected = selectedTabItem == index,
                        onClick = {selectedTabItem = index},
-                       text = {Text(tab.title)}
+                       text = {Text(tr(tab.title))}
                    )
                }
                if (ytEnabled) {
                    Tab(
                        selected = selectedTabItem == SearchSubTab.entries.size,
                        onClick = { selectedTabItem = SearchSubTab.entries.size },
-                       text = { Text("YouTube Music") }
+                       text = { Text(tr("YouTube Music")) }
                    )
                }
            }
@@ -328,7 +330,7 @@ fun SearchOverlayScreen(
                                     onClick =  {songsLimit += 10}
                                 ) {
                                     Text(
-                                        text = "Ver más",
+                                        text = tr("Ver más"),
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.primary
                                     )
@@ -548,10 +550,10 @@ private fun YtMusicResults(query: String, onPlay: (com.example.creproductor.data
     when {
         result == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         list == null -> Text(
-            "No se pudo consultar YouTube Music. Revisa la conexión o inténtalo más tarde.",
+            tr("No se pudo consultar YouTube Music. Revisa la conexión o inténtalo más tarde."),
             modifier = Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        list.isEmpty() -> Text("Sin resultados.", modifier = Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        list.isEmpty() -> Text(tr("Sin resultados."), modifier = Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
         else -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
             items(list, key = { it.url }) { t ->
                 ListItem(

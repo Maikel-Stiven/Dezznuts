@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -79,21 +81,21 @@ fun LyricsPane(song: Song, currentPositionMs: () -> Long, onSeekTo: (Long) -> Un
         when (val s = state) {
             LyricsState.Loading, LyricsState.Searching -> Centered {
                 CircularProgressIndicator()
-                Text(if (s == LyricsState.Searching) "Buscando en LRCLIB…" else "Cargando…", modifier = Modifier.padding(top = 12.dp))
+                Text(tr(if (s == LyricsState.Searching) "Buscando en LRCLIB…" else "Cargando…"), modifier = Modifier.padding(top = 12.dp))
             }
             is LyricsState.Found -> LyricsList(s.lyrics, currentPositionMs, onSeekTo)
             else -> Centered {
                 Text(
-                    when (s) {
+                    tr(when (s) {
                         LyricsState.Offline -> "Sin conexión. Inténtalo de nuevo con internet."
                         LyricsState.NotOnline -> "LRCLIB no tiene la letra de esta canción."
                         else -> "No hay letra guardada para esta canción."
-                    },
+                    }),
                     textAlign = TextAlign.Center
                 )
-                Button(onClick = { searchNonce++ }, modifier = Modifier.padding(top = 16.dp)) { Text("Buscar en internet (LRCLIB)") }
+                Button(onClick = { searchNonce++ }, modifier = Modifier.padding(top = 16.dp)) { Text(tr("Buscar en internet (LRCLIB)")) }
                 Text(
-                    "Se enviará a lrclib.net el título, artista, álbum y duración. Se guarda para usarla sin conexión.",
+                    tr("Se enviará a lrclib.net el título, artista, álbum y duración. Se guarda para usarla sin conexión."),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,

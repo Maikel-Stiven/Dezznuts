@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
@@ -40,18 +42,18 @@ fun TrackInfoDialog(song: Song, audioInfo: String, onEdit: () -> Unit = {}, onDi
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Default.Info, contentDescription = null) },
-        title = { Text("Información técnica") },
+        title = { Text(tr("Información técnica")) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 rows.forEach { (k, v) ->
                     Column {
-                        Text(k, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                        Text(tr(k), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
                         Text(v, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } },
-        dismissButton = { TextButton(onClick = { onDismiss(); onEdit() }) { Text("Editar etiquetas") } }
+        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Cerrar")) } },
+        dismissButton = { TextButton(onClick = { onDismiss(); onEdit() }) { Text(tr("Editar etiquetas")) } }
     )
 }

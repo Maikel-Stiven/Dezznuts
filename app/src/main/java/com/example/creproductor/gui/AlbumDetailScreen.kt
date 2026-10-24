@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.activity.compose.BackHandler
 import com.example.creproductor.data.coverModel
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -120,7 +122,7 @@ fun AlbumDetailScreen(
             IconButton(onClick = onBackClick) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Volver",
+                    contentDescription = tr("Volver"),
                     tint = MaterialTheme.colorScheme.onBackground
                 )
             }
@@ -232,7 +234,7 @@ fun AlbumDetailScreen(
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("REPRODUCIR")
+                            Text(tr("REPRODUCIR"))
                         }
 
                         OutlinedButton(
@@ -251,7 +253,7 @@ fun AlbumDetailScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("ALEATORIO")
+                            Text(tr("ALEATORIO"))
                         }
                     }
                 }
@@ -376,7 +378,7 @@ private fun AlbumTrackItem(
         ) {
             Icon(
                 imageVector = Icons.Default.MoreVert,
-                contentDescription = "Opciones de pista",
+                contentDescription = tr("Opciones de pista"),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 modifier = Modifier.size(20.dp)
 

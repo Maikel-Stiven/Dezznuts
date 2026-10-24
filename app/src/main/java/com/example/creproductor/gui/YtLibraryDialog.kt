@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import android.annotation.SuppressLint
 import android.webkit.CookieManager
 import android.webkit.WebView
@@ -60,12 +62,12 @@ fun YtLibraryDialog(onPlay: (YtTrack) -> Unit, onDismiss: () -> Unit) {
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("YouTube Music") },
+        title = { Text(tr("YouTube Music")) },
         text = {
             if (!loggedIn) Column {
-                Text("Inicia sesión para ver las canciones que te gustan. La sesión se guarda solo en este teléfono y puedes cerrarla cuando quieras.")
+                Text(tr("Inicia sesión para ver las canciones que te gustan. La sesión se guarda solo en este teléfono y puedes cerrarla cuando quieras."))
                 Text(
-                    "Función no oficial: puede dejar de funcionar sin aviso y va contra los términos de YouTube.",
+                    tr("Función no oficial: puede dejar de funcionar sin aviso y va contra los términos de YouTube."),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp)
                 )
             } else {
@@ -77,8 +79,8 @@ fun YtLibraryDialog(onPlay: (YtTrack) -> Unit, onDismiss: () -> Unit) {
                 val list = result?.getOrNull()
                 when {
                     result == null -> Box(Modifier.size(120.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-                    list == null -> Text("No se pudo cargar. Revisa la conexión o inicia sesión de nuevo.")
-                    list.isEmpty() -> Text("Aún no tienes canciones con Me gusta.")
+                    list == null -> Text(tr("No se pudo cargar. Revisa la conexión o inicia sesión de nuevo."))
+                    list.isEmpty() -> Text(tr("Aún no tienes canciones con Me gusta."))
                     else -> LazyColumn(Modifier.size(width = 320.dp, height = 380.dp)) {
                         items(list, key = { it.url }) { t ->
                             ListItem(
@@ -96,12 +98,12 @@ fun YtLibraryDialog(onPlay: (YtTrack) -> Unit, onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            if (!loggedIn) TextButton(onClick = { showLogin = true }) { Text("Iniciar sesión") }
-            else TextButton(onClick = onDismiss) { Text("Cerrar") }
+            if (!loggedIn) TextButton(onClick = { showLogin = true }) { Text(tr("Iniciar sesión")) }
+            else TextButton(onClick = onDismiss) { Text(tr("Cerrar")) }
         },
         dismissButton = {
-            if (loggedIn) TextButton(onClick = { YtLibrary.logout(context); CookieManager.getInstance().removeAllCookies(null); loggedIn = false }) { Text("Cerrar sesión") }
-            else TextButton(onClick = onDismiss) { Text("Cancelar") }
+            if (loggedIn) TextButton(onClick = { YtLibrary.logout(context); CookieManager.getInstance().removeAllCookies(null); loggedIn = false }) { Text(tr("Cerrar sesión")) }
+            else TextButton(onClick = onDismiss) { Text(tr("Cancelar")) }
         }
     )
 }
@@ -113,7 +115,7 @@ private fun YtLoginWindow(onDone: () -> Unit, onCancel: () -> Unit) {
     val context = LocalContext.current
     Dialog(onDismissRequest = onCancel, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = true)) {
         Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-            TextButton(onClick = onCancel, modifier = Modifier.padding(4.dp)) { Text("Cancelar") }
+            TextButton(onClick = onCancel, modifier = Modifier.padding(4.dp)) { Text(tr("Cancelar")) }
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { ctx ->

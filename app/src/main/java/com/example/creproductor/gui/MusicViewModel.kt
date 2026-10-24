@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import android.app.Application
 import android.content.ComponentName
 import android.content.Context
@@ -171,6 +173,9 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     /** Respaldo en memoria de `id → nº de reproducciones` (origen de "Más reproducidas"). */
     private val playCountMap = mutableMapOf<Long, Int>()
 
+    /** Reproducciones por id de canción (para las estadísticas). */
+    fun playCounts(): Map<Long, Int> = playCountMap.toMap()
+
     /** Canciones ordenadas por número de reproducciones (descendente). */
     private val _mostPlayedSongs = MutableStateFlow<List<Song>>(emptyList())
     val mostPlayedSongs: StateFlow<List<Song>> = _mostPlayedSongs.asStateFlow()
@@ -244,7 +249,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         _currentQueue.value = _currentQueue.value.ifEmpty { (_uiState.value as? UiState.Success)?.songs ?: emptyList() } + song
         saveCurrentQueueIds(_currentQueue.value.map { it.id })
         controller.addMediaItems(buildMediaItems(listOf(song)))
-        Toast.makeText(getApplication(), "Agregada a la cola", Toast.LENGTH_SHORT).show()
+        Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "Agregada a la cola"), Toast.LENGTH_SHORT).show()
     }
 
     /**
@@ -265,7 +270,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                 Bundle().apply { putInt(MusicService.EXTRA_INDEX, at) }
             )
         }
-        Toast.makeText(getApplication(), "Suena a continuación", Toast.LENGTH_SHORT).show()
+        Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "Suena a continuación"), Toast.LENGTH_SHORT).show()
     }
 
     /** Borra el archivo (Android < 11; en 11+ lo hace el sistema con su propia confirmación) y recarga la biblioteca. */
@@ -273,7 +278,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         viewModelScope.launch(Dispatchers.IO) {
             val ok = runCatching { getApplication<Application>().contentResolver.delete(song.contentUri, null, null) > 0 }.getOrDefault(false)
             withContext(Dispatchers.Main) {
-                if (!ok) Toast.makeText(getApplication(), "No se pudo eliminar", Toast.LENGTH_LONG).show()
+                if (!ok) Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "No se pudo eliminar"), Toast.LENGTH_LONG).show()
                 loadSongs(silent = true)
             }
         }
@@ -281,7 +286,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
 
     fun addSongToPlaylist(playlistId: String, song: Song) {
         addSongsToPlaylist(playlistId, listOf(song.id))
-        Toast.makeText(getApplication(), "Agregada a la lista", Toast.LENGTH_SHORT).show()
+        Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "Agregada a la lista"), Toast.LENGTH_SHORT).show()
     }
 
     /** Estado del temporizador de apagado: 0 = apagado, -1 = al final de la canción, otro = hora de fin (ms). */
@@ -789,7 +794,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             val url = runCatching { withContext(Dispatchers.IO) { com.example.creproductor.data.YtMusic.audioUrl(track.url) } }
                 .getOrElse {
-                    Toast.makeText(app, "No se pudo abrir la canción de YouTube Music", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(app, com.example.creproductor.i18n.I18n.tr(app, "No se pudo abrir la canción de YouTube Music"), Toast.LENGTH_SHORT).show()
                     return@launch
                 }
             val song = Song(
@@ -912,7 +917,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                 SongCoverCache.invalidate(getApplication(), song)
                 loadSongs(silent = true)
             } else {
-                Toast.makeText(getApplication(), "No se pudieron guardar los tags", Toast.LENGTH_LONG).show()
+                Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "No se pudieron guardar los tags"), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -1083,7 +1088,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         runCatching { getApplication<Application>().contentResolver.openOutputStream(uri, "wt")!!.bufferedWriter().use { it.write(text) } }.isSuccess
     }
 
-    private fun toast(text: String) = Toast.makeText(getApplication(), text, Toast.LENGTH_LONG).show()
+    private fun toast(text: String) = Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), text), Toast.LENGTH_LONG).show()
 
     fun exportBackup(uri: Uri) {
         val byId = librarySongs.associateBy { it.id }
@@ -1242,13 +1247,13 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         saveCurrentQueueIds(updatedQueue.map { it.id })
 
         mediaController?.addMediaItems(buildMediaItems(playlistSongs))
-        Toast.makeText(getApplication(), "Lista agregada a la cola", Toast.LENGTH_SHORT).show()
+        Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "Lista agregada a la cola"), Toast.LENGTH_SHORT).show()
     }
 
     /** Copia las canciones de una playlist a otra */
     fun appendPlaylistToPlaylist (sourcePlaylist: Playlist, targetPlaylistId: String){
         addSongsToPlaylist(targetPlaylistId, sourcePlaylist.songIds)
-        Toast.makeText(getApplication(), "Canciones añadidas a la playlist", Toast.LENGTH_SHORT).show()
+        Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "Canciones añadidas a la playlist"), Toast.LENGTH_SHORT).show()
     }
 
     /** Elimina IDs duplicadas (canciones) dentro de la playlist */
@@ -1260,7 +1265,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         }
         _playlists.value = updated
         savePlaylists(updated)
-        Toast.makeText(getApplication(), "Duplicados eliminados", Toast.LENGTH_LONG).show()
+        Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "Duplicados eliminados"), Toast.LENGTH_LONG).show()
     }
 
     /** Elimina del dispositivo las canciones dentro de la playlist*/

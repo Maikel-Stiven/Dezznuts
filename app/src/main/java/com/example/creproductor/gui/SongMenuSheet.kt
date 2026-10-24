@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -89,7 +91,7 @@ fun SongMenuSheet(
             if (pickingPlaylist) {
                 if (playlists.isEmpty()) {
                     Text(
-                        "Aún no has creado una lista de reproducción",
+                        tr("Aún no has creado una lista de reproducción"),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(16.dp)
@@ -115,10 +117,10 @@ fun SongMenuSheet(
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("¿Eliminar del dispositivo?") },
+            title = { Text(tr("¿Eliminar del dispositivo?")) },
             text = { Text("\"${song.title}\" se borrará del almacenamiento. No se puede deshacer.") },
-            confirmButton = { TextButton(onClick = { confirmDelete = false; onDismiss(); actions.onDelete() }) { Text("Eliminar") } },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancelar") } }
+            confirmButton = { TextButton(onClick = { confirmDelete = false; onDismiss(); actions.onDelete() }) { Text(tr("Eliminar")) } },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(tr("Cancelar")) } }
         )
     }
 }
@@ -126,7 +128,7 @@ fun SongMenuSheet(
 @Composable
 private fun MenuRow(icon: ImageVector, text: String, onClick: () -> Unit, tint: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Unspecified) {
     ListItem(
-        headlineContent = { Text(text, color = tint) },
+        headlineContent = { Text(tr(text), color = tint) },
         leadingContent = { Icon(icon, contentDescription = null, tint = if (tint == androidx.compose.ui.graphics.Color.Unspecified) MaterialTheme.colorScheme.onSurfaceVariant else tint) },
         colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
         modifier = Modifier.clickable(onClick = onClick)

@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.activity.compose.BackHandler
 import com.example.creproductor.data.coverModel
 import androidx.compose.foundation.background
@@ -121,7 +123,7 @@ fun ArtistDetailScreen (
             IconButton(onClick =  onBackClick) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Volver",
+                    contentDescription = tr("Volver"),
                     tint = MaterialTheme.colorScheme.onBackground
                 )
             }
@@ -212,7 +214,7 @@ fun ArtistDetailScreen (
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("REPRODUCIR")
+                            Text(tr("REPRODUCIR"))
                         }
                         OutlinedButton(
                             onClick = onShuffleClick,
@@ -228,7 +230,7 @@ fun ArtistDetailScreen (
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("ALEATORIO")
+                            Text(tr("ALEATORIO"))
                         }
                     }
                 }
@@ -238,7 +240,7 @@ fun ArtistDetailScreen (
                 item {
                     Column(modifier = Modifier.padding(vertical = 8.dp)) {
                         Text(
-                            text = "Álbumes",
+                            text = tr("Álbumes"),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground,
@@ -311,7 +313,7 @@ fun ArtistDetailScreen (
 
             item {
                 Text(
-                    text = "Canciones",
+                    text = tr("Canciones"),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
@@ -424,7 +426,7 @@ private fun ArtistTrackItem(
         ) {
             Icon(
                 imageVector = Icons.Default.MoreVert,
-                contentDescription = "opciones",
+                contentDescription = tr("opciones"),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )

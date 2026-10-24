@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.compose.foundation.background
 import com.example.creproductor.data.coverModel
 import androidx.compose.foundation.clickable
@@ -109,7 +111,7 @@ fun AddSongsToPlaylistDialog(
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Cerrar",
+                        contentDescription = tr("Cerrar"),
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -141,11 +143,11 @@ fun AddSongsToPlaylistDialog(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = {searchQuery = it},
-                placeholder = {Text("Buscar", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))},
+                placeholder = {Text(tr("Buscar"), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))},
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
-                        contentDescription = "Buscar",
+                        contentDescription = tr("Buscar"),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
@@ -154,7 +156,7 @@ fun AddSongsToPlaylistDialog(
                         IconButton(onClick = {searchQuery = ""}) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Limpiar busqueda",
+                                contentDescription = tr("Limpiar busqueda"),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -181,17 +183,17 @@ fun AddSongsToPlaylistDialog(
                 Tab(
                     selected = selectedTabIndex == 0,
                     onClick = {selectedTabIndex = 0},
-                    text = {Text("Todas")}
+                    text = {Text(tr("Todas"))}
                 )
                 Tab(
                     selected = selectedTabIndex == 1,
                     onClick = {selectedTabIndex = 1},
-                    text = {Text("Favoritos")}
+                    text = {Text(tr("Favoritos"))}
                 )
                 Tab(
                     selected = selectedTabIndex == 2,
                     onClick = {selectedTabIndex = 2},
-                    text = {Text("Recientes")}
+                    text = {Text(tr("Recientes"))}
                 )
             }
 

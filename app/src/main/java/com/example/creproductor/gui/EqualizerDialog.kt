@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -132,9 +134,9 @@ private fun EqualizerContent(onDismiss: () -> Unit) {
     ) {
         // Cabecera
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onDismiss) { Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Cerrar", Modifier.padding(0.dp)) }
+            IconButton(onClick = onDismiss) { Icon(Icons.Default.KeyboardArrowDown, contentDescription = tr("Cerrar"), Modifier.padding(0.dp)) }
             Column(Modifier.weight(1f)) {
-                Text("Ecualizador", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                Text(tr("Ecualizador"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 Text(
                     if (enabled) "Activo" else "Apagado · señal sin tocar",
                     style = MaterialTheme.typography.labelMedium,
@@ -156,12 +158,12 @@ private fun EqualizerContent(onDismiss: () -> Unit) {
                     label = { Text(name) }
                 )
             }
-            FilterChip(selected = preset == null, onClick = {}, enabled = false, label = { Text("Personalizado") })
+            FilterChip(selected = preset == null, onClick = {}, enabled = false, label = { Text(tr("Personalizado")) })
         }
 
         // Saved
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Saved", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(tr("Saved"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             saved.forEach { (name, p) ->
                 FilterChip(
                     selected = preset == name,
@@ -170,8 +172,8 @@ private fun EqualizerContent(onDismiss: () -> Unit) {
                     trailingIcon = { Icon(Icons.Default.Close, contentDescription = "Eliminar $name", Modifier.size(16.dp).clickable { deleting = name }) }
                 )
             }
-            if (preset == null && saved.size < SavedEqPresets.MAX) TextButton(onClick = { naming = true }) { Text("Guardar +") }
-            if (saved.isEmpty() && preset != null) Text("Mueve la curva para guardar el tuyo", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (preset == null && saved.size < SavedEqPresets.MAX) TextButton(onClick = { naming = true }) { Text(tr("Guardar +")) }
+            if (saved.isEmpty() && preset != null) Text(tr("Mueve la curva para guardar el tuyo"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
         // Curva
@@ -194,7 +196,7 @@ private fun EqualizerContent(onDismiss: () -> Unit) {
                 Readout("Q", "%.1f".format(band.q), Modifier.weight(0.7f))
             }
             Column {
-                Text("Ancho de banda (Q)", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tr("Ancho de banda (Q)"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Slider(
                     modifier = Modifier.semantics { contentDescription = "Ancho de banda Q de la banda ${selected + 1}" },
                     value = band.q,
@@ -207,12 +209,12 @@ private fun EqualizerContent(onDismiss: () -> Unit) {
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "Arrastra los puntos sobre la curva. Sin efecto con audio offload.",
+                tr("Arrastra los puntos sobre la curva. Sin efecto con audio offload."),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f)
             )
-            TextButton(onClick = { bands.clear(); bands.addAll(EqBands.DEFAULT); save() }) { Text("Restablecer") }
+            TextButton(onClick = { bands.clear(); bands.addAll(EqBands.DEFAULT); save() }) { Text(tr("Restablecer")) }
         }
         Spacer(Modifier.height(8.dp))
     }
@@ -221,19 +223,19 @@ private fun EqualizerContent(onDismiss: () -> Unit) {
         var name by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { naming = false },
-            title = { Text("Guardar preset") },
-            text = { OutlinedTextField(value = name, onValueChange = { name = SavedEqPresets.cleanName(it) }, label = { Text("Nombre") }, singleLine = true) },
-            confirmButton = { TextButton(enabled = name.isNotBlank(), onClick = { SavedEqPresets.add(saved, name, bands.toList())?.let(::persistSaved); naming = false }) { Text("Guardar") } },
-            dismissButton = { TextButton(onClick = { naming = false }) { Text("Cancelar") } }
+            title = { Text(tr("Guardar preset")) },
+            text = { OutlinedTextField(value = name, onValueChange = { name = SavedEqPresets.cleanName(it) }, label = { Text(tr("Nombre")) }, singleLine = true) },
+            confirmButton = { TextButton(enabled = name.isNotBlank(), onClick = { SavedEqPresets.add(saved, name, bands.toList())?.let(::persistSaved); naming = false }) { Text(tr("Guardar")) } },
+            dismissButton = { TextButton(onClick = { naming = false }) { Text(tr("Cancelar")) } }
         )
     }
     deleting?.let { name ->
         AlertDialog(
             onDismissRequest = { deleting = null },
-            title = { Text("¿Eliminar el preset?") },
+            title = { Text(tr("¿Eliminar el preset?")) },
             text = { Text("\"$name\" se borrará y quedará libre su espacio (máximo ${SavedEqPresets.MAX}).") },
-            confirmButton = { TextButton(onClick = { persistSaved(SavedEqPresets.remove(saved, name)); deleting = null }) { Text("Sí") } },
-            dismissButton = { TextButton(onClick = { deleting = null }) { Text("No") } }
+            confirmButton = { TextButton(onClick = { persistSaved(SavedEqPresets.remove(saved, name)); deleting = null }) { Text(tr("Sí")) } },
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text(tr("No")) } }
         )
     }
 }
@@ -248,7 +250,7 @@ private fun Readout(label: String, value: String, modifier: Modifier = Modifier)
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             .padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(tr(label), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }
@@ -282,6 +284,7 @@ private fun EqCurve(
     val padB = with(density) { 22.dp.toPx() }
     val hit = with(density) { 44.dp.toPx() }
 
+    val curveDescription = tr("Curva del ecualizador: arrastra los puntos para cambiar frecuencia y ganancia")
     var size by remember { mutableStateOf(IntSize.Zero) }
     var lastSave by remember { mutableLongStateOf(0L) }
     var lastSign by remember { mutableIntStateOf(0) }
@@ -321,7 +324,7 @@ private fun EqCurve(
             .clip(MaterialTheme.shapes.large)
             .background(bg)
             .onSizeChanged { size = it }
-            .semantics { contentDescription = "Curva del ecualizador: arrastra los puntos para cambiar frecuencia y ganancia" }
+            .semantics { contentDescription = curveDescription }
             .pointerInput(Unit) {
                 detectTapGestures { p -> nearest(p)?.let { select(it) } }
             }

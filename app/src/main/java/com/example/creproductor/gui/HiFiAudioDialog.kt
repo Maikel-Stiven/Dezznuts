@@ -1,4 +1,6 @@
-  package com.example.creproductor.gui
+package com.example.creproductor.gui
+
+import com.example.creproductor.i18n.tr
 
 import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
@@ -70,14 +72,14 @@ fun HiFiAudioDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Default.GraphicEq, contentDescription = null) },
-        title = { Text("Audio Hi/Res") },
+        title = { Text(tr("Audio Hi/Res")) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "DEZZNUTS ya decodifica FLAC, ALAC y WAV sin pérdida. " +
+                    text = tr("DEZZNUTS ya decodifica FLAC, ALAC y WAV sin pérdida. ") +
                         "Estos ajustes deciden cómo se entrega esa señal al DAC del dispositivo. " +
                         "Ninguno viene activado: pruébalos tú y quédate con el que mejor suene en tu equipo.",
                     style = MaterialTheme.typography.bodyMedium
@@ -155,9 +157,9 @@ fun HiFiAudioDialog(
                 )
 
                 Column {
-                    Text("Fundido de entrada y salida", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                    Text(tr("Fundido de entrada y salida"), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
                     Text(
-                        "Sube el volumen al empezar una pista o reanudar y lo baja al final de la pista y al pausar. " +
+                        tr("Sube el volumen al empezar una pista o reanudar y lo baja al final de la pista y al pausar. ") +
                             "En discos sin cortes (gapless) conviene dejarlo apagado.",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -196,12 +198,12 @@ fun HiFiAudioDialog(
                     }
                 )
 
-                TextButton(onClick = onOpenEqualizer) { Text("Ecualizador…") }
+                TextButton(onClick = onOpenEqualizer) { Text(tr("Ecualizador…")) }
 
                 HorizontalDivider()
 
                 Text(
-                    text = "Salidas conectadas: " + if (outputs.isEmpty()) "ninguna" else "",
+                    text = tr("Salidas conectadas: ") + if (outputs.isEmpty()) "ninguna" else "",
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
@@ -211,14 +213,14 @@ fun HiFiAudioDialog(
                 }
 
                 Text(
-                    text = "Salida nativa del dispositivo: " +
+                    text = tr("Salida nativa del dispositivo: ") +
                         (sampleRate?.let { "$it Hz" } ?: "desconocida"),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = "El sistema remuestrea a esa frecuencia todo lo que no coincida con ella " +
+                    text = tr("El sistema remuestrea a esa frecuencia todo lo que no coincida con ella ") +
                         "(por ejemplo, un FLAC de CD a 44100 Hz). El offload evita ese remuestreo " +
                         "en los dispositivos que lo soportan.",
                     style = MaterialTheme.typography.bodySmall,
@@ -227,7 +229,7 @@ fun HiFiAudioDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Listo") }
+            TextButton(onClick = onDismiss) { Text(tr("Listo")) }
         }
     )
 }

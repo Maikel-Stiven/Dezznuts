@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -56,10 +58,10 @@ fun ClearImageCacheDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = { if (!isClearing) onDismiss() },
         icon = { Icon(Icons.Default.DeleteSweep, contentDescription = null) },
-        title = { Text("Borrar caché de imágenes") },
+        title = { Text(tr("Borrar caché de imágenes")) },
         text = {
             Column {
-                Text("Se borrarán las fotos de artistas descargadas y las carátulas extraídas de los archivos. Se volverán a generar cuando hagan falta.")
+                Text(tr("Se borrarán las fotos de artistas descargadas y las carátulas extraídas de los archivos. Se volverán a generar cuando hagan falta."))
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = when {
@@ -83,7 +85,7 @@ fun ClearImageCacheDialog(onDismiss: () -> Unit) {
                             ArtistImageFetcher.clearArtistImageCache(context)
                             SongCoverCache.clear(context)
                         }
-                        Toast.makeText(context, "Caché de imágenes borrada", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, com.example.creproductor.i18n.I18n.tr(context, "Caché de imágenes borrada"), Toast.LENGTH_SHORT).show()
                         onDismiss()
                     }
                 }
@@ -93,7 +95,7 @@ fun ClearImageCacheDialog(onDismiss: () -> Unit) {
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isClearing) {
-                Text("Cancelar")
+                Text(tr("Cancelar"))
             }
         }
     )

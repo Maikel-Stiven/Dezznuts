@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,7 +39,7 @@ fun SleepTimerDialog(endState: Long, onSelect: (minutes: Int) -> Unit, onDismiss
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Temporizador") },
+        title = { Text(tr("Temporizador")) },
         text = {
             Column {
                 if (active) {
@@ -45,7 +47,7 @@ fun SleepTimerDialog(endState: Long, onSelect: (minutes: Int) -> Unit, onDismiss
                         val s = remainingMs / 1000
                         "Se detendrá en %d:%02d".format(s / 60, s % 60)
                     }
-                    Text(label, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 8.dp))
+                    Text(tr(label), color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 8.dp))
                 }
                 SLEEP_OPTIONS.forEach { (minutes, text) ->
                     Row(
@@ -53,12 +55,12 @@ fun SleepTimerDialog(endState: Long, onSelect: (minutes: Int) -> Unit, onDismiss
                         modifier = Modifier.fillMaxWidth().clickable { onSelect(minutes); onDismiss() }
                     ) {
                         RadioButton(selected = false, onClick = { onSelect(minutes); onDismiss() })
-                        Text(text)
+                        Text(tr(text))
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } },
-        dismissButton = if (active) ({ TextButton(onClick = { onSelect(0); onDismiss() }) { Text("Cancelar temporizador") } }) else null
+        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Cerrar")) } },
+        dismissButton = if (active) ({ TextButton(onClick = { onSelect(0); onDismiss() }) { Text(tr("Cancelar temporizador")) } }) else null
     )
 }

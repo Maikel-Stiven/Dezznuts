@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.compose.foundation.background
 import com.example.creproductor.data.coverModel
 import androidx.compose.foundation.basicMarquee
@@ -111,7 +113,7 @@ fun QuickSelectionScreen(
             value = withContext(Dispatchers.Default) { Moods.group(allSongs) { it.genre } }
         }
         if (moods.isNotEmpty()) {
-            Text("Moods:", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+            Text(tr("Moods:"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -141,15 +143,15 @@ fun SectionRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // El título cede espacio (y se recorta) antes que "VER TODOS", que nunca se parte en líneas.
-            Text(text = title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text(text = tr(title), style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             TextButton(onClick = onSeeAllClick) {
-                Text("VER TODOS", style = MaterialTheme.typography.labelMedium, maxLines = 1, softWrap = false)
+                Text(tr("VER TODOS"), style = MaterialTheme.typography.labelMedium, maxLines = 1, softWrap = false)
             }
         }
 
         if (songs.isEmpty()){
             Text(
-                text = emptyMessage,
+                text = tr(emptyMessage),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)

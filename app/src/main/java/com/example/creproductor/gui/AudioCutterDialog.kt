@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import android.media.MediaPlayer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -55,7 +57,7 @@ fun AudioCutterDialog(song: Song, cutting: Boolean, onCut: (startMs: Long, endMs
 
     AlertDialog(
         onDismissRequest = { if (!cutting) onDismiss() },
-        title = { Text("Cortador de audio") },
+        title = { Text(tr("Cortador de audio")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(song.title, style = MaterialTheme.typography.titleSmall, maxLines = 1)
@@ -85,19 +87,19 @@ fun AudioCutterDialog(song: Song, cutting: Boolean, onCut: (startMs: Long, endMs
                     }
                     if (cutting) {
                         CircularProgressIndicator(Modifier.padding(start = 16.dp).padding(2.dp), strokeWidth = 2.dp)
-                        Text("Cortando…", modifier = Modifier.padding(start = 8.dp))
+                        Text(tr("Cortando…"), modifier = Modifier.padding(start = 8.dp))
                     }
                 }
                 Text(
-                    "Se guarda como archivo nuevo en Música/DEZZNUTS; el original no se modifica.",
+                    tr("Se guarda como archivo nuevo en Música/DEZZNUTS; el original no se modifica."),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         },
         confirmButton = {
-            TextButton(enabled = !cutting, onClick = { previewing = false; onCut(range.start.toLong(), range.endInclusive.toLong()) }) { Text("Guardar corte") }
+            TextButton(enabled = !cutting, onClick = { previewing = false; onCut(range.start.toLong(), range.endInclusive.toLong()) }) { Text(tr("Guardar corte")) }
         },
-        dismissButton = { TextButton(enabled = !cutting, onClick = onDismiss) { Text("Cancelar") } }
+        dismissButton = { TextButton(enabled = !cutting, onClick = onDismiss) { Text(tr("Cancelar")) } }
     )
 }

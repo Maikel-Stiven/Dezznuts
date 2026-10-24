@@ -1,5 +1,7 @@
 package com.example.creproductor
 
+import com.example.creproductor.i18n.tr
+
 import com.example.creproductor.gui.CoverAccentTheme
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
@@ -163,7 +165,7 @@ class MainActivity : ComponentActivity() {
                     // Android 9 o menos: guardar en la carpeta pública de Música exige el permiso de escritura.
                     var pendingCut by remember { mutableStateOf<(() -> Unit)?>(null) }
                     val writePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
-                        if (ok) pendingCut?.invoke() else Toast.makeText(this@MainActivity, "Sin permiso no se puede guardar el corte", Toast.LENGTH_LONG).show()
+                        if (ok) pendingCut?.invoke() else Toast.makeText(this@MainActivity, com.example.creproductor.i18n.I18n.tr(this@MainActivity, "Sin permiso no se puede guardar el corte"), Toast.LENGTH_LONG).show()
                         pendingCut = null
                     }
                     var showSleepTimerDialog by remember { mutableStateOf(false) }
@@ -190,7 +192,7 @@ class MainActivity : ComponentActivity() {
                     val editSong: (Song) -> Unit = { song -> songMenuFor = song }
                     fun openCutter(song: Song) {
                         // Las pistas de una hoja CUE son un tramo de un archivo largo: se cortaría el archivo entero.
-                        if (song.cueStartMs >= 0) { Toast.makeText(this@MainActivity, "Las pistas de una hoja CUE no se pueden cortar", Toast.LENGTH_LONG).show(); return }
+                        if (song.cueStartMs >= 0) { Toast.makeText(this@MainActivity, com.example.creproductor.i18n.I18n.tr(this@MainActivity, "Las pistas de una hoja CUE no se pueden cortar"), Toast.LENGTH_LONG).show(); return }
                         viewModel.pauseIfPlaying()
                         songToCut = song
                     }
@@ -227,7 +229,7 @@ class MainActivity : ComponentActivity() {
                             AppAction.AudioCutter -> {
                                 val playing = currentSong
                                 if (playing != null) openCutter(playing)
-                                else Toast.makeText(this@MainActivity, "Elige una canción desde su menú ⋮ → Cortador de audio", Toast.LENGTH_LONG).show()
+                                else Toast.makeText(this@MainActivity, com.example.creproductor.i18n.I18n.tr(this@MainActivity, "Elige una canción desde su menú ⋮ → Cortador de audio"), Toast.LENGTH_LONG).show()
                             }
                             AppAction.SleepTimer -> showSleepTimerDialog = true
                             AppAction.ExportBackup -> saveBackup.launch("dezznuts-copia-${java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).format(java.util.Date())}.txt")
@@ -243,7 +245,7 @@ class MainActivity : ComponentActivity() {
                                 // Los comentarios van a los "issues" del repositorio.
                                 runCatching {
                                     startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(FEEDBACK_URL)))
-                                }.onFailure { Toast.makeText(this@MainActivity, "No hay navegador para abrir el enlace", Toast.LENGTH_LONG).show() }
+                                }.onFailure { Toast.makeText(this@MainActivity, com.example.creproductor.i18n.I18n.tr(this@MainActivity, "No hay navegador para abrir el enlace"), Toast.LENGTH_LONG).show() }
                             }
                         }
                     }
@@ -459,7 +461,7 @@ class MainActivity : ComponentActivity() {
                         if (showAboutDialog) AboutDialog(versionName) { showAboutDialog = false }
                         if (showOptionsDialog) OptionsDialog { showOptionsDialog = false }
                         if (showYtLibrary) com.example.creproductor.gui.YtLibraryDialog(onPlay = { viewModel.playYt(it) }, onDismiss = { showYtLibrary = false })
-                        if (showStatsDialog) com.example.creproductor.gui.StatsDialog((uiState as? UiState.Success)?.songs.orEmpty()) { showStatsDialog = false }
+                        if (showStatsDialog) com.example.creproductor.gui.StatsDialog((uiState as? UiState.Success)?.songs.orEmpty(), viewModel.playCounts()) { showStatsDialog = false }
 
                         if (showClearImageCacheDialog) {
                             ClearImageCacheDialog(onDismiss = { showClearImageCacheDialog = false })
@@ -578,7 +580,7 @@ fun SongItem(
                 if (song.albumArtUri != null) {
                     AsyncImage(
                         model = song.coverModel,
-                        contentDescription = "Portada",
+                        contentDescription = tr("Portada"),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
@@ -627,7 +629,7 @@ fun SongItem(
             IconButton(onClick = onEditClick) {
                 Icon(
                     imageVector = Icons.Default.MoreVert,
-                    contentDescription = "Opciones",
+                    contentDescription = tr("Opciones"),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     modifier = Modifier.size(20.dp)
                 )
@@ -732,7 +734,7 @@ fun BottomPlayerBar(
                 )
             }
             IconButton(onClick = onNext) {
-                Icon(Icons.Default.SkipNext, contentDescription = "Siguiente", tint = MaterialTheme.colorScheme.onSurface)
+                Icon(Icons.Default.SkipNext, contentDescription = tr("Siguiente"), tint = MaterialTheme.colorScheme.onSurface)
             }
         }
     }

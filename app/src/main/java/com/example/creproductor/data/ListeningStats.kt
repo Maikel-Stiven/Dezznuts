@@ -12,8 +12,9 @@ data class ListeningStats(
     val topArtists: List<Pair<String, Int>>
 ) {
     companion object {
-        fun of(songs: List<Song>, top: Int = 5) =
-            compute(songs.map { PlayedEntry(it.id, it.artist, it.playCount, it.duration) }, top)
+        /** Las reproducciones no están en [Song] sino en el contador del ViewModel: se cruzan por id. */
+        fun of(songs: List<Song>, counts: Map<Long, Int>, top: Int = 5) =
+            compute(songs.map { PlayedEntry(it.id, it.artist, counts[it.id] ?: 0, it.duration) }, top)
 
         /** Las canciones sin reproducciones no cuentan. Los artistas desconocidos se omiten del ranking. */
         fun compute(entries: List<PlayedEntry>, top: Int = 5): ListeningStats {

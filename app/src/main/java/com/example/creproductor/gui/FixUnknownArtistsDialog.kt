@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -60,12 +62,12 @@ fun FixUnknownArtistsDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
-        title = { Text("Corregir artistas desconocidos") },
+        title = { Text(tr("Corregir artistas desconocidos")) },
         text = {
             Column {
                 when {
-                    result == null -> Text("Buscando…")
-                    items.isEmpty() -> Text("No hay canciones con artista desconocido que se puedan deducir del nombre del archivo.")
+                    result == null -> Text(tr("Buscando…"))
+                    items.isEmpty() -> Text(tr("No hay canciones con artista desconocido que se puedan deducir del nombre del archivo."))
                     else -> LazyColumn(Modifier.weight(1f, fill = false)) {
                         items(items, key = { it.first.id }) { (song, s) ->
                             Row(
@@ -96,6 +98,6 @@ fun FixUnknownArtistsDialog(
         confirmButton = {
             if (selected.isNotEmpty()) Button(onClick = { onApply(selected) }) { Text("Corregir ${selected.size}") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Cerrar")) } }
     )
 }

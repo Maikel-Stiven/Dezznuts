@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Box
@@ -272,21 +274,21 @@ fun MainScreen(
                     TopAppBar(
                         navigationIcon = {
                             IconButton(onClick = { coroutineScope.launch { drawerState.open() } }) {
-                                Icon(Icons.Default.Menu, contentDescription = "Abrir menú")
+                                Icon(Icons.Default.Menu, contentDescription = tr("Abrir menú"))
                             }
                         },
-                        title = { Text("DEZZNUTS", fontWeight = FontWeight.ExtraBold) },
+                        title = { Text(tr("DEZZNUTS"), fontWeight = FontWeight.ExtraBold) },
                         actions = {
                             IconButton(onClick = { onSectionChange(AppSection.SEARCH) }) {
-                                Icon(Icons.Default.Search, contentDescription = "Buscar")
+                                Icon(Icons.Default.Search, contentDescription = tr("Buscar"))
                             }
                             Box {
                                 IconButton(onClick = { showOverflow = true }) {
-                                    Icon(Icons.Default.MoreVert, contentDescription = "Más opciones")
+                                    Icon(Icons.Default.MoreVert, contentDescription = tr("Más opciones"))
                                 }
                                 DropdownMenu(expanded = showOverflow, onDismissRequest = { showOverflow = false }) {
                                     listOf(AppAction.ScanFiles, AppAction.SleepTimer, AppAction.Options, AppAction.About).forEach { action ->
-                                        DropdownMenuItem(text = { Text(action.title) }, onClick = { showOverflow = false; onAction(action) })
+                                        DropdownMenuItem(text = { Text(tr(action.title)) }, onClick = { showOverflow = false; onAction(action) })
                                     }
                                 }
                             }
@@ -311,7 +313,7 @@ fun MainScreen(
                             Tab(
                                 selected = pagerState.currentPage == index,
                                 onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
-                                text = {Text(tab.title)}
+                                text = {Text(tr(tab.title))}
                             )
                         }
                     }
@@ -339,7 +341,7 @@ fun MainScreen(
                                              FilterChip(
                                                  selected = currentFilter == filter,
                                                  onClick = { viewModel.setFilter(filter) },
-                                                 label = { Text(label) }
+                                                 label = { Text(tr(label)) }
                                              )
                                          }
                                      }
@@ -351,7 +353,7 @@ fun MainScreen(
                                          DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
                                              SongSort.entries.forEach { sort ->
                                                  DropdownMenuItem(
-                                                     text = { Text(sort.label) },
+                                                     text = { Text(tr(sort.label)) },
                                                      trailingIcon = { if (sort == currentSort) Icon(Icons.Default.Check, contentDescription = null) },
                                                      onClick = { showSortMenu = false; viewModel.setSort(sort) }
                                                  )

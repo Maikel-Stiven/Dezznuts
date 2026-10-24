@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -50,10 +52,10 @@ fun StatusScreen(
             contentDescription = null,
             modifier = Modifier.size(180.dp)
         )
-        Text(title, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+        Text(tr(title), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
         Spacer(Modifier.height(8.dp))
         Text(
-            message,
+            tr(message),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -61,7 +63,7 @@ fun StatusScreen(
         )
         Spacer(Modifier.height(28.dp))
         if (loading) LinearProgressIndicator(Modifier.widthIn(max = 200.dp))
-        if (actionLabel != null) Button(onClick = onAction) { Text(actionLabel) }
-        if (secondaryLabel != null) TextButton(onClick = onSecondary) { Text(secondaryLabel) }
+        if (actionLabel != null) Button(onClick = onAction) { Text(tr(actionLabel)) }
+        if (secondaryLabel != null) TextButton(onClick = onSecondary) { Text(tr(secondaryLabel)) }
     }
 }

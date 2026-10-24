@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.activity.compose.BackHandler
 import com.example.creproductor.data.coverModel
 import androidx.compose.animation.core.animateFloat
@@ -249,7 +251,7 @@ fun FullScreenPlayer(
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Cerrar reproductor",
+                        contentDescription = tr("Cerrar reproductor"),
                         modifier = Modifier.size(32.dp)
                     )
                 }
@@ -258,7 +260,7 @@ fun FullScreenPlayer(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "REPRODUCIENDO DESDE",
+                        text = tr("REPRODUCIENDO DESDE"),
                         style = MaterialTheme.typography.labelSmall,
                         maxLines = 1,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
@@ -273,7 +275,7 @@ fun FullScreenPlayer(
                 IconButton(onClick = { showTrackInfo = true }) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Información técnica"
+                        contentDescription = tr("Información técnica")
                     )
                 }
             }
@@ -329,7 +331,7 @@ fun FullScreenPlayer(
                                 .decoderDispatcher(Dispatchers.IO)
                                 .crossfade(true)
                                 .build(),
-                            contentDescription = "Portada",
+                            contentDescription = tr("Portada"),
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
@@ -373,7 +375,7 @@ fun FullScreenPlayer(
                 IconButton(onClick = { onToggleFavorite(song) }) {
                     Icon(
                         imageVector = if (song.isFavorite) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
-                        contentDescription = if (song.isFavorite) "Quitar de favoritos" else "Añadir a favoritos",
+                        contentDescription = tr(if (song.isFavorite) "Quitar de favoritos" else "Añadir a favoritos"),
                         tint = if (song.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         modifier = Modifier.size(28.dp)
                     )
@@ -392,7 +394,7 @@ fun FullScreenPlayer(
                 IconButton(onClick = onToggleShuffle) {
                     Icon(
                         imageVector = Icons.Default.Shuffle,
-                        contentDescription = if (isShuffleEnabled) "Desactivar aleatorio" else "Activar aleatorio",
+                        contentDescription = tr(if (isShuffleEnabled) "Desactivar aleatorio" else "Activar aleatorio"),
                         tint = if (isShuffleEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
                 }
@@ -404,7 +406,7 @@ fun FullScreenPlayer(
                     },
                     modifier = Modifier.size(56.dp)
                 ) {
-                    Icon(Icons.Default.SkipPrevious, contentDescription = "Anterior", modifier = Modifier.size(40.dp))
+                    Icon(Icons.Default.SkipPrevious, contentDescription = tr("Anterior"), modifier = Modifier.size(40.dp))
                 }
                 FilledIconButton(
                     onClick = onTogglePlayPause,
@@ -417,12 +419,12 @@ fun FullScreenPlayer(
                 ) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "Pausar" else "Reproducir",
+                        contentDescription = tr(if (isPlaying) "Pausar" else "Reproducir"),
                         modifier = Modifier.size(40.dp)
                     )
                 }
                 IconButton(onClick = { safeClick { onNextClick() } }, modifier = Modifier.size(56.dp)) {
-                    Icon(Icons.Default.SkipNext, contentDescription = "Siguiente", modifier = Modifier.size(40.dp))
+                    Icon(Icons.Default.SkipNext, contentDescription = tr("Siguiente"), modifier = Modifier.size(40.dp))
                 }
                 IconButton(onClick = onToggleRepeatMode) {
                     Icon(imageVector = repeatIcon, contentDescription = modelLabel, tint = repeatTint)
@@ -435,13 +437,13 @@ fun FullScreenPlayer(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 IconButton(onClick = onOpenEqualizer) {
-                    Icon(Icons.Default.Tune, contentDescription = "Ecualizador", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                    Icon(Icons.Default.Tune, contentDescription = tr("Ecualizador"), tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
                 }
                 IconButton(onClick = {
                     showQueueBottomSheet = true
                     onOpenQueueClick()
                 }) {
-                    Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = "Cola de reproducción", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                    Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = tr("Cola de reproducción"), tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
                 }
             }
         }
@@ -492,7 +494,7 @@ fun FullScreenPlayer(
                     ) {
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowDown,
-                            contentDescription = "Cerrar Cola",
+                            contentDescription = tr("Cerrar Cola"),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(28.dp)
                         )
@@ -507,7 +509,7 @@ fun FullScreenPlayer(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "Cola de reproducción",
+                        text = tr("Cola de reproducción"),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -520,7 +522,7 @@ fun FullScreenPlayer(
                         IconButton(onClick = onToggleShuffle) {
                             Icon(
                                 imageVector = Icons.Default.Shuffle,
-                                contentDescription = "Aleatorio",
+                                contentDescription = tr("Aleatorio"),
                                 tint = if (isShuffleEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -630,7 +632,7 @@ fun FullScreenPlayer(
                             ){
                                 Icon(
                                     imageVector = Icons.Default.DragHandle,
-                                    contentDescription = "Reordenar pista",
+                                    contentDescription = tr("Reordenar pista"),
                                     tint = if (isBeingDragged) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                     modifier = Modifier
                                         .padding( end = 8.dp)
@@ -714,7 +716,7 @@ fun FullScreenPlayer(
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.RemoveCircleOutline,
-                                    contentDescription = "Quitar de la cola",
+                                    contentDescription = tr("Quitar de la cola"),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -726,7 +728,7 @@ fun FullScreenPlayer(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.MoreVert,
-                                    contentDescription = "Opciones",
+                                    contentDescription = tr("Opciones"),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(20.dp)
                                 )

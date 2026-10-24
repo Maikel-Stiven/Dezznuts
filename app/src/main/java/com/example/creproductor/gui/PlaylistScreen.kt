@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.compose.foundation.background
 import com.example.creproductor.data.coverModel
 import androidx.compose.foundation.clickable
@@ -89,7 +91,7 @@ fun PlaylistScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "Aún no has creado una lista de reproducción",
+                    text = tr("Aún no has creado una lista de reproducción"),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -108,7 +110,7 @@ fun PlaylistScreen(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Crear lista de reproducción")
+                    Text(tr("Crear lista de reproducción"))
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -124,7 +126,7 @@ fun PlaylistScreen(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Restaurar lista de reproducción")
+                    Text(tr("Restaurar lista de reproducción"))
                 }
             }
         }else{
@@ -217,7 +219,7 @@ fun PlaylistScreen(
                             IconButton(onClick = {onPlaylistOptionsClick(playlist)}) {
                                 Icon(
                                     imageVector = Icons.Default.MoreVert,
-                                    contentDescription = "Opciones",
+                                    contentDescription = tr("Opciones"),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -235,7 +237,7 @@ fun PlaylistScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Crear lista"
+                    contentDescription = tr("Crear lista")
                 )
             }
         }

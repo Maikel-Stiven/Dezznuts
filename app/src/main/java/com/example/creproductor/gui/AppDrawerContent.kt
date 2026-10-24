@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -65,7 +67,7 @@ fun AppDrawerContent(versionName: String, onAction: (AppAction) -> Unit, onClose
         Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                 Text(
-                    text = "DEZZNUTS",
+                    text = tr("DEZZNUTS"),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -74,14 +76,14 @@ fun AppDrawerContent(versionName: String, onAction: (AppAction) -> Unit, onClose
                 HorizontalDivider(Modifier.padding(bottom = 8.dp))
                 DRAWER_GROUPS.forEach { (group, actions) ->
                     if (group != null) Text(
-                        group, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
+                        tr(group), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp)
                     )
                     // "Mi YouTube Music" solo aparece si activaste YouTube Music en Opciones.
                     val ytOn = com.example.creproductor.data.YtMusic.isEnabled(androidx.compose.ui.platform.LocalContext.current)
                     actions.filter { it != AppAction.YtLibrary || ytOn }.forEach { item ->
                         NavigationDrawerItem(
-                            label = { Text(item.title) },
+                            label = { Text(tr(item.title)) },
                             icon = { Icon(item.icon, contentDescription = null) },
                             selected = false,
                             onClick = { onCloseDrawer(); onAction(item) },
@@ -104,11 +106,11 @@ fun AppDrawerContent(versionName: String, onAction: (AppAction) -> Unit, onClose
 fun OptionsDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Opciones") },
+        title = { Text(tr("Opciones")) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 val context = androidx.compose.ui.platform.LocalContext.current
-                Text("Tema", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(bottom = 4.dp))
+                Text(tr("Tema"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(bottom = 4.dp))
                 androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     com.example.creproductor.ui.theme.ThemeMode.entries
                         .filter { it != com.example.creproductor.ui.theme.ThemeMode.DYNAMIC || com.example.creproductor.ui.theme.ThemeSetting.dynamicAvailable }
@@ -116,7 +118,7 @@ fun OptionsDialog(onDismiss: () -> Unit) {
                             FilterChip(
                                 selected = com.example.creproductor.ui.theme.ThemeSetting.mode == m,
                                 onClick = { com.example.creproductor.ui.theme.ThemeSetting.set(context, m) },
-                                label = { Text(m.label) }
+                                label = { Text(tr(m.label)) }
                             )
                         }
                 }
@@ -138,7 +140,7 @@ fun OptionsDialog(onDismiss: () -> Unit) {
                 )
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Listo") } }
+        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Listo")) } }
     )
 }
 
@@ -150,8 +152,8 @@ internal fun PrefSwitch(
     val context = androidx.compose.ui.platform.LocalContext.current
     var on by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(read(context)) }
     ListItem(
-        headlineContent = { Text(title, style = MaterialTheme.typography.titleSmall) },
-        supportingContent = { Text(subtitle) },
+        headlineContent = { Text(tr(title), style = MaterialTheme.typography.titleSmall) },
+        supportingContent = { Text(tr(subtitle)) },
         leadingContent = { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
         trailingContent = { androidx.compose.material3.Switch(checked = on, onCheckedChange = { on = it; write(context, it) }) },
         colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
@@ -161,28 +163,28 @@ internal fun PrefSwitch(
 
 /** "Tu música en números": reproducciones, horas y los más escuchados. Solo lee lo que ya guarda la app. */
 @Composable
-fun StatsDialog(songs: List<com.example.creproductor.data.Song>, onDismiss: () -> Unit) {
-    val stats = remember(songs) { com.example.creproductor.data.ListeningStats.of(songs) }
+fun StatsDialog(songs: List<com.example.creproductor.data.Song>, counts: Map<Long, Int>, onDismiss: () -> Unit) {
+    val stats = remember(songs, counts) { com.example.creproductor.data.ListeningStats.of(songs, counts) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Estadísticas") },
+        title = { Text(tr("Estadísticas")) },
         text = {
-            if (stats.plays == 0) Text("Aún no hay reproducciones. Escucha algo de tu biblioteca y vuelve.")
+            if (stats.plays == 0) Text(tr("Aún no hay reproducciones. Escucha algo de tu biblioteca y vuelve."))
             else Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 val hours = stats.listenedMs / 3_600_000.0
                 Text("${stats.plays} reproducciones · ${"%.1f".format(hours)} h de música", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                Text("Canciones más escuchadas", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 12.dp))
+                Text(tr("Canciones más escuchadas"), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 12.dp))
                 val byId = songs.associateBy { it.id }
                 stats.topSongs.forEachIndexed { i, (id, n) ->
                     val song = byId[id] ?: return@forEachIndexed
                     Text("${i + 1}. ${song.title} — ${com.example.creproductor.displayArtist(song.artist)} ($n)")
                 }
                 if (stats.topArtists.isNotEmpty()) {
-                    Text("Artistas más escuchados", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 12.dp))
+                    Text(tr("Artistas más escuchados"), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 12.dp))
                     stats.topArtists.forEachIndexed { i, (artist, n) -> Text("${i + 1}. $artist ($n)") }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } }
+        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Cerrar")) } }
     )
 }

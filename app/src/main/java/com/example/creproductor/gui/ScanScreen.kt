@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import android.net.Uri
 import android.os.Environment
 import android.provider.DocumentsContract
@@ -102,30 +104,30 @@ fun ScanScreen(
         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(4.dp)) {
                 IconButton(onClick = { if (running) onCancel() else onClose(settings()) }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("Volver"))
                 }
-                Text("Escanear archivos", style = MaterialTheme.typography.titleLarge)
+                Text(tr("Escanear archivos"), style = MaterialTheme.typography.titleLarge)
             }
 
             if (progress != null) {
                 ScanProgressContent(progress, onCancel = onCancel, onDone = { onClose(settings()) })
             } else {
                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Dónde buscar", style = MaterialTheme.typography.titleMedium)
+                    Text(tr("Dónde buscar"), style = MaterialTheme.typography.titleMedium)
                     SourceRow("Almacenamiento interno", useInternal) { useInternal = it }
                     SourceRow("Descargas", useDownloads) { useDownloads = it }
                     if (sdCards.isNotEmpty()) SourceRow("Tarjeta SD", useSd) { useSd = it }
                     extraFolders.forEach { f ->
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                             Text(f.path, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                            TextButton(onClick = { extraFolders.remove(f) }) { Text("Quitar") }
+                            TextButton(onClick = { extraFolders.remove(f) }) { Text(tr("Quitar")) }
                         }
                     }
-                    OutlinedButton(onClick = { folderPicker.launch(null) }) { Text("Elegir carpeta…") }
+                    OutlinedButton(onClick = { folderPicker.launch(null) }) { Text(tr("Elegir carpeta…")) }
 
                     HorizontalDivider(Modifier.padding(vertical = 12.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Avanzado", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                        Text(tr("Avanzado"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                         Switch(checked = advanced, onCheckedChange = { advanced = it })
                     }
                     AnimatedVisibility(advanced) {
@@ -133,7 +135,7 @@ fun ScanScreen(
                             NumberField("Ignorar archivos de menos de (segundos)", seconds) { seconds = it }
                             NumberField("Ignorar archivos de menos de (KB)", kb) { kb = it }
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Ignorar archivos y carpetas ocultos", modifier = Modifier.weight(1f))
+                                Text(tr("Ignorar archivos y carpetas ocultos"), modifier = Modifier.weight(1f))
                                 Switch(checked = hidden, onCheckedChange = { hidden = it })
                             }
                         }
@@ -149,7 +151,7 @@ fun ScanScreen(
                     onClick = { onStart(roots, settings()) },
                     enabled = roots.isNotEmpty(),
                     modifier = Modifier.fillMaxWidth().padding(16.dp)
-                ) { Text("INICIAR ESCANEO") }
+                ) { Text(tr("INICIAR ESCANEO")) }
             }
         }
     }
@@ -159,7 +161,7 @@ fun ScanScreen(
 private fun SourceRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Checkbox(checked = checked, onCheckedChange = onChange)
-        Text(label)
+        Text(tr(label))
     }
 }
 
@@ -168,7 +170,7 @@ private fun NumberField(label: String, value: String, onChange: (String) -> Unit
     OutlinedTextField(
         value = value,
         onValueChange = { v -> onChange(v.filter(Char::isDigit).take(6)) },
-        label = { Text(label) },
+        label = { Text(tr(label)) },
         singleLine = true,
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth()
@@ -185,10 +187,10 @@ private fun androidx.compose.foundation.layout.ColumnScope.ScanProgressContent(p
         Radar(spinning = !progress.finished, modifier = Modifier.size(220.dp))
         Spacer(Modifier.height(24.dp))
         if (progress.finished) {
-            Text("Escaneo terminado", style = MaterialTheme.typography.titleLarge)
+            Text(tr("Escaneo terminado"), style = MaterialTheme.typography.titleLarge)
             Text("${progress.total} archivos de audio revisados", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(16.dp))
-            Button(onClick = onDone) { Text("LISTO") }
+            Button(onClick = onDone) { Text(tr("LISTO")) }
         } else {
             Text("${progress.percent} %", style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.primary)
             Text(
@@ -199,7 +201,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.ScanProgressContent(p
                 modifier = Modifier.padding(top = 8.dp)
             )
             Spacer(Modifier.height(16.dp))
-            OutlinedButton(onClick = onCancel) { Text("CANCELAR") }
+            OutlinedButton(onClick = onCancel) { Text(tr("CANCELAR")) }
         }
     }
 }
