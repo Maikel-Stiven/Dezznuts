@@ -41,7 +41,8 @@ class HiFiRenderersFactory(
     context: Context,
     useFloatOutput: Boolean,
     private val useOffload: Boolean,
-    private val eqProcessor: AudioProcessor? = null
+    private val eqProcessor: AudioProcessor? = null,
+    private val spectrumTap: AudioProcessor? = null
 ) : DefaultRenderersFactory(context) {
 
     init {
@@ -61,7 +62,7 @@ class HiFiRenderersFactory(
         val sink = DefaultAudioSink.Builder(context)
             .setEnableFloatOutput(enableFloatOutput)
             .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
-            .apply { if (eqProcessor != null) setAudioProcessorChain(SingleProcessorChain(eqProcessor)) }
+            .apply { if (eqProcessor != null) setAudioProcessorChain(ProcessorChain(listOfNotNull(eqProcessor, spectrumTap))) }
             .build()
 
         if (useOffload && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -73,13 +74,13 @@ class HiFiRenderersFactory(
 }
 
 /**
- * Cadena con un único procesador. La cadena por defecto añade Sonic (velocidad) y silenciador, que solo admiten
+ * Cadena con los procesadores propios (ecualizador y, si está encendido, el espía del visualizador). La cadena por defecto añade Sonic (velocidad) y silenciador, que solo admiten
  * 16 bits y rechazarían la salida float del ecualizador. Como la app no cambia velocidad ni omite silencios,
  * se prescinde de ellos: velocidad fija a 1× y sin recorte de silencios.
  */
 @OptIn(UnstableApi::class)
-private class SingleProcessorChain(private val processor: AudioProcessor) : DefaultAudioSink.AudioProcessorChain {
-    override fun getAudioProcessors(): Array<AudioProcessor> = arrayOf(processor)
+private class ProcessorChain(private val processors: List<AudioProcessor>) : DefaultAudioSink.AudioProcessorChain {
+    override fun getAudioProcessors(): Array<AudioProcessor> = processors.toTypedArray()
     override fun applyPlaybackParameters(playbackParameters: androidx.media3.common.PlaybackParameters) = playbackParameters
     override fun applySkipSilenceEnabled(skipSilenceEnabled: Boolean) = false
     override fun getMediaDuration(playoutDuration: Long) = playoutDuration

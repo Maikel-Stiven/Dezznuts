@@ -61,6 +61,7 @@
     <string name="s_72ddaf49d6">Banda</string>
     <string name="s_c72dc64b3a">Bandas, presets y perfiles por salida</string>
     <string name="s_083090cb46">Barra abajo</string>
+    <string name="s_3f18b83f17">Barras de frecuencia en el reproductor; no usa internet ni permisos (no con audio offload)</string>
     <string name="s_497ac5c11b">Biblioteca</string>
     <string name="s_954773cf25">Blanco</string>
     <string name="s_f48076e5cc">Borrando…</string>
@@ -335,6 +336,7 @@
     <string name="s_486f7ff02b">Ver todo</string>
     <string name="s_daba544d2b">Verde</string>
     <string name="s_e1fb15444a">Versión, licencia y créditos</string>
+    <string name="s_7ccabff150">Visualizador (barras tipo CAVA)</string>
     <string name="s_84a715a785">Volver</string>
     <string name="s_d0edcaa68d">YT Music</string>
     <string name="s_1a050f0844">YouTube Music · cuenta de Google</string>

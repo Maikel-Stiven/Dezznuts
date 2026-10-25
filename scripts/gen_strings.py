@@ -171,7 +171,7 @@ EN = {
 "Color a medida": "Custom color", "Tono": "Hue", "Intensidad": "Saturation", "Brillo": "Brightness", "Aplicar": "Apply",
 "Seleccionar todo": "Select all", "Añadir a una lista": "Add to a list", "Añadir a la cola": "Add to queue",
 "Eliminar": "Delete", "Inicio": "Home", "Me gusta": "Likes", "Reintentar": "Retry", "No se pudo cargar.": "Couldn't load.",
-"Origen": "Source", "Nueva lista": "New list", "Navegación": "Navigation", "Pestañas arriba": "Top tabs", "Barra abajo": "Bottom bar", "Ajustes": "Settings", "YT Music": "YT Music", "Accesos directos": "Shortcuts", "Reproducir todo": "Play all", "Música que te gustó": "Music you liked",
+"Origen": "Source", "Visualizador (barras tipo CAVA)": "Visualizer (CAVA-style bars)", "Barras de frecuencia en el reproductor; no usa internet ni permisos (no con audio offload)": "Frequency bars in the player; no internet or permissions needed (not with audio offload)", "Nueva lista": "New list", "Navegación": "Navigation", "Pestañas arriba": "Top tabs", "Barra abajo": "Bottom bar", "Ajustes": "Settings", "YT Music": "YT Music", "Accesos directos": "Shortcuts", "Reproducir todo": "Play all", "Música que te gustó": "Music you liked",
 }
 
 def key(es): return "s_" + hashlib.sha1(es.encode()).hexdigest()[:10]

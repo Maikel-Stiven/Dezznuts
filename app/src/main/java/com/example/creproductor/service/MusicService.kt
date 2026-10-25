@@ -50,6 +50,7 @@ import com.example.creproductor.data.MixerFormat
 import com.example.creproductor.data.EqBands
 import com.example.creproductor.data.Fade
 import com.example.creproductor.data.HiFiAudio
+import com.example.creproductor.data.Visualizer
 import com.example.creproductor.data.OutputClass
 import com.example.creproductor.data.OutputProfiles
 import com.example.creproductor.data.ProfileSettings
@@ -71,6 +72,8 @@ class MusicService : MediaLibraryService(){
     /** Ecualizador paramétrico + subida de ReplayGain del reproductor actual (ver [ParametricEqProcessor]). */
     private var eqProcessor = ParametricEqProcessor(enabledAtBuild = false)
     private var processorActive = false
+    /** ¿La cadena actual lleva el espía del visualizador? Cambiarlo exige recrear el reproductor (como el ecualizador). */
+    private var spectrumActive = false
     private var lastRoute: String? = null
 
     // Bit-perfect (ver BitPerfect): formato de mezcla activo y DAC al que se aplicó (null = modo normal), y el formato
@@ -112,6 +115,7 @@ class MusicService : MediaLibraryService(){
                 // El procesador solo existe en la cadena si algo lo necesita; cambiar eso exige recrear el player.
                 if (needsProcessor() != processorActive) rebuildPlayer() else applyVolume()
             }
+            Visualizer.KEY -> if (Visualizer.isOn(this) != spectrumActive) rebuildPlayer()
             HiFiAudio.KEY_EQ_BANDS -> applyVolume()
             HiFiAudio.KEY_FADE_MS -> updateFade()
             HiFiAudio.KEY_PREFER_USB -> applyPreferredDevice()
@@ -232,13 +236,15 @@ class MusicService : MediaLibraryService(){
             .build()
 
         processorActive = needsProcessor()
+        spectrumActive = Visualizer.isOn(this)
         eqProcessor = ParametricEqProcessor(enabledAtBuild = processorActive)
 
         val renderersFactory = HiFiRenderersFactory(
             context = this,
             useFloatOutput = HiFiAudio.isFloatOutputEnabled(this),
             useOffload = HiFiAudio.isOffloadEnabled(this),
-            eqProcessor = eqProcessor
+            eqProcessor = eqProcessor,
+            spectrumTap = SpectrumTapProcessor(enabledAtBuild = spectrumActive)
         )
 
         val player = ExoPlayer.Builder(this, renderersFactory)

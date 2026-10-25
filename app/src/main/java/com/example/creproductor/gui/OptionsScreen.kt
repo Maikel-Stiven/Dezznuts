@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Movie
@@ -108,6 +109,12 @@ fun OptionsScreen(versionName: String, onAction: (AppAction) -> Unit, onClose: (
                 PrefSwitch(
                     "Color de la carátula en el reproductor", "Botones y progreso toman el tono de la portada",
                     Icons.Default.Palette, ::isCoverAccentOn, ::setCoverAccent
+                )
+            }
+            item {
+                PrefSwitch(
+                    "Visualizador (barras tipo CAVA)", "Barras de frecuencia en el reproductor; no usa internet ni permisos (no con audio offload)",
+                    Icons.Default.GraphicEq, com.example.creproductor.data.Visualizer::isOn, com.example.creproductor.data.Visualizer::set
                 )
             }
             item {

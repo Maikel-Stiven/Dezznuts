@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -234,6 +235,10 @@ fun FullScreenPlayer(
         val (tiltX, tiltY) = rememberCoverTilt(remember { isCoverMotionOn(coverContext) })
         Box(Modifier.fillMaxSize()) {
         CoverBackdrop(song, isPlaying)
+        // Visualizador tipo CAVA (opcional): barras de fondo en la mitad baja del reproductor.
+        if (remember { com.example.creproductor.data.Visualizer.isOn(coverContext) }) {
+            CavaVisualizer(isPlaying, Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.45f).padding(horizontal = 8.dp).graphicsLayer { alpha = 0.55f })
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()

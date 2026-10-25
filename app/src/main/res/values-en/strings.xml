@@ -60,6 +60,7 @@
     <string name="s_72ddaf49d6">Band</string>
     <string name="s_c72dc64b3a">Bands, presets and per-output profiles</string>
     <string name="s_083090cb46">Bottom bar</string>
+    <string name="s_3f18b83f17">Frequency bars in the player; no internet or permissions needed (not with audio offload)</string>
     <string name="s_497ac5c11b">Library</string>
     <string name="s_954773cf25">White</string>
     <string name="s_f48076e5cc">Deleting…</string>
@@ -334,6 +335,7 @@
     <string name="s_486f7ff02b">See all</string>
     <string name="s_daba544d2b">Green</string>
     <string name="s_e1fb15444a">Version, license and credits</string>
+    <string name="s_7ccabff150">Visualizer (CAVA-style bars)</string>
     <string name="s_84a715a785">Back</string>
     <string name="s_d0edcaa68d">YT Music</string>
     <string name="s_1a050f0844">YouTube Music · Google account</string>
