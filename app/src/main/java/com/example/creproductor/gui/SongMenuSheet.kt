@@ -85,7 +85,7 @@ fun SongMenuSheet(
                 headlineContent = { Text(song.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 supportingContent = {
                     val artist = if (song.artist.isBlank() || song.artist == "<unknown>") "Artista desconocido" else song.artist
-                    Text("$artist • ${com.example.creproductor.formatDuration(song.duration)}", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("$artist • ${formatDuration(song.duration)}", maxLines = 1, overflow = TextOverflow.Ellipsis)
                 },
                 colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent)
             )

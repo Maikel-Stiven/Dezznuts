@@ -30,17 +30,17 @@ import androidx.compose.ui.platform.LocalContext
 import com.example.creproductor.i18n.tr
 import kotlinx.coroutines.launch
 
-/** Dónde va la navegación principal: pestañas arriba (maqueta) o barra inferior (interfaz de Maikel, rama temas/interfaces). */
-enum class NavStyle { TOP, BOTTOM }
+/** Dónde va la navegación principal: barra inferior (interfaz de Maikel, rama temas/interfaces; por defecto) o pestañas arriba con menú lateral (maqueta). */
+enum class NavStyle { BOTTOM, TOP }
 
 object NavSetting {
     private const val KEY = "nav_style"
-    var style by mutableStateOf(NavStyle.TOP)
+    var style by mutableStateOf(NavStyle.BOTTOM)
         private set
 
     fun load(context: Context) {
         val name = context.getSharedPreferences("dezznuts_prefs", Context.MODE_PRIVATE).getString(KEY, null)
-        style = NavStyle.entries.firstOrNull { it.name == name } ?: NavStyle.TOP
+        style = NavStyle.entries.firstOrNull { it.name == name } ?: NavStyle.BOTTOM
     }
 
     fun set(context: Context, value: NavStyle) {
@@ -66,11 +66,12 @@ internal val LIBRARY_TABS = AppTab.entries.filter { it != AppTab.QUICK && it != 
  * Selección rápida, Biblioteca = el resto de pestañas locales), así no hay pantallas duplicadas.
  */
 @Composable
-fun AppBottomBar(section: AppSection, pagerState: PagerState, onSectionChange: (AppSection) -> Unit, onOpenOptions: () -> Unit) {
+fun AppBottomBar(section: AppSection, pagerState: PagerState, onSectionChange: (AppSection) -> Unit) {
     val scope = rememberCoroutineScope()
     val page = AppTab.entries[pagerState.currentPage]
     val selected = when {
         section == AppSection.SEARCH -> BottomDest.SEARCH
+        section == AppSection.SETTINGS -> BottomDest.SETTINGS
         page == AppTab.YT -> BottomDest.YT
         page == AppTab.QUICK -> BottomDest.HOME
         else -> BottomDest.LIBRARY
@@ -86,11 +87,11 @@ fun AppBottomBar(section: AppSection, pagerState: PagerState, onSectionChange: (
                         BottomDest.LIBRARY -> goTo(if (selected == BottomDest.LIBRARY) page else AppTab.SONGS)
                         BottomDest.HOME -> goTo(AppTab.QUICK)
                         BottomDest.SEARCH -> onSectionChange(AppSection.SEARCH)
-                        BottomDest.SETTINGS -> onOpenOptions()
+                        BottomDest.SETTINGS -> onSectionChange(AppSection.SETTINGS)
                     }
                 },
                 icon = { Icon(d.icon, contentDescription = null) },
-                label = { Text(tr(d.title), maxLines = 1) },
+                label = { Text(tr(d.title), maxLines = 1, style = MaterialTheme.typography.labelSmall) },
                 alwaysShowLabel = true
             )
         }

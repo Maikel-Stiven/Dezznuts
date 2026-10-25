@@ -130,7 +130,7 @@ fun StatsDialog(songs: List<com.example.creproductor.data.Song>, counts: Map<Lon
                 val byId = songs.associateBy { it.id }
                 stats.topSongs.forEachIndexed { i, (id, n) ->
                     val song = byId[id] ?: return@forEachIndexed
-                    Text("${i + 1}. ${song.title} — ${com.example.creproductor.displayArtist(song.artist)} ($n)")
+                    Text("${i + 1}. ${song.title} — ${displayArtist(song.artist)} ($n)")
                 }
                 if (stats.topArtists.isNotEmpty()) {
                     Text(tr("Artistas más escuchados"), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 12.dp))

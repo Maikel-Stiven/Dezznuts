@@ -64,21 +64,31 @@ fun YtMusicScreen(onPlay: (YtTrack) -> Unit) {
     }
     androidx.compose.runtime.LaunchedEffect(loggedIn) { YtLogin.warm = !loggedIn }
 
+    var searching by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize()) {
-        OutlinedTextField(
+        // Cabecera de la interfaz de Maikel: título, lupa y sesión.
+        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("YT Music"), style = MaterialTheme.typography.headlineSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, modifier = Modifier.weight(1f))
+            IconButton(onClick = { searching = !searching; if (!searching) query = "" }) {
+                Icon(if (searching) Icons.Default.Close else Icons.Default.Search, contentDescription = tr("Buscar en YouTube Music"))
+            }
+            androidx.compose.material3.OutlinedButton(
+                onClick = {
+                    if (loggedIn) { YtLibrary.logout(context); CookieManager.getInstance().removeAllCookies(null); loggedIn = false }
+                    else YtLogin.open = true
+                },
+                shape = MaterialTheme.shapes.small,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+            ) { Text(tr(if (loggedIn) "Cerrar sesión" else "Iniciar sesión"), style = MaterialTheme.typography.labelMedium) }
+        }
+        if (searching) OutlinedTextField(
             value = query, onValueChange = { query = it }, singleLine = true,
             placeholder = { Text(tr("Buscar en YouTube Music")) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
             trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Default.Close, contentDescription = tr("Limpiar")) } },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
         )
-        when {
-            query.isNotBlank() -> YtMusicResults(query, onPlay)
-            else -> YtHomeContent(
-                loggedIn = loggedIn, reload = reload, onPlay = onPlay,
-                onLogin = { YtLogin.open = true },
-                onLogout = { YtLibrary.logout(context); CookieManager.getInstance().removeAllCookies(null); loggedIn = false }
-            )
-        }
+        if (searching && query.isNotBlank()) YtMusicResults(query, onPlay)
+        else YtHomeContent(loggedIn = loggedIn, reload = reload, onPlay = onPlay, onLogin = { YtLogin.open = true })
     }
 }

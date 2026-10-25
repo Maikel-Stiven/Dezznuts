@@ -23,11 +23,13 @@ private val Manrope = FontFamily(
     variable(R.font.manrope, FontWeight.SemiBold), variable(R.font.manrope, FontWeight.Bold),
     variable(R.font.manrope, FontWeight.ExtraBold)
 )
-private val Pixelify = FontFamily(variable(R.font.pixelify_sans, FontWeight.Bold))
+/** Silkscreen (OFL), la tipografía pixel que Maikel eligió para su interfaz «Omarge» (rama temas/interfaces). */
+private val Silkscreen = FontFamily(Font(R.font.silkscreen, FontWeight.Normal), Font(R.font.silkscreen_bold, FontWeight.Bold))
 
 /** Premium: Manrope en todo. Omarchy: pixel en títulos y monoespaciada en el resto (estilo terminal). */
-private fun scale(titles: FontFamily, body: FontFamily, titleWeight: FontWeight, tracking: Double) = Typography().let { t ->
-    fun TextStyle.t() = copy(fontFamily = titles, fontWeight = titleWeight, letterSpacing = tracking.sp)
+private fun scale(titles: FontFamily, body: FontFamily, titleWeight: FontWeight, tracking: Double, titleScale: Float = 1f) = Typography().let { t ->
+    // Una pixel como Silkscreen es ancha: sus títulos se achican (titleScale) para que quepan igual que los normales.
+    fun TextStyle.t() = copy(fontFamily = titles, fontWeight = titleWeight, letterSpacing = tracking.sp, fontSize = fontSize * titleScale, lineHeight = lineHeight * titleScale)
     fun TextStyle.b() = copy(fontFamily = body)
     t.copy(
         displayLarge = t.displayLarge.t(), displayMedium = t.displayMedium.t(), displaySmall = t.displaySmall.t(),
@@ -39,7 +41,7 @@ private fun scale(titles: FontFamily, body: FontFamily, titleWeight: FontWeight,
 }
 
 val PremiumTypography = scale(Manrope, Manrope, FontWeight.Bold, 0.0)
-val OmarchyTypography = scale(Pixelify, FontFamily.Monospace, FontWeight.Bold, 1.0)
+val OmarchyTypography = scale(Silkscreen, FontFamily.Monospace, FontWeight.Bold, 0.5, titleScale = 0.72f)
 
 val PremiumShapes = Shapes(
     extraSmall = RoundedCornerShape(6.dp), small = RoundedCornerShape(10.dp), medium = RoundedCornerShape(14.dp),

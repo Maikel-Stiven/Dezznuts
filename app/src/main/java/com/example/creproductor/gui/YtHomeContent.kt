@@ -62,7 +62,7 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun YtHomeContent(
-    loggedIn: Boolean, reload: Int, onPlay: (YtTrack) -> Unit, onLogin: () -> Unit, onLogout: () -> Unit
+    loggedIn: Boolean, reload: Int, onPlay: (YtTrack) -> Unit, onLogin: () -> Unit
 ) {
     val context = LocalContext.current
     var mood by remember { mutableStateOf<YtMood?>(null) }
@@ -96,21 +96,6 @@ internal fun YtHomeContent(
                 }
             }
         }
-        if (!loggedIn) item {
-            Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth().padding(16.dp, 8.dp)) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(tr("Tus Me gusta, a mano"), style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            tr("Inicia sesión para ver tus canciones con Me gusta. La sesión se guarda solo en este teléfono y puedes cerrarla cuando quieras."),
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 2.dp)
-                        )
-                    }
-                    Button(onClick = onLogin, modifier = Modifier.padding(start = 12.dp)) { Text(tr("Iniciar sesión")) }
-                }
-            }
-        }
         val feed = result?.getOrNull()
         when {
             result == null -> item { Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() } }
@@ -121,17 +106,36 @@ internal fun YtHomeContent(
                 }
             }
             else -> {
-                // Accesos directos (orden de la pantalla de Maikel): "Me gusta" y las primeras canciones del inicio.
+                // Orden de la pantalla de Maikel: Selección rápida (con «Reproducir todo»), Accesos directos y los estantes.
                 val quick = feed.shelves.firstOrNull()?.items?.mapNotNull { it.track }.orEmpty()
-                if (quick.isNotEmpty()) item {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(tr("Accesos directos"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        Button(onClick = { onPlay(quick.first()) }, contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)) { Text(tr("Reproducir todo")) }
+                val rest = feed.shelves.drop(1)
+                if (quick.isNotEmpty()) {
+                    item {
+                        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(feed.shelves.first().title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                            Button(
+                                onClick = { onPlay(quick.first()) }, shape = MaterialTheme.shapes.extraSmall,
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                            ) { Text(tr("Reproducir todo"), style = MaterialTheme.typography.labelMedium) }
+                        }
                     }
+                    items(quick.take(5), key = { "q" + it.url }) { t ->
+                        ListItem(
+                            headlineContent = { Text(t.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            supportingContent = { Text(t.artist, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            leadingContent = { AsyncImage(t.thumbnail, null, contentScale = ContentScale.Crop, modifier = Modifier.size(48.dp).clip(MaterialTheme.shapes.small)) },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier.clickable { onPlay(t) }
+                        )
+                    }
+                }
+                val shortcuts = rest.flatMap { it.items }.distinctBy { it.track?.url ?: it.browseId ?: it.title }.take(5)
+                item {
+                    Text(tr("Accesos directos"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp))
                     Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         val likedLabel = tr("Música que te gustó")
                         val cells = listOf(Triple(likedLabel, null as String?, { if (loggedIn) showLiked = true else onLogin() })) +
-                            quick.take(5).map { t -> Triple(t.title, t.thumbnail, { onPlay(t) }) }
+                            shortcuts.map { it -> Triple(it.title, it.thumbnail, { it.track?.let(onPlay) ?: run { opened = it } }) }
                         cells.chunked(3).forEach { row ->
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 row.forEach { (title, thumb, act) -> ShortcutTile(Modifier.weight(1f), title, thumb, act) }
@@ -140,7 +144,7 @@ internal fun YtHomeContent(
                         }
                     }
                 }
-                items(feed.shelves, key = { it.title }) { shelf ->
+                items(rest, key = { it.title }) { shelf ->
                     Text(shelf.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp))
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(shelf.items, key = { it.track?.url ?: it.browseId ?: it.title }) { item ->
@@ -148,7 +152,6 @@ internal fun YtHomeContent(
                         }
                     }
                 }
-                if (loggedIn) item { TextButton(onClick = onLogout, modifier = Modifier.padding(start = 8.dp, top = 8.dp)) { Text(tr("Cerrar sesión")) } }
             }
         }
     }

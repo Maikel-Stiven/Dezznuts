@@ -43,7 +43,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.creproductor.SongListScreen
 import com.example.creproductor.data.Playlist
 import com.example.creproductor.data.Song
 import kotlinx.coroutines.launch
@@ -59,7 +58,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.mutableStateListOf
 
 /** Pantalla principal (pestañas + menú hamburguesa, como en la maqueta) o la búsqueda que se abre desde la lupa. */
-enum class AppSection { HOME, SEARCH }
+enum class AppSection { HOME, SEARCH, SETTINGS }
 
 /** Pestañas de la pantalla principal, en el orden de la maqueta. */
 enum class AppTab(val title: String){
@@ -269,6 +268,7 @@ fun MainScreen(
                     onSectionChange(AppSection.HOME)
                 }
             )
+            AppSection.SETTINGS -> OptionsScreen(versionName = versionName, onAction = onAction, onClose = { onSectionChange(AppSection.HOME) })
             AppSection.HOME -> ModalNavigationDrawer(
                 drawerState = drawerState,
                 // El deslizamiento lateral es de las pestañas; el menú se abre con la hamburguesa y se cierra deslizando.
@@ -280,9 +280,11 @@ fun MainScreen(
             Scaffold(
                 topBar = {
                     var showOverflow by remember { mutableStateOf(false) }
+                    // Con la barra inferior todo vive en ella y en Ajustes: sin hamburguesa, lupa ni ⋮ arriba.
+                    val topNav = NavSetting.style == NavStyle.TOP
                     TopAppBar(
                         navigationIcon = {
-                            IconButton(onClick = { coroutineScope.launch { drawerState.open() } }) {
+                            if (topNav) IconButton(onClick = { coroutineScope.launch { drawerState.open() } }) {
                                 Icon(Icons.Default.Menu, contentDescription = tr("Abrir menú"))
                             }
                         },
@@ -293,7 +295,7 @@ fun MainScreen(
                                 fontWeight = FontWeight.Bold, letterSpacing = 3.sp, color = MaterialTheme.colorScheme.primary
                             )
                         },
-                        actions = {
+                        actions = { if (topNav) {
                             IconButton(onClick = { onSectionChange(AppSection.SEARCH) }) {
                                 Icon(Icons.Default.Search, contentDescription = tr("Buscar"))
                             }
@@ -307,7 +309,7 @@ fun MainScreen(
                                     }
                                 }
                             }
-                        },
+                        } },
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
                     )
                 },

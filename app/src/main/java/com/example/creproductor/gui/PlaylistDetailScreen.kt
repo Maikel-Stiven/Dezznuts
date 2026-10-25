@@ -51,7 +51,6 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.creproductor.data.Playlist
 import com.example.creproductor.data.Song
-import com.example.creproductor.formatDuration
 import com.example.creproductor.data.SongOrganizer
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf

@@ -42,7 +42,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.creproductor.data.Playlist
 import com.example.creproductor.data.Song
-import com.example.creproductor.formatDuration
 
 class PlaylistMenuActions(
     val onPlay: () -> Unit,

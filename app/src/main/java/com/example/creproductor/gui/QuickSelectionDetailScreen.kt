@@ -50,7 +50,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.creproductor.data.Song
-import com.example.creproductor.formatDuration
 
 @Composable
 fun QuickSelectDetailScreen(

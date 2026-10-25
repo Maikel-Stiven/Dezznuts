@@ -99,6 +99,10 @@ See [`docs/HOJA_DE_RUTA.md`](docs/HOJA_DE_RUTA.md) (Spanish): what's done and wh
 
 Contributions of any size are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md).
 
+## 👤 Credits
+
+Open source (GPL-3.0), built by several people: **@Pedroj-64** (design, themes, player, lyrics, YouTube Music, Android Auto, widget, optimisation), **@Maikel-Stiven** (original author; playlist menus, queue persistence and the **bottom-bar interface, theme/accent picker, Silkscreen typography and YT Music home** that are now the app's foundation) and **Brandon Gil (@AiiwA)** (hi-fi audio, seek performance, covers, tests and CI).
+
 ## 📜 License
 
 Distributed under **GPL-3.0**; see [`LICENSE`](LICENSE).

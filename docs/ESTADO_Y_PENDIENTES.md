@@ -12,6 +12,13 @@ Foto del **2026-10-24**, versión **1.0.0**, todo en `main`.
 - No publicar releases ni etiquetas sin que el usuario lo pida (ver «GitHub Actions» más abajo).
 - **Probar siempre la versión *release*** (R8) en el emulador antes de entregar un APK: el widget ya hizo crashear una.
 
+## Actualización 2026-10-25 (rama `unificacion-interfaces`, sin fusionar)
+La interfaz de Maikel (rama `temas/interfaces`) es ahora la base: **barra inferior por defecto** (YT Music · Biblioteca ·
+Inicio · Buscar · Ajustes, sin hamburguesa; todo el menú está en Ajustes), pestaña YT Music con su orden, selector de
+tema con vistas previas + acento a medida, tipografía Silkscreen en Omarchy. Opcional: pestañas arriba + menú lateral.
+Además: selección múltiple, arreglo de duplicados a 0:00 (Snaptube), «añadir canciones» de listas, recientes sin YT,
+iTunes con caché/límite y portada animada validada. Siguiente: `optimizacion` (llamadas a APIs, RAM/CPU) y luego `main`.
+
 ## Hecho
 - **Maqueta restaurada**: pestañas Selección rápida · Canciones · Álbumes · Artistas · Géneros · Listas · Carpetas ·
   **YT Music**; menú lateral con las acciones; el menú ⋮ abre Escanear, Temporizador, Opciones y Acerca de.

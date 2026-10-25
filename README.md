@@ -163,7 +163,7 @@ adb logcat -s DezzSeek
 | Componente | Versión / Herramienta |
 |------------|-----------------------|
 | Lenguaje | Kotlin `2.2.10` |
-| UI | Jetpack Compose (BOM `2026.02.01`), Material 3, tipografía de Material (Manrope y Pixelify Sans, OFL, en sus temas) |
+| UI | Jetpack Compose (BOM `2026.02.01`), Material 3, tipografía de Material (Manrope y Silkscreen, OFL, en sus temas) |
 | Reproductor | AndroidX Media3 `1.9.1` (ExoPlayer + MediaSession) |
 | Imágenes | Coil `2.7.0` |
 | Etiquetas | jaudiotagger `3.0.1` |
@@ -256,4 +256,8 @@ Distribuido bajo la licencia **GPL-3.0**; consulta [`LICENSE`](LICENSE).
 
 ## 👤 Créditos
 
-Desarrollado inicialmente por el autor del repositorio.
+Proyecto de código abierto (GPL-3.0) hecho entre varias personas:
+
+- **[@Pedroj-64](https://github.com/Pedroj-64)**: diseño, temas, reproductor, letras, YouTube Music, Android Auto, widget, estadísticas, inglés y optimización.
+- **[@Maikel-Stiven](https://github.com/Maikel-Stiven)**: autor original del repositorio; menús y listas de reproducción, persistencia de la cola y la **interfaz de barra inferior, el selector de temas y acentos, la tipografía Silkscreen y el inicio de YT Music** que hoy son la base de la app.
+- **Brandon Gil (@AiiwA)**: audio de alta fidelidad, rendimiento del *seek*, carátulas, pruebas y CI.
