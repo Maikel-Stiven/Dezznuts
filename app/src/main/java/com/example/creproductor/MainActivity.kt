@@ -38,7 +38,6 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -60,6 +59,7 @@ import com.example.creproductor.gui.AppSection
 import com.example.creproductor.gui.SettingsScreen
 import com.example.creproductor.gui.StatusScreen
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import com.example.creproductor.gui.LocalAnimationsEnabled
 import com.example.creproductor.gui.AudioCutterDialog
 import com.example.creproductor.gui.ClearImageCacheDialog
@@ -79,6 +79,7 @@ import com.example.creproductor.gui.SongMenuActions
 import com.example.creproductor.gui.SongMenuSheet
 import com.example.creproductor.gui.TrackInfoDialog
 import com.example.creproductor.gui.UiState
+import com.example.creproductor.ui.theme.AppStyle
 import com.example.creproductor.ui.theme.DEZZNUTStheme
 import kotlinx.coroutines.launch
 import coil.Coil
@@ -131,7 +132,9 @@ class MainActivity : ComponentActivity() {
         Coil.setImageLoader (imageLoader)
 
         setContent {
-            DEZZNUTStheme {
+            val appStyle by viewModel.appStyle.collectAsStateWithLifecycle()
+
+            DEZZNUTStheme(appStyle = appStyle) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -150,6 +153,7 @@ class MainActivity : ComponentActivity() {
                     LaunchedEffect(openPlayerRequest.value) {
                         if (openPlayerRequest.value) { isPlayerFullScreenVisible = true; openPlayerRequest.value = false }
                     }
+                    var showThemeDialog by remember { mutableStateOf(false) }
                     var showClearImageCacheDialog by remember { mutableStateOf(false) }
                     var showHiFiAudioDialog by remember { mutableStateOf(false) }
                     var showEqualizerDialog by remember { mutableStateOf(false) }
@@ -215,6 +219,7 @@ class MainActivity : ComponentActivity() {
                     }
                     fun runAction(action: AppAction) {
                         when (action) {
+                            AppAction.AppTheme -> showThemeDialog = true
                             AppAction.Equalizer -> showEqualizerDialog = true
                             AppAction.SearchDuplicates -> showDuplicatesDialog = true
                             AppAction.FixUnknownArtists -> showFixArtistsDialog = true
@@ -427,6 +432,55 @@ class MainActivity : ComponentActivity() {
                                     } else run()
                                 },
                                 onDismiss = { songToCut = null }
+                            )
+                        }
+
+                        if (showThemeDialog){
+                            AlertDialog(
+                                onDismissRequest = {showThemeDialog = false},
+                                title = {Text("Seleccionar tema visual")},
+                                text = {
+                                    Column {
+                                        AppStyle.entries.forEach { style ->
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable{
+                                                        viewModel.setAppStyle(style)
+                                                        showThemeDialog = false
+                                                    }
+                                                    .padding(vertical = 12.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                RadioButton(
+                                                    selected = (style == appStyle),
+                                                    onClick = {
+                                                        viewModel.setAppStyle(style)
+                                                        showThemeDialog = false
+                                                    }
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Column{
+                                                    Text(
+                                                        text = style.label,
+                                                        style = MaterialTheme.typography.bodyLarge,
+                                                        fontWeight = FontWeight.Medium
+                                                    )
+                                                    Text(
+                                                        text = style.description,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                confirmButton = {
+                                    TextButton(onClick = {showThemeDialog = false}) {
+                                        Text("Cancelar")
+                                    }
+                                }
                             )
                         }
 

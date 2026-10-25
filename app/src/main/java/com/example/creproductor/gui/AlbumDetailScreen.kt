@@ -340,7 +340,7 @@ private fun AlbumTrackItem(
         ) {
             Text(
                 text = song.title,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,

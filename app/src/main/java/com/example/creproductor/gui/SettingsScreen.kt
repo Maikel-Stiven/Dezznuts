@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -21,6 +22,7 @@ sealed class AppAction(
     val subtitle: String,
     val icon : ImageVector
 ){
+    object AppTheme : AppAction("Estilo  y tema visual", "Default, Omarge, OLED y más...", Icons.Default.Palette)
     object Equalizer : AppAction("Ecualizador", "Bandas, presets y perfiles por salida", Icons.Default.Equalizer)
     object HiFiAudio : AppAction("Audio Hi/Res", "Salida float, offload, bit-perfect, ReplayGain y fundidos", Icons.Default.GraphicEq)
     object ScanFiles : AppAction("Escanear archivos", "Buscar música nueva y filtrar audios cortos", Icons.Default.Radar)
@@ -30,13 +32,14 @@ sealed class AppAction(
     object SleepTimer: AppAction("Temporizador", "Pausar la música pasado un tiempo", Icons.Default.Timer)
     object ExportBackup : AppAction("Guardar copia de seguridad", "Favoritas, reproducciones y listas en un archivo", Icons.Default.Backup)
     object ImportBackup : AppAction("Restaurar copia", "Recuperarlas al reinstalar o en otro teléfono", Icons.Default.Restore)
-    object ImportM3u : AppAction("Importar lista M3U", "Traer una lista de otro reproductor", Icons.Default.PlaylistAdd)
+    object ImportM3u : AppAction("Importar lista M3U", "Traer una lista de otro reproductor", Icons.AutoMirrored.Filled.PlaylistAdd)
     object ClearImageCache : AppAction("Borrar caché de imágenes", "Carátulas y fotos de artistas descargadas", Icons.Default.DeleteSweep)
     object About: AppAction("Acerca de", "Versión, licencia y créditos", Icons.Default.Info)
     object SendFeedback : AppAction("Enviar comentarios", "Reportar un fallo o pedir una función en GitHub", Icons.AutoMirrored.Filled.HelpOutline)
 }
 
 private val SETTINGS_GROUPS = listOf(
+    "Apariencia" to listOf(AppAction.AppTheme),
     "Audio" to listOf(AppAction.Equalizer, AppAction.HiFiAudio),
     "Biblioteca" to listOf(AppAction.ScanFiles, AppAction.SearchDuplicates, AppAction.FixUnknownArtists),
     "Herramientas" to listOf(AppAction.AudioCutter, AppAction.SleepTimer),

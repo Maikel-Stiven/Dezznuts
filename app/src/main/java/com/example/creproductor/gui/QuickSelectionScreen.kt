@@ -203,7 +203,7 @@ fun MediaCard(
       Spacer(modifier = Modifier.height(6.dp))
       Text(
           text = song.title,
-          style = MaterialTheme.typography.bodySmall,
+          style = MaterialTheme.typography.titleSmall,
           maxLines = 1,
           overflow = TextOverflow.Ellipsis,
           modifier = Modifier.basicMarquee()

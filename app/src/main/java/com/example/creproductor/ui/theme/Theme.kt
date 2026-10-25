@@ -3,10 +3,36 @@ package com.example.creproductor.ui.theme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.creproductor.R
+
+
+val SilkscreenFont = FontFamily(
+    Font(R.font.silkscreen, FontWeight.Normal),
+    Font(R.font.silkscreen_bold, FontWeight.Bold)
+    )
+
+private val PixelBaseStyle = TextStyle (
+    fontFamily = SilkscreenFont,
+    platformStyle = PlatformTextStyle(
+        includeFontPadding = false
+    ),
+    lineHeightStyle = LineHeightStyle(
+        alignment = LineHeightStyle.Alignment.Center,
+        trim = LineHeightStyle.Trim.Both
+    )
+)
 
 /**
  * Identidad DEZZNUTS: negro cálido y caramelo (la bellota), con un verde hoja de acento.
@@ -38,6 +64,40 @@ private val DezzColors = darkColorScheme(
     outlineVariant = Color(0xFF3D3631),
 )
 
+private val OmargeColors = darkColorScheme(
+    primary = Color(0xFF85D667),
+    onPrimary = Color(0xFF0D120B),
+    primaryContainer = Color(0xFF22381B),
+    onPrimaryContainer = Color(0xFFC3F3AF),
+    secondary = Color(0xFF85D667),
+    onSecondary = Color(0xFF0D120B),
+    secondaryContainer = Color(0xFF192814),
+    onSecondaryContainer = Color(0xFFD0F0C0),
+    background = Color(0xFF0A0E0A),
+    onBackground = Color(0xFFE0EFE0),
+    surface = Color(0xFF0A0E0A),
+    onSurface = Color(0xFFE0EFE0),
+    surfaceVariant = Color(0xFF141E13),
+    onSurfaceVariant = Color(0xFFA0BFA0),
+    surfaceContainerLowest = Color(0xFF050805),
+    surfaceContainerLow = Color(0xFF0D140D),
+    surfaceContainer = Color(0xFF121B12),
+    surfaceContainerHigh = Color(0xFF1A261A),
+    surfaceContainerHighest = Color(0xFF223222),
+    outline = Color(0xFF3A5438),
+    outlineVariant = Color(0xFF223421)
+)
+
+private val OledColors = DezzColors.copy(
+    background = Color(0xFF000000),
+    surface = Color(0xFF000000),
+    surfaceContainerLowest = Color(0xFF000000),
+    surfaceContainerLow = Color(0xFF080706),
+    surfaceContainer = Color(0xFF0E0C0A),
+    surfaceContainerHigh = Color(0xFF161310),
+    surfaceContainerHighest = Color(0xFF1F1B17)
+)
+
 /** Cuatro radios para toda la app (antes había once distintos). */
 val DezzShapes = Shapes(
     extraSmall = RoundedCornerShape(6.dp),
@@ -47,12 +107,66 @@ val DezzShapes = Shapes(
     extraLarge = RoundedCornerShape(28.dp),
 )
 
+private val OmargeShapes = Shapes(
+    extraSmall = RoundedCornerShape(0.dp),
+    small = RoundedCornerShape(0.dp),
+    medium = RoundedCornerShape(0.dp),
+    large = RoundedCornerShape(0.dp),
+    extraLarge = RoundedCornerShape(0.dp)
+)
+
+private val OmargeTypography = Typography(
+
+    headlineSmall = PixelBaseStyle.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp, lineHeight = 16.sp),
+    titleLarge = PixelBaseStyle.copy(fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 14.sp),
+    titleMedium = PixelBaseStyle.copy(fontWeight = FontWeight.Bold, fontSize = 13.sp, lineHeight = 12.sp),
+    titleSmall = PixelBaseStyle.copy(fontWeight = FontWeight.Bold, fontSize = 12.sp, lineHeight = 11.sp),
+
+    bodyLarge = PixelBaseStyle.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp, lineHeight = 8.sp),
+
+    bodyMedium = TextStyle(
+        fontFamily = FontFamily.Monospace,
+        fontSize = 11.sp,
+        lineHeight = 13.sp,
+        platformStyle = PlatformTextStyle(includeFontPadding = false)
+    ),
+    bodySmall = TextStyle(
+        fontFamily = FontFamily.Monospace,
+        fontSize = 10.sp,
+        lineHeight = 12.sp,
+        platformStyle = PlatformTextStyle(includeFontPadding = false)
+    ),
+    labelLarge = PixelBaseStyle.copy(fontWeight = FontWeight.Bold, fontSize = 11.sp, lineHeight = 12.sp),
+    labelMedium = TextStyle(
+        fontFamily = FontFamily.Monospace,
+        fontSize = 10.sp,
+        lineHeight = 12.sp,
+        platformStyle = PlatformTextStyle(includeFontPadding = false)
+    ),
+    labelSmall = TextStyle(
+        fontFamily = FontFamily.Monospace,
+        fontSize = 9.sp,
+        lineHeight = 11.sp,
+        platformStyle = PlatformTextStyle(includeFontPadding = false)
+    )
+)
+
 @Composable
-fun DEZZNUTStheme(content: @Composable () -> Unit){
+fun DEZZNUTStheme(
+    appStyle: AppStyle = AppStyle.MATERIAL_3,
+    content: @Composable () -> Unit
+){
+
+    val (colorScheme, shapes, typography) = when (appStyle){
+        AppStyle.MATERIAL_3 -> Triple(DezzColors, DezzShapes, Typography)
+        AppStyle.OMARGE -> Triple(OmargeColors, OmargeShapes, OmargeTypography)
+        AppStyle.OLED_DARK -> Triple(OledColors, DezzShapes, Typography)
+    }
+
     MaterialTheme(
-        colorScheme = DezzColors,
-        typography = Typography,
-        shapes = DezzShapes,
+        colorScheme = colorScheme,
+        typography = typography,
+        shapes = shapes,
         content = content
     )
 }

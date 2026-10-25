@@ -65,6 +65,7 @@ import com.example.creproductor.data.RepeatMode
 import com.example.creproductor.data.SongOrganizer
 import com.example.creproductor.data.next
 import com.example.creproductor.service.PlaybackDiagnostics
+import com.example.creproductor.ui.theme.AppStyle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -203,6 +204,19 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     /** Listas de reproducción creadas por el usuario. */
     private val _playlists = MutableStateFlow<List<Playlist>>(emptyList())
     val playlists: StateFlow<List<Playlist>> = _playlists.asStateFlow()
+
+    private val _appStyle = MutableStateFlow(
+        runCatching {
+            AppStyle.valueOf(prefs.getString("app_style", null) ?: "")
+        }.getOrDefault(AppStyle.MATERIAL_3)
+    )
+
+    val  appStyle: StateFlow<AppStyle> = _appStyle.asStateFlow()
+
+    fun setAppStyle(style: AppStyle){
+        _appStyle.value = style
+        prefs.edit().putString("app_style", style.name).apply()
+    }
 
     /**
      * Canciones visibles en la pestaña "Canciones". Combina tres fuentes:
