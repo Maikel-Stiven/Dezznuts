@@ -2,10 +2,10 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versionado semántico.
 
-## [Sin publicar]
+## [1.2.0] - 2026-10-25
 
 ### Novedades
-- **Unificación de interfaces** (rama `unificacion-interfaces`): se integra lo de la rama `temas/interfaces` de Maikel.
+- **Unificación de interfaces** (rama `temas/interfaces` de Maikel).
   - **Color de acento a medida** sobre cualquier tema: colores rápidos y un selector con tono, intensidad y brillo.
   - **Selector de tema con vistas previas** en miniatura (barra, portada, lista y reproductor) en vez de círculos de color.
   - **Inicio de YouTube Music** en la pestaña YT: estados de ánimo y estantes (con tu cuenta es el personalizado);
@@ -23,6 +23,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
 - **Selección múltiple** en Canciones (pulsación larga): añadir a una lista, a la cola o eliminar de una vez.
 
 ### Correcciones
+- **Moods**: las canciones sin género (descargas de Snaptube y similares) entran por palabras del título, álbum y
+  carpeta y por el género de otras canciones del mismo artista; lo que no encaja va a «Otras».
+- La barra inferior cierra los detalles abiertos; en horizontal se vuelve a pestañas arriba; el menú de una canción de
+  YT ya no ofrece la cola local (no sonaba).
 - **Fotos de artista de otro artista**: se tomaba el primer resultado de Deezer sin comprobar el nombre («Aurora Vega»
   mostraba a «aurorawave»); ahora solo vale un resultado con el mismo nombre (la caché antigua se descarta).
 - Botones «Reproducir/Aleatorio» de álbum, artista, género y lista sin partirse en dos líneas; pestañas de la búsqueda
