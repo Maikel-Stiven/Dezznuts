@@ -63,6 +63,12 @@ import com.example.creproductor.data.YtTrack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/** ¿Hay margen para tener el WebView de Google cargado de antemano? No en equipos de poca RAM ni de ≤ 2 núcleos. */
+fun canPreloadWebView(context: Context): Boolean {
+    val am = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+    return !am.isLowRamDevice && am.memoryClass >= 256 && Runtime.getRuntime().availableProcessors() > 2
+}
+
 /** Estado compartido del inicio de sesión de YouTube Music: lo pide la pestaña YT y lo dibuja [YtLoginHost]. */
 object YtLogin {
     var open by mutableStateOf(false)
@@ -128,7 +134,7 @@ fun YtLoginHost() {
     val context = LocalContext.current
     val session = remember { YtLoginSession(context) { YtLogin.open = false; YtLogin.authVersion++ } }
     DisposableEffect(Unit) { onDispose { session.destroy() } }
-    LaunchedEffect(YtLogin.warm) { if (YtLogin.warm) session.ensure() }
+    LaunchedEffect(YtLogin.warm) { if (YtLogin.warm) session.ensure() else if (!YtLogin.open) session.destroy() }
     // Cerrar sin terminar no destruye la página: se conserva para reabrirla al instante.
     AnimatedVisibility(
         visible = YtLogin.open,

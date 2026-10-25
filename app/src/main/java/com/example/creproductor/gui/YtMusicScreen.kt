@@ -62,7 +62,11 @@ fun YtMusicScreen(onPlay: (YtTrack) -> Unit) {
     androidx.compose.runtime.LaunchedEffect(YtLogin.authVersion) {
         if (YtLogin.authVersion > 0) { loggedIn = YtLibrary.isLoggedIn(context); reload++ }
     }
-    androidx.compose.runtime.LaunchedEffect(loggedIn) { YtLogin.warm = !loggedIn }
+    // La página de Google se precarga (inicio de sesión al instante) solo en equipos con margen: un WebView cuesta
+    // ~65 MB de RAM, y en uno de 2 GB eso es lo que más pesa de toda la app. Al salir de la pestaña se suelta.
+    val preload = remember { com.example.creproductor.gui.canPreloadWebView(context) }
+    androidx.compose.runtime.LaunchedEffect(loggedIn) { YtLogin.warm = !loggedIn && preload }
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { YtLogin.warm = false } }
 
     var searching by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize()) {
