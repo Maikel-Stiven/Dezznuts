@@ -70,7 +70,7 @@ fun SongMenuSheet(
     var pickingPlaylist by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     val isCueTrack = song.cueStartMs >= 0
-    // Una canción de YouTube Music no es un archivo: nada de álbum local, etiquetas, cortador ni borrado.
+    // Una canción de YouTube Music no es un archivo: nada de álbum local, etiquetas, cortador, borrado ni cola (su dirección de audio se pide al abrirla).
     val isYt = song.isYoutube
 
     // Cada acción cierra el menú y luego ejecuta.
@@ -104,8 +104,8 @@ fun SongMenuSheet(
                     MenuRow(Icons.AutoMirrored.Filled.QueueMusic, p.name, { onDismiss(); actions.onAddToPlaylist(p.id) })
                 }
             } else {
-                MenuRow(Icons.Default.SkipNext, "Reproducir a continuación", run(actions.onPlayNext))
-                MenuRow(Icons.AutoMirrored.Filled.QueueMusic, "Agregar al final de la cola", run(actions.onAddToQueue))
+                if (!isYt) MenuRow(Icons.Default.SkipNext, "Reproducir a continuación", run(actions.onPlayNext))
+                if (!isYt) MenuRow(Icons.AutoMirrored.Filled.QueueMusic, "Agregar al final de la cola", run(actions.onAddToQueue))
                 if (!isYt) MenuRow(Icons.AutoMirrored.Filled.PlaylistAdd, "Agregar a una playlist", { pickingPlaylist = true })
                 if (!isYt) MenuRow(Icons.Default.Album, "Ir al álbum", run(actions.onGoToAlbum))
                 MenuRow(Icons.Default.Person, "Ir al artista", run(actions.onGoToArtist))

@@ -50,6 +50,16 @@ object NavSetting {
     }
 }
 
+/**
+ * Estilo que se usa de verdad: en pantallas bajas (teléfono en horizontal) la barra inferior más el mini-reproductor se
+ * comen media pantalla, así que se vuelve a pestañas arriba y menú lateral aunque se haya elegido la barra.
+ */
+@Composable
+fun rememberNavStyle(): NavStyle {
+    val height = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp
+    return if (NavSetting.style == NavStyle.BOTTOM && height >= 480) NavStyle.BOTTOM else NavStyle.TOP
+}
+
 /** Destinos de la barra inferior, en el orden de la interfaz de Maikel. */
 private enum class BottomDest(val title: String, val icon: ImageVector) {
     YT("YT Music", Icons.Default.PlayCircleOutline),
@@ -67,7 +77,7 @@ internal val LIBRARY_TABS = AppTab.entries.filter { it != AppTab.QUICK && it != 
  * Selección rápida, Biblioteca = el resto de pestañas locales), así no hay pantallas duplicadas.
  */
 @Composable
-fun AppBottomBar(section: AppSection, pagerState: PagerState, onSectionChange: (AppSection) -> Unit) {
+fun AppBottomBar(section: AppSection, pagerState: PagerState, onSectionChange: (AppSection) -> Unit, onNavigate: () -> Unit = {}) {
     val scope = rememberCoroutineScope()
     val page = AppTab.entries[pagerState.currentPage]
     val selected = when {
@@ -82,6 +92,7 @@ fun AppBottomBar(section: AppSection, pagerState: PagerState, onSectionChange: (
             NavigationBarItem(
                 selected = selected == d,
                 onClick = {
+                    onNavigate()
                     fun goTo(tab: AppTab) { onSectionChange(AppSection.HOME); scope.launch { pagerState.scrollToPage(AppTab.entries.indexOf(tab)) } }
                     when (d) {
                         BottomDest.YT -> goTo(AppTab.YT)

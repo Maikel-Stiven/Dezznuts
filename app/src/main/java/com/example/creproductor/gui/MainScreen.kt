@@ -93,15 +93,18 @@ fun MainScreen(
     onExportPlaylist: (Playlist) -> Unit = {},
     onEditSong: (Song) -> Unit = {},
     onDeleteSongs: (List<Song>) -> Unit = {},
+    /** Sube cada vez que se toca la barra inferior: cierra los detalles abiertos (álbum, artista…) para llegar a esa pantalla. */
+    navReset: Int = 0,
     pagerState: androidx.compose.foundation.pager.PagerState = rememberPagerState(initialPage = 0, pageCount = { AppTab.entries.size })
 ){
     val coroutineScope = rememberCoroutineScope ()
+    val navStyle = rememberNavStyle()
 
     val stack = remember { mutableStateListOf<Detail>() }
     fun open(detail: Detail) { stack.add(detail) }
     fun back() { stack.removeLastOrNull() }
     // Cambiar de sección desde la barra inferior cierra los detalles abiertos.
-    LaunchedEffect(section) { stack.clear() }
+    LaunchedEffect(section, navReset) { stack.clear() }
 
     var showCreatedPlaylistDialog by remember { mutableStateOf(false) }
     var showRestoreDialog by remember { mutableStateOf(false) }
@@ -282,7 +285,7 @@ fun MainScreen(
                 topBar = {
                     var showOverflow by remember { mutableStateOf(false) }
                     // Con la barra inferior todo vive en ella y en Ajustes: sin hamburguesa, lupa ni ⋮ arriba.
-                    val topNav = NavSetting.style == NavStyle.TOP
+                    val topNav = navStyle == NavStyle.TOP
                     // YT Music y Biblioteca ya traen su propia cabecera/pestañas: el logotipo solo va en Inicio.
                     if (topNav || AppTab.entries[pagerState.currentPage] == AppTab.QUICK) TopAppBar(
                         navigationIcon = {
@@ -317,7 +320,7 @@ fun MainScreen(
                 },
                 contentWindowInsets = WindowInsets(0)
             ) { innerPadding ->
-                val topBarShown = NavSetting.style == NavStyle.TOP || AppTab.entries[pagerState.currentPage] == AppTab.QUICK
+                val topBarShown = navStyle == NavStyle.TOP || AppTab.entries[pagerState.currentPage] == AppTab.QUICK
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -325,7 +328,7 @@ fun MainScreen(
                         .then(if (topBarShown) Modifier else Modifier.statusBarsPadding())
                 ) {
                     // Con la barra inferior, las pestañas de arriba son solo las de la biblioteca (y solo estando en ella).
-                    val bottomNav = NavSetting.style == NavStyle.BOTTOM
+                    val bottomNav = navStyle == NavStyle.BOTTOM
                     val tabs = if (bottomNav) LIBRARY_TABS else AppTab.entries
                     val currentTab = AppTab.entries[pagerState.currentPage]
                     if (!bottomNav || currentTab in LIBRARY_TABS) PrimaryScrollableTabRow(

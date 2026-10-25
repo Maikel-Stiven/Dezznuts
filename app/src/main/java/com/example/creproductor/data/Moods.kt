@@ -44,10 +44,12 @@ object Moods {
     }
 
     /** ¿Alguna palabra del texto casa con este mood? Las palabras cortas (≤ 4) deben ser enteras; las largas, por prefijo. */
-    fun matchesText(mood: Mood, text: String): Boolean {
-        val tokens = norm(text).split(Regex("[^a-z0-9]+")).filter { it.isNotEmpty() }
-        return mood.words.any { w -> tokens.any { t -> if (w.length <= 4) t == w else t.startsWith(w) } }
-    }
+    fun matchesText(mood: Mood, text: String) = matchesTokens(mood, tokensOf(text))
+
+    private val SPLIT = Regex("[^a-z0-9]+")
+    private fun tokensOf(text: String) = norm(text).split(SPLIT).filter { it.isNotEmpty() }
+    private fun matchesTokens(mood: Mood, tokens: List<String>) =
+        mood.words.any { w -> tokens.any { t -> if (w.length <= 4) t == w else t.startsWith(w) } }
 
     /**
      * Moods con sus canciones (en el orden de [Mood]; los vacíos se omiten y una canción puede estar en varios).
@@ -66,8 +68,10 @@ object Moods {
         for (item in items) {
             val own = genreOf(item)
             val genre = if (isKnownGenre(own)) own else artistGenre[norm(artistOf(item)).trim()].orEmpty()
-            val text = textOf(item)
-            val hits = Mood.entries.filter { it != Mood.OTHER && (matches(it, genre) || matchesText(it, text)) }
+            // Se normaliza una vez por canción (no una por mood): en bibliotecas de miles de canciones se nota.
+            val g = norm(genre)
+            val tokens = tokensOf(textOf(item))
+            val hits = Mood.entries.filter { m -> m != Mood.OTHER && ((g.isNotEmpty() && m.keywords.any { g.contains(norm(it)) }) || matchesTokens(m, tokens)) }
             if (hits.isEmpty()) result.getOrPut(Mood.OTHER) { mutableListOf() }.add(item)
             else hits.forEach { result.getOrPut(it) { mutableListOf() }.add(item) }
         }

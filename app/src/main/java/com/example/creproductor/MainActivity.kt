@@ -182,6 +182,7 @@ class MainActivity : ComponentActivity() {
                     }
                     var section by rememberSaveable { mutableStateOf(AppSection.HOME) }
                     var showOptionsScreen by remember { mutableStateOf(false) }
+                    var navReset by remember { mutableIntStateOf(0) }
                     val homePager = androidx.compose.foundation.pager.rememberPagerState(initialPage = 0, pageCount = { com.example.creproductor.gui.AppTab.entries.size })
                     var showStatsDialog by remember { mutableStateOf(false) }
                     // Copia de seguridad y M3U: el usuario elige el archivo con el selector del sistema (sin permisos extra).
@@ -200,6 +201,7 @@ class MainActivity : ComponentActivity() {
                         if (uri != null && p != null) viewModel.exportPlaylistM3u(p.id, uri)
                         playlistToExport = null
                     }
+                    val navStyle = com.example.creproductor.gui.rememberNavStyle()
                     fun runAction(action: AppAction) {
                         when (action) {
                             AppAction.Equalizer -> showEqualizerDialog = true
@@ -218,7 +220,7 @@ class MainActivity : ComponentActivity() {
                             AppAction.ClearImageCache -> showClearImageCacheDialog = true
                             AppAction.HiFiAudio -> showHiFiAudioDialog = true
                             AppAction.About -> showAboutDialog = true
-                            AppAction.Options -> if (com.example.creproductor.gui.NavSetting.style == com.example.creproductor.gui.NavStyle.BOTTOM) section = AppSection.SETTINGS else showOptionsScreen = true
+                            AppAction.Options -> if (navStyle == com.example.creproductor.gui.NavStyle.BOTTOM) section = AppSection.SETTINGS else showOptionsScreen = true
                             AppAction.Stats -> showStatsDialog = true
                             AppAction.SendFeedback -> {
                                 // Los comentarios van a los "issues" del repositorio.
@@ -297,6 +299,7 @@ class MainActivity : ComponentActivity() {
                                                     },
                                                     onExportPlaylist = { playlistToExport = it; saveM3u.launch("${it.name}.m3u8") },
                                                     pagerState = homePager,
+                                                    navReset = navReset,
                                                     versionName = versionName,
                                                     onAction = ::runAction
                                                 )
@@ -322,8 +325,8 @@ class MainActivity : ComponentActivity() {
                                             }
 
                                             // Interfaz de Maikel: barra inferior (opcional), bajo el mini-reproductor.
-                                            if (com.example.creproductor.gui.NavSetting.style == com.example.creproductor.gui.NavStyle.BOTTOM) {
-                                                com.example.creproductor.gui.AppBottomBar(section, homePager) { section = it }
+                                            if (com.example.creproductor.gui.rememberNavStyle() == com.example.creproductor.gui.NavStyle.BOTTOM) {
+                                                com.example.creproductor.gui.AppBottomBar(section, homePager, { section = it }, onNavigate = { navReset++ })
                                             }
 
                                         }
