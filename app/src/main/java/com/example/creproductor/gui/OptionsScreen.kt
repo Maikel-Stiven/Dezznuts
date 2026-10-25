@@ -100,6 +100,8 @@ fun OptionsScreen(versionName: String, onAction: (AppAction) -> Unit, onClose: (
                         Text(tr("Tema"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 16.dp))
                     }
                     ThemePicker()
+                    Text(tr("Navegación"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 18.dp, bottom = 8.dp))
+                    NavStylePicker()
                 }
             }
             item {

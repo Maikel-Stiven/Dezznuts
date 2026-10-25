@@ -22,6 +22,7 @@
     <string name="s_53d7dae386">Add to a playlist</string>
     <string name="s_b5fdd6ab36">Add to the end of the queue</string>
     <string name="s_962b3b7614">Add tracks</string>
+    <string name="s_9751f876e9">Settings</string>
     <string name="s_fc1bd603dc">At the end of the song</string>
     <string name="s_72637db2e5">When a song ends, the next recommended one plays</string>
     <string name="s_a7567a43eb">Shuffle</string>
@@ -58,6 +59,7 @@
     <string name="s_04976d7a46">You don\'t have favorite songs yet</string>
     <string name="s_72ddaf49d6">Band</string>
     <string name="s_c72dc64b3a">Bands, presets and per-output profiles</string>
+    <string name="s_083090cb46">Bottom bar</string>
     <string name="s_497ac5c11b">Library</string>
     <string name="s_954773cf25">White</string>
     <string name="s_f48076e5cc">Deleting…</string>
@@ -219,6 +221,7 @@
     <string name="s_6334d01118">Most played</string>
     <string name="s_a9c9f26a6e">Music you liked</string>
     <string name="s_2ac7694229">Orange</string>
+    <string name="s_60cb068581">Navigation</string>
     <string name="s_d43e9e8749">AMOLED black</string>
     <string name="s_816c52fd2b">No</string>
     <string name="s_540b823878">We couldn\'t find any music</string>
@@ -255,6 +258,7 @@
     <string name="s_39fc573771">Pause the music after a while</string>
     <string name="s_38ae1ac63e">Allow access</string>
     <string name="s_73866561c5">Custom</string>
+    <string name="s_6e87613b46">Tabs on top</string>
     <string name="s_4c0145d379">Cover</string>
     <string name="s_35fdf42a6f">Animated cover (online)</string>
     <string name="s_b0724582b4">Moving cover</string>

@@ -92,9 +92,9 @@ fun MainScreen(
     onAction: (AppAction) -> Unit,
     onExportPlaylist: (Playlist) -> Unit = {},
     onEditSong: (Song) -> Unit = {},
-    onDeleteSongs: (List<Song>) -> Unit = {}
+    onDeleteSongs: (List<Song>) -> Unit = {},
+    pagerState: androidx.compose.foundation.pager.PagerState = rememberPagerState(initialPage = 0, pageCount = { AppTab.entries.size })
 ){
-    val pagerState = rememberPagerState(initialPage = 0, pageCount = { AppTab.entries.size})
     val coroutineScope = rememberCoroutineScope ()
 
     val stack = remember { mutableStateListOf<Detail>() }
@@ -318,16 +318,20 @@ fun MainScreen(
                         .fillMaxSize()
                         .padding(innerPadding)
                 ) {
-                    PrimaryScrollableTabRow(
-                        selectedTabIndex = pagerState.currentPage,
+                    // Con la barra inferior, las pestañas de arriba son solo las de la biblioteca (y solo estando en ella).
+                    val bottomNav = NavSetting.style == NavStyle.BOTTOM
+                    val tabs = if (bottomNav) LIBRARY_TABS else AppTab.entries
+                    val currentTab = AppTab.entries[pagerState.currentPage]
+                    if (!bottomNav || currentTab in LIBRARY_TABS) PrimaryScrollableTabRow(
+                        selectedTabIndex = tabs.indexOf(currentTab).coerceAtLeast(0),
                         edgePadding = 16.dp,
                         containerColor = MaterialTheme.colorScheme.background,
                         contentColor = MaterialTheme.colorScheme.primary
                     ) {
-                        AppTab.entries.forEachIndexed { index, tab ->
+                        tabs.forEach { tab ->
                             Tab(
-                                selected = pagerState.currentPage == index,
-                                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+                                selected = currentTab == tab,
+                                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(AppTab.entries.indexOf(tab)) } },
                                 selectedContentColor = MaterialTheme.colorScheme.onSurface,
                                 unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                 text = { Text(tr(tab.title), style = MaterialTheme.typography.titleSmall) }

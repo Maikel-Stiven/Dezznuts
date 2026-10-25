@@ -23,6 +23,7 @@
     <string name="s_53d7dae386">Agregar a una playlist</string>
     <string name="s_b5fdd6ab36">Agregar al final de la cola</string>
     <string name="s_962b3b7614">Agregar pistas</string>
+    <string name="s_9751f876e9">Ajustes</string>
     <string name="s_fc1bd603dc">Al terminar la canción</string>
     <string name="s_72637db2e5">Al terminar una canción pasa a la siguiente recomendada</string>
     <string name="s_a7567a43eb">Aleatorio</string>
@@ -59,6 +60,7 @@
     <string name="s_04976d7a46">Aún no tienes canciones favoritas</string>
     <string name="s_72ddaf49d6">Banda</string>
     <string name="s_c72dc64b3a">Bandas, presets y perfiles por salida</string>
+    <string name="s_083090cb46">Barra abajo</string>
     <string name="s_497ac5c11b">Biblioteca</string>
     <string name="s_954773cf25">Blanco</string>
     <string name="s_f48076e5cc">Borrando…</string>
@@ -220,6 +222,7 @@
     <string name="s_6334d01118">Más reproducidas</string>
     <string name="s_a9c9f26a6e">Música que te gustó</string>
     <string name="s_2ac7694229">Naranja</string>
+    <string name="s_60cb068581">Navegación</string>
     <string name="s_d43e9e8749">Negro AMOLED</string>
     <string name="s_816c52fd2b">No</string>
     <string name="s_540b823878">No encontramos música</string>
@@ -256,6 +259,7 @@
     <string name="s_39fc573771">Pausar la música pasado un tiempo</string>
     <string name="s_38ae1ac63e">Permitir acceso</string>
     <string name="s_73866561c5">Personalizado</string>
+    <string name="s_6e87613b46">Pestañas arriba</string>
     <string name="s_4c0145d379">Portada</string>
     <string name="s_35fdf42a6f">Portada animada (en línea)</string>
     <string name="s_b0724582b4">Portada con movimiento</string>

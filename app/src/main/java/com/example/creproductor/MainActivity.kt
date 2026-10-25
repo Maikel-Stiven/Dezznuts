@@ -140,6 +140,7 @@ class MainActivity : ComponentActivity() {
         Coil.setImageLoader (imageLoader)
 
         com.example.creproductor.ui.theme.ThemeSetting.load(this)
+        com.example.creproductor.gui.NavSetting.load(this)
         setContent {
             DEZZNUTStheme {
                 Surface(
@@ -209,6 +210,7 @@ class MainActivity : ComponentActivity() {
                     }
                     var section by rememberSaveable { mutableStateOf(AppSection.HOME) }
                     var showOptionsScreen by remember { mutableStateOf(false) }
+                    val homePager = androidx.compose.foundation.pager.rememberPagerState(initialPage = 0, pageCount = { com.example.creproductor.gui.AppTab.entries.size })
                     var showStatsDialog by remember { mutableStateOf(false) }
                     // Copia de seguridad y M3U: el usuario elige el archivo con el selector del sistema (sin permisos extra).
                     val saveBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
@@ -322,6 +324,7 @@ class MainActivity : ComponentActivity() {
                                                         } else list.forEach(viewModel::deleteSongLegacy)
                                                     },
                                                     onExportPlaylist = { playlistToExport = it; saveM3u.launch("${it.name}.m3u8") },
+                                                    pagerState = homePager,
                                                     versionName = versionName,
                                                     onAction = ::runAction
                                                 )
@@ -344,6 +347,11 @@ class MainActivity : ComponentActivity() {
                                                         )
                                                     }
                                                 }
+                                            }
+
+                                            // Interfaz de Maikel: barra inferior (opcional), bajo el mini-reproductor.
+                                            if (com.example.creproductor.gui.NavSetting.style == com.example.creproductor.gui.NavStyle.BOTTOM) {
+                                                com.example.creproductor.gui.AppBottomBar(section, homePager, { section = it }, onOpenOptions = { showOptionsScreen = true })
                                             }
 
                                         }

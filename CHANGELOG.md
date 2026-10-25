@@ -10,6 +10,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
   - **Selector de tema con vistas previas** en miniatura (barra, portada, lista y reproductor) en vez de círculos de color.
   - **Inicio de YouTube Music** en la pestaña YT: estados de ánimo y estantes (con tu cuenta es el personalizado);
     los álbumes y listas se abren en una hoja con sus canciones. Mismo cliente InnerTube que los «Me gusta».
+- **Barra de navegación a elegir** (Opciones → Apariencia → Navegación): pestañas arriba (maqueta, por defecto) o la
+  barra inferior de Maikel (YT Music · Biblioteca · Inicio · Buscar · Ajustes), colocada bajo el mini-reproductor. Con
+  la barra abajo, las pestañas de arriba son solo las de la biblioteca.
 - **Selección múltiple** en Canciones (pulsación larga): añadir a una lista, a la cola o eliminar de una vez.
 
 ### Correcciones
