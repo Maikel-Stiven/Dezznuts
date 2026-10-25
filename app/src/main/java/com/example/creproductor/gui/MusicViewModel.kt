@@ -58,6 +58,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import androidx.core.content.edit
 import androidx.annotation.OptIn
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.media3.common.util.UnstableApi
 import com.example.creproductor.data.Playlist
 import com.example.creproductor.data.PlaylistSerializer
@@ -65,6 +67,7 @@ import com.example.creproductor.data.RepeatMode
 import com.example.creproductor.data.SongOrganizer
 import com.example.creproductor.data.next
 import com.example.creproductor.service.PlaybackDiagnostics
+import com.example.creproductor.ui.theme.AppAccentPreset
 import com.example.creproductor.ui.theme.AppStyle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -216,6 +219,40 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     fun setAppStyle(style: AppStyle){
         _appStyle.value = style
         prefs.edit().putString("app_style", style.name).apply()
+    }
+
+    private val _isAdaptiveAccent = MutableStateFlow(
+        prefs.getBoolean("is_adaptive_accent", true)
+    )
+    val isAdaptiveAccent: StateFlow<Boolean> = _isAdaptiveAccent.asStateFlow()
+
+    fun setAdaptiveAccent(enabled: Boolean){
+        _isAdaptiveAccent.value = enabled
+        prefs.edit().putBoolean("is_adaptive_accent", enabled).apply()
+    }
+
+    private val _accentPreset = MutableStateFlow(
+        runCatching {
+            AppAccentPreset.valueOf(prefs.getString("accent_preset", null)?: "")
+        }.getOrDefault(AppAccentPreset.DEFAULT)
+    )
+
+    val accentPreset: StateFlow<AppAccentPreset> = _accentPreset.asStateFlow()
+
+    fun setAccentPreset(preset: AppAccentPreset){
+        _accentPreset.value = preset
+        prefs.edit().putString("accent_preset", preset.name).apply()
+    }
+
+    private val _customAccentColor = MutableStateFlow(
+        Color(prefs.getInt("custom_accent_color", 0xFF85D667.toInt()))
+    )
+
+    val customAccentColor: StateFlow<Color> = _customAccentColor.asStateFlow()
+
+    fun setCustomAccentColor(color: Color){
+        _customAccentColor.value = color
+        prefs.edit().putInt("custom_accent_color", color.toArgb()).apply()
     }
 
     /**

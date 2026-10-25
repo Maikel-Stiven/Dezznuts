@@ -1,12 +1,14 @@
 package com.example.creproductor.ui.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -151,20 +153,61 @@ private val OmargeTypography = Typography(
     )
 )
 
+/** Genera variaciones adecuadas que encajan bien al aplicar un color primario personalizado*/
+private fun ColorScheme.applyAccent(accent: Color): ColorScheme{
+    val argb = accent.toArgb()
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(argb, hsv)
+
+    val containerHsv = floatArrayOf(
+        hsv[0],
+        (hsv[1] * 0.7f).coerceIn(0.2f, 0.85f),
+        (hsv[2] * 0.3f).coerceIn(0.12f, 0.35f)
+    )
+
+    val containerColor = Color(android.graphics.Color.HSVToColor(containerHsv))
+    val onContainerHsv = floatArrayOf(hsv[0], (hsv[1] * 0.3f), 0.95f)
+    val onContainerColor = Color(android.graphics.Color.HSVToColor(onContainerHsv))
+
+    return this.copy(
+        primary = accent,
+        primaryContainer = containerColor,
+        onPrimaryContainer = onContainerColor,
+        secondary = accent,
+        secondaryContainer = containerColor,
+        onSecondaryContainer = onContainerColor
+    )
+
+}
+
 @Composable
 fun DEZZNUTStheme(
     appStyle: AppStyle = AppStyle.MATERIAL_3,
+    accentPreset: AppAccentPreset = AppAccentPreset.DEFAULT,
+    customAccentColor: Color? = null,
     content: @Composable () -> Unit
 ){
 
-    val (colorScheme, shapes, typography) = when (appStyle){
+    val (baseColors, shapes, typography) = when (appStyle){
         AppStyle.MATERIAL_3 -> Triple(DezzColors, DezzShapes, Typography)
         AppStyle.OMARGE -> Triple(OmargeColors, OmargeShapes, OmargeTypography)
         AppStyle.OLED_DARK -> Triple(OledColors, DezzShapes, Typography)
     }
 
+    val targetAccent = when (accentPreset){
+        AppAccentPreset.DEFAULT -> baseColors.primary
+        AppAccentPreset.CUSTOM -> customAccentColor ?: baseColors.primary
+        else -> accentPreset.defaultColor ?: baseColors.primary
+    }
+
+    val finalColors = if (targetAccent == baseColors.primary){
+        baseColors
+    }else{
+        baseColors.applyAccent(targetAccent)
+    }
+
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = finalColors,
         typography = typography,
         shapes = shapes,
         content = content

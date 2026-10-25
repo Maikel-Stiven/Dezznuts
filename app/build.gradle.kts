@@ -76,4 +76,7 @@ dependencies {
     implementation("net.jthink:jaudiotagger:3.0.1")
     //
 
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+
 }

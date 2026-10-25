@@ -84,6 +84,8 @@ import com.example.creproductor.ui.theme.DEZZNUTStheme
 import kotlinx.coroutines.launch
 import coil.Coil
 import com.example.creproductor.gui.PlayingEqualizerIcon
+import com.example.creproductor.gui.ThemeDialog
+import com.example.creproductor.ui.theme.AppAccentPreset
 
 
 private const val FEEDBACK_URL = "https://github.com/Maikel-Stiven/Dezznuts/issues/new"
@@ -133,8 +135,14 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val appStyle by viewModel.appStyle.collectAsStateWithLifecycle()
-
-            DEZZNUTStheme(appStyle = appStyle) {
+            val isAdaptiveAccent by viewModel.isAdaptiveAccent.collectAsStateWithLifecycle()
+            val accentPreset by viewModel.accentPreset.collectAsStateWithLifecycle()
+            val customAccentColor by viewModel.customAccentColor.collectAsStateWithLifecycle()
+            DEZZNUTStheme(
+                appStyle = appStyle,
+                accentPreset = accentPreset,
+                customAccentColor = customAccentColor
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -349,30 +357,55 @@ class MainActivity : ComponentActivity() {
                                             // únicamente la barra de progreso, así el resto del reproductor no se recompone cada 500 ms.
                                             val currentPositionMs by viewModel.currentPositionMs.collectAsStateWithLifecycle()
 
-                                            CoverAccentTheme(playingSong) {
-                                            FullScreenPlayer(
-                                                song = playingSong,
-                                                songs = activeSongsQueue,
-                                                isPlaying = isPlaying,
-                                                currentPositionMs = { currentPositionMs },
-                                                repeatMode = repeatMode,
-                                                isShuffleEnabled = isShuffleEnabled,
-                                                audioInfo = audioInfo,
-                                                onOpenEqualizer = { showEqualizerDialog = true },
-                                                onEditSong = editSong,
-                                                onToggleShuffle = { viewModel.toggleShuffle() },
-                                                onTogglePlayPause = { viewModel.togglePlayPause() },
-                                                onNextClick = { viewModel.playNext() },
-                                                onPreviousClick = { viewModel.playPrevious() },
-                                                onSeekTo = { pos -> viewModel.seekTo(pos)},
-                                                onSongSelected = {song -> viewModel.playSong(song, customQueue = activeSongsQueue)},
-                                                onToggleRepeatMode = {viewModel.toggleRepeatMode()},
-                                                onRemoveQueue = {song -> viewModel.removeFromQueue(song)},
-                                                onMoveQueueItem = { from, to -> viewModel.moveQueueItem(from, to) },
-                                                onDismiss = { isPlayerFullScreenVisible = false },
-                                                onToggleFavorite = { song -> viewModel.toggleFavorite(song) }
-                                            )
-                                            }
+                                           if (isAdaptiveAccent){
+                                               CoverAccentTheme(playingSong) {
+                                                   FullScreenPlayer(
+                                                       song = playingSong,
+                                                       songs = activeSongsQueue,
+                                                       isPlaying = isPlaying,
+                                                       currentPositionMs = { currentPositionMs },
+                                                       repeatMode = repeatMode,
+                                                       isShuffleEnabled = isShuffleEnabled,
+                                                       audioInfo = audioInfo,
+                                                       onOpenEqualizer = { showEqualizerDialog = true },
+                                                       onEditSong = editSong,
+                                                       onToggleShuffle = { viewModel.toggleShuffle() },
+                                                       onTogglePlayPause = { viewModel.togglePlayPause() },
+                                                       onNextClick = { viewModel.playNext() },
+                                                       onPreviousClick = { viewModel.playPrevious() },
+                                                       onSeekTo = { pos -> viewModel.seekTo(pos)},
+                                                       onSongSelected = {song -> viewModel.playSong(song, customQueue = activeSongsQueue)},
+                                                       onToggleRepeatMode = {viewModel.toggleRepeatMode()},
+                                                       onRemoveQueue = {song -> viewModel.removeFromQueue(song)},
+                                                       onMoveQueueItem = { from, to -> viewModel.moveQueueItem(from, to) },
+                                                       onDismiss = { isPlayerFullScreenVisible = false },
+                                                       onToggleFavorite = { song -> viewModel.toggleFavorite(song) }
+                                                   )
+                                               }
+                                           }else{
+                                               FullScreenPlayer(
+                                                   song = playingSong,
+                                                   songs = activeSongsQueue,
+                                                   isPlaying = isPlaying,
+                                                   currentPositionMs = { currentPositionMs },
+                                                   repeatMode = repeatMode,
+                                                   isShuffleEnabled = isShuffleEnabled,
+                                                   audioInfo = audioInfo,
+                                                   onOpenEqualizer = { showEqualizerDialog = true },
+                                                   onEditSong = editSong,
+                                                   onToggleShuffle = { viewModel.toggleShuffle() },
+                                                   onTogglePlayPause = { viewModel.togglePlayPause() },
+                                                   onNextClick = { viewModel.playNext() },
+                                                   onPreviousClick = { viewModel.playPrevious() },
+                                                   onSeekTo = { pos -> viewModel.seekTo(pos)},
+                                                   onSongSelected = {song -> viewModel.playSong(song, customQueue = activeSongsQueue)},
+                                                   onToggleRepeatMode = {viewModel.toggleRepeatMode()},
+                                                   onRemoveQueue = {song -> viewModel.removeFromQueue(song)},
+                                                   onMoveQueueItem = { from, to -> viewModel.moveQueueItem(from, to) },
+                                                   onDismiss = { isPlayerFullScreenVisible = false },
+                                                   onToggleFavorite = { song -> viewModel.toggleFavorite(song) }
+                                               )
+                                           }
                                         }
                                     }
                             }
@@ -436,51 +469,16 @@ class MainActivity : ComponentActivity() {
                         }
 
                         if (showThemeDialog){
-                            AlertDialog(
-                                onDismissRequest = {showThemeDialog = false},
-                                title = {Text("Seleccionar tema visual")},
-                                text = {
-                                    Column {
-                                        AppStyle.entries.forEach { style ->
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .clickable{
-                                                        viewModel.setAppStyle(style)
-                                                        showThemeDialog = false
-                                                    }
-                                                    .padding(vertical = 12.dp),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                RadioButton(
-                                                    selected = (style == appStyle),
-                                                    onClick = {
-                                                        viewModel.setAppStyle(style)
-                                                        showThemeDialog = false
-                                                    }
-                                                )
-                                                Spacer(modifier = Modifier.width(8.dp))
-                                                Column{
-                                                    Text(
-                                                        text = style.label,
-                                                        style = MaterialTheme.typography.bodyLarge,
-                                                        fontWeight = FontWeight.Medium
-                                                    )
-                                                    Text(
-                                                        text = style.description,
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                },
-                                confirmButton = {
-                                    TextButton(onClick = {showThemeDialog = false}) {
-                                        Text("Cancelar")
-                                    }
-                                }
+                            ThemeDialog (
+                                currentStyle = appStyle,
+                                isAdaptiveAccent = isAdaptiveAccent,
+                                currentPreset = accentPreset,
+                                customAccentColor = customAccentColor,
+                                onStyleSelected = { viewModel.setAppStyle(it) },
+                                onAdaptiveAccentToggled = { viewModel.setAdaptiveAccent(it) },
+                                onAccentPresetSelected = { viewModel.setAccentPreset(it) },
+                                onCustomAccentColorPicked = { viewModel.setCustomAccentColor(it) },
+                                onDismiss = { showThemeDialog = false }
                             )
                         }
 

@@ -49,14 +49,19 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.mutableStateListOf
 
 /** Secciones de la barra inferior. */
 enum class AppSection(val title: String, val icon: ImageVector) {
-    HOME("Inicio", Icons.Default.Home),
+
+    YT_MUSIC("Yt music", Icons.Default.PlayCircleOutline),
+
     LIBRARY("Biblioteca", Icons.Default.LibraryMusic),
+
+    HOME("Inicio", Icons.Default.Home),
     SEARCH("Buscar", Icons.Default.Search),
     SETTINGS("Ajustes", Icons.Default.Settings)
 }
@@ -237,25 +242,12 @@ fun MainScreen(
             )
         }
         null -> when (section) {
-            AppSection.HOME -> Scaffold(
-                topBar = {
-                    TopAppBar(
-                        title = { Text("DEZZNUTS", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold) },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
-                    )
-                },
-                // La barra inferior ya reserva el espacio de la barra de gestos.
-                contentWindowInsets = WindowInsets(0)
-            ) { innerPadding ->
-                Box(Modifier.padding(innerPadding)) {
-                    QuickSelectionScreen(
-                        viewModel = viewModel,
-                        onSongClick = { song, queue -> viewModel.playSong(song, customQueue = queue)},
-                        onSeeAllCategoryClick = {type, categorySongs -> open(Detail.Category(type.title, categorySongs)) },
-                        onMoodClick = { mood, moodSongs -> open(Detail.Category(mood.label, moodSongs)) }
-                    )
-                }
-            }
+
+            AppSection.YT_MUSIC -> YtMusicScreen (
+                onOpenSearch = { },
+                onLoginClick = { },
+                onTrackClick = { }
+            )
             AppSection.SEARCH -> SearchOverlayScreen(
                 onEditSong = onEditSong,
                 searchQuery = searchQuery,
@@ -278,6 +270,27 @@ fun MainScreen(
                     onSectionChange(AppSection.HOME)
                 }
             )
+
+            AppSection.HOME -> Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = { Text("DEZZNUTS", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold) },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+                    )
+                },
+                // La barra inferior ya reserva el espacio de la barra de gestos.
+                contentWindowInsets = WindowInsets(0)
+            ) { innerPadding ->
+                Box(Modifier.padding(innerPadding)) {
+                    QuickSelectionScreen(
+                        viewModel = viewModel,
+                        onSongClick = { song, queue -> viewModel.playSong(song, customQueue = queue)},
+                        onSeeAllCategoryClick = {type, categorySongs -> open(Detail.Category(type.title, categorySongs)) },
+                        onMoodClick = { mood, moodSongs -> open(Detail.Category(mood.label, moodSongs)) }
+                    )
+                }
+            }
+
             AppSection.SETTINGS -> settingsContent()
             AppSection.LIBRARY -> Scaffold(
                 topBar = {
