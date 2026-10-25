@@ -47,6 +47,7 @@ import com.example.creproductor.data.Playlist
 import com.example.creproductor.data.Song
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
@@ -282,7 +283,8 @@ fun MainScreen(
                     var showOverflow by remember { mutableStateOf(false) }
                     // Con la barra inferior todo vive en ella y en Ajustes: sin hamburguesa, lupa ni ⋮ arriba.
                     val topNav = NavSetting.style == NavStyle.TOP
-                    TopAppBar(
+                    // YT Music y Biblioteca ya traen su propia cabecera/pestañas: el logotipo solo va en Inicio.
+                    if (topNav || AppTab.entries[pagerState.currentPage] == AppTab.QUICK) TopAppBar(
                         navigationIcon = {
                             if (topNav) IconButton(onClick = { coroutineScope.launch { drawerState.open() } }) {
                                 Icon(Icons.Default.Menu, contentDescription = tr("Abrir menú"))
@@ -315,10 +317,12 @@ fun MainScreen(
                 },
                 contentWindowInsets = WindowInsets(0)
             ) { innerPadding ->
+                val topBarShown = NavSetting.style == NavStyle.TOP || AppTab.entries[pagerState.currentPage] == AppTab.QUICK
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
+                        .then(if (topBarShown) Modifier else Modifier.statusBarsPadding())
                 ) {
                     // Con la barra inferior, las pestañas de arriba son solo las de la biblioteca (y solo estando en ella).
                     val bottomNav = NavSetting.style == NavStyle.BOTTOM
@@ -393,6 +397,7 @@ fun MainScreen(
                                      onEditSong = onEditSong,
                                      onAddToPlaylist = { id, list -> viewModel.addSongsToPlaylist(id, list.map { it.id }) },
                                      onAddToQueue = { list -> list.forEach(viewModel::addToQueue) },
+                                     onNewPlaylist = { showCreatedPlaylistDialog = true },
                                      onDeleteSongs = onDeleteSongs
                                  )
                              }

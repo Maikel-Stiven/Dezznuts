@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.SelectAll
@@ -45,17 +46,19 @@ fun SongListScreen(
     onEditSong: (Song) -> Unit,
     onAddToPlaylist: (playlistId: String, songs: List<Song>) -> Unit = { _, _ -> },
     onAddToQueue: (List<Song>) -> Unit = {},
+    onNewPlaylist: () -> Unit = {},
     onDeleteSongs: (List<Song>) -> Unit = {}
 ) {
     // Por id: si la biblioteca se recarga o el filtro cambia, la selección se conserva sin referirse a objetos viejos.
     val selected = remember { mutableStateListOf<Long>() }
     val inSelection = selected.isNotEmpty()
     var confirmDelete by remember { mutableStateOf(false) }
+    val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
     androidx.activity.compose.BackHandler(enabled = inSelection) { selected.clear() }
     fun chosen() = songs.filter { it.id in selected }
 
     Column(Modifier.fillMaxSize()) {
-        if (inSelection) {
+        androidx.compose.animation.AnimatedVisibility(visible = inSelection) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { selected.clear() }) { Icon(Icons.Default.Close, contentDescription = tr("Cerrar")) }
                 Text(
@@ -72,6 +75,11 @@ fun SongListScreen(
                         DropdownMenuItem(
                             text = { Text(tr("Añadir a la cola")) },
                             onClick = { menu = false; onAddToQueue(chosen()); selected.clear() }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(tr("Nueva lista")) },
+                            leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
+                            onClick = { menu = false; onNewPlaylist() }
                         )
                         playlists.forEach { pl ->
                             DropdownMenuItem(
@@ -101,7 +109,10 @@ fun SongListScreen(
                     onClick = {
                         if (inSelection) { if (!selected.remove(song.id)) selected.add(song.id) } else onSongClick(song)
                     },
-                    onLongClick = { if (!selected.remove(song.id)) selected.add(song.id) },
+                    onLongClick = {
+                        haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                        if (!selected.remove(song.id)) selected.add(song.id)
+                    },
                     onEditClick = { onEditSong(song) }
                 )
             }

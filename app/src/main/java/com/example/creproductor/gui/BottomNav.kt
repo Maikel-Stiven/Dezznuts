@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import com.example.creproductor.i18n.tr
 import kotlinx.coroutines.launch
@@ -91,7 +92,7 @@ fun AppBottomBar(section: AppSection, pagerState: PagerState, onSectionChange: (
                     }
                 },
                 icon = { Icon(d.icon, contentDescription = null) },
-                label = { Text(tr(d.title), maxLines = 1, style = MaterialTheme.typography.labelSmall) },
+                label = { Text(tr(d.title), maxLines = 1, style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp), softWrap = false) },
                 alwaysShowLabel = true
             )
         }
