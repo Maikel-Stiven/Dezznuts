@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -16,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -119,6 +121,25 @@ internal fun YtHomeContent(
                 }
             }
             else -> {
+                // Accesos directos (orden de la pantalla de Maikel): "Me gusta" y las primeras canciones del inicio.
+                val quick = feed.shelves.firstOrNull()?.items?.mapNotNull { it.track }.orEmpty()
+                if (quick.isNotEmpty()) item {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(tr("Accesos directos"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        Button(onClick = { onPlay(quick.first()) }, contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)) { Text(tr("Reproducir todo")) }
+                    }
+                    Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val likedLabel = tr("Música que te gustó")
+                        val cells = listOf(Triple(likedLabel, null as String?, { if (loggedIn) showLiked = true else onLogin() })) +
+                            quick.take(5).map { t -> Triple(t.title, t.thumbnail, { onPlay(t) }) }
+                        cells.chunked(3).forEach { row ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                row.forEach { (title, thumb, act) -> ShortcutTile(Modifier.weight(1f), title, thumb, act) }
+                                repeat(3 - row.size) { Box(Modifier.weight(1f)) }
+                            }
+                        }
+                    }
+                }
                 items(feed.shelves, key = { it.title }) { shelf ->
                     Text(shelf.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp))
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -167,5 +188,17 @@ private fun YtItemCard(item: YtItem, onClick: () -> Unit) {
         )
         Text(item.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
         if (item.subtitle.isNotBlank()) Text(item.subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** Atajo cuadrado del inicio: portada (o el pulgar de "Me gusta") y título. */
+@Composable
+private fun ShortcutTile(modifier: Modifier, title: String, thumbnail: String?, onClick: () -> Unit) {
+    Surface(modifier.height(124.dp).clip(MaterialTheme.shapes.medium).clickable(onClick = onClick), color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.medium) {
+        Column(Modifier.padding(8.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            if (thumbnail != null) AsyncImage(thumbnail, null, contentScale = ContentScale.Crop, modifier = Modifier.size(56.dp).clip(MaterialTheme.shapes.small))
+            else androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.ThumbUp, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(56.dp).padding(12.dp))
+            Text(title, style = MaterialTheme.typography.labelMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+        }
     }
 }

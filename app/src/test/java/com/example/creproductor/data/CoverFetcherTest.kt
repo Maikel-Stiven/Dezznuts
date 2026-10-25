@@ -21,4 +21,7 @@ class CoverFetcherTest {
     fun `con artista desconocido solo compara el titulo`() {
         assertTrue(CoverFetcher.isSameSong("Loser", "<Artista desconocido>", "Loser", "Beck"))
     }
+
+    @Test fun ignoraAcentosEnElArtista() =
+        org.junit.Assert.assertTrue(CoverFetcher.isSameSong("Todo Lo Fue", "Lenin Ramirez", "Todo Lo Fue", "Lenin Ramírez"))
 }

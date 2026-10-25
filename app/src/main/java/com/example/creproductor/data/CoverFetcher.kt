@@ -21,7 +21,8 @@ data class RemoteMetaDataResult(
 
 object CoverFetcher {
 
-    private fun norm(s: String) = s.lowercase().filter { it.isLetterOrDigit() }
+    /** Sin mayúsculas, acentos ni signos: «Ramírez» y «Ramirez» son el mismo artista para iTunes y para YouTube. */
+    private fun norm(s: String) = java.text.Normalizer.normalize(s.lowercase(), java.text.Normalizer.Form.NFD).filter { it.isLetterOrDigit() }
 
     /**
      * ¿El resultado remoto es la misma canción? Evita sobrescribir las etiquetas con el primer

@@ -32,9 +32,12 @@ object AnimatedCover {
     private const val TTL_MS = 7L * 24 * 3600 * 1000
 
     /** La lista HLS (se adapta a la conexión y se limita a 720p al reproducir) o `null` si el álbum no tiene bucle. */
-    fun parse(json: String): String? = runCatching {
+    fun parse(json: String, title: String? = null, artist: String? = null): String? = runCatching {
         val o = JSONObject(json)
-        if (o.has("error")) null else o.optString("animated").takeIf { it.startsWith("https://") }
+        // El servicio a veces devuelve OTRA canción con el mismo título (otro artista): ese bucle no es de esta portada.
+        val sameSong = title == null || artist == null || !o.has("name") ||
+            CoverFetcher.isSameSong(title, artist, o.optString("name"), o.optString("artist"))
+        if (o.has("error") || !sameSong) null else o.optString("animated").takeIf { it.startsWith("https://") }
     }.getOrNull()
 
     private fun key(song: Song) = "${song.artist.trim().lowercase()}|${song.album.trim().lowercase()}"
@@ -85,7 +88,7 @@ object AnimatedCover {
             if (c.responseCode != 200) throw IOException("HTTP ${c.responseCode}")
             c.inputStream.bufferedReader().use { it.readText() }
         } finally { c.disconnect() }
-        return parse(body)
+        return parse(body, song.title, song.artist)
     }
 
     /**

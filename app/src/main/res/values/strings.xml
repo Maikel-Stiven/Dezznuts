@@ -12,6 +12,7 @@
     <string name="s_aed4e116f3">45 minutos</string>
     <string name="s_ef544be6cf">ALEATORIO</string>
     <string name="s_256a5c2ab3">Abrir menú</string>
+    <string name="s_a5fc234826">Accesos directos</string>
     <string name="s_8669f0380c">Acerca de</string>
     <string name="s_10a0f5b1f9">Activar YouTube Music</string>
     <string name="s_3a9cab04c1">Activar aleatorio</string>
@@ -217,6 +218,7 @@
     <string name="s_e4f75d5280">Más</string>
     <string name="s_977c75651c">Más opciones</string>
     <string name="s_6334d01118">Más reproducidas</string>
+    <string name="s_a9c9f26a6e">Música que te gustó</string>
     <string name="s_2ac7694229">Naranja</string>
     <string name="s_d43e9e8749">Negro AMOLED</string>
     <string name="s_816c52fd2b">No</string>
@@ -281,6 +283,7 @@
     <string name="s_2d20e2c084">Reproduciendo</string>
     <string name="s_d1a18873dc">Reproducir</string>
     <string name="s_004cc27be9">Reproducir a continuación</string>
+    <string name="s_93abdfb1b3">Reproducir todo</string>
     <string name="s_593868e466">Reproductor de música local pensado para sonar bien y gastar poco, también en teléfonos modestos.</string>
     <string name="s_1d3af03665">Restablecer</string>
     <string name="s_f9cdc1b4a7">Restaurar</string>

@@ -11,6 +11,7 @@
     <string name="s_aed4e116f3">45 minutes</string>
     <string name="s_ef544be6cf">SHUFFLE</string>
     <string name="s_256a5c2ab3">Open menu</string>
+    <string name="s_a5fc234826">Shortcuts</string>
     <string name="s_8669f0380c">About</string>
     <string name="s_10a0f5b1f9">Turn on YouTube Music</string>
     <string name="s_3a9cab04c1">Turn shuffle on</string>
@@ -216,6 +217,7 @@
     <string name="s_e4f75d5280">More</string>
     <string name="s_977c75651c">More options</string>
     <string name="s_6334d01118">Most played</string>
+    <string name="s_a9c9f26a6e">Music you liked</string>
     <string name="s_2ac7694229">Orange</string>
     <string name="s_d43e9e8749">AMOLED black</string>
     <string name="s_816c52fd2b">No</string>
@@ -280,6 +282,7 @@
     <string name="s_2d20e2c084">Playing</string>
     <string name="s_d1a18873dc">Play</string>
     <string name="s_004cc27be9">Play next</string>
+    <string name="s_93abdfb1b3">Play all</string>
     <string name="s_593868e466">A local music player built to sound good and use little, even on modest phones.</string>
     <string name="s_1d3af03665">Reset</string>
     <string name="s_f9cdc1b4a7">Restore</string>

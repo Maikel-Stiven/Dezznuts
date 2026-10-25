@@ -16,6 +16,12 @@ class AnimatedCoverTest {
 
     @Test fun jsonRoto() = assertNull(AnimatedCover.parse("<html>"))
 
+    @Test fun descartaElBucleDeOtraCancionConElMismoTitulo() {
+        val json = """{"name":"Todo Lo Fue (Versión Estudio)","artist":"La Buena Racha","animated":"https://x/y.m3u8"}"""
+        assertNull(AnimatedCover.parse(json, "Todo Lo Fue", "Lenin Ramirez"))
+        assertEquals("https://x/y.m3u8", AnimatedCover.parse(json, "Todo Lo Fue", "La Buena Racha"))
+    }
+
     @Test fun noAceptaHttpPlano() = assertNull(AnimatedCover.parse("""{"animated":"http://x/y.m3u8"}"""))
 }
 
