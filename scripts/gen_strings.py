@@ -166,6 +166,12 @@ EN = {
 "Cuenta de YouTube Music": "YouTube Music account", "Sesión iniciada en este teléfono": "Signed in on this phone",
 "Sin sesión: inicia desde la pestaña YT Music": "Not signed in: do it from the YT Music tab",
 "1 canción": "1 song", "0 canciones": "0 songs", "1 álbum": "1 album",
+"Color de acento": "Accent color", "Del tema": "From the theme", "Morado": "Purple", "Azul": "Blue", "Turquesa": "Teal",
+"Verde": "Green", "Lima": "Lime", "Ámbar": "Amber", "Naranja": "Orange", "Rojo": "Red", "Rosa": "Pink", "Blanco": "White",
+"Color a medida": "Custom color", "Tono": "Hue", "Intensidad": "Saturation", "Brillo": "Brightness", "Aplicar": "Apply",
+"Seleccionar todo": "Select all", "Añadir a una lista": "Add to a list", "Añadir a la cola": "Add to queue",
+"Eliminar": "Delete", "Inicio": "Home", "Me gusta": "Likes", "Reintentar": "Retry", "No se pudo cargar.": "Couldn't load.",
+"Origen": "Source",
 }
 
 def key(es): return "s_" + hashlib.sha1(es.encode()).hexdigest()[:10]

@@ -102,6 +102,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.creproductor.data.RepeatMode
 import com.example.creproductor.data.Song
+import com.example.creproductor.data.isYoutube
 import java.util.concurrent.TimeUnit
 import kotlin.math.absoluteValue
 import kotlinx.coroutines.Dispatchers
@@ -372,7 +373,8 @@ fun FullScreenPlayer(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                IconButton(onClick = { onToggleFavorite(song) }) {
+                // Los favoritos son de la biblioteca local: una canción de YouTube Music no se puede guardar ahí.
+                if (!song.isYoutube) IconButton(onClick = { onToggleFavorite(song) }) {
                     Icon(
                         imageVector = if (song.isFavorite) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
                         contentDescription = tr(if (song.isFavorite) "Quitar de favoritos" else "Añadir a favoritos"),

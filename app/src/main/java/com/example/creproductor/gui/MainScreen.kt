@@ -91,7 +91,8 @@ fun MainScreen(
     versionName: String,
     onAction: (AppAction) -> Unit,
     onExportPlaylist: (Playlist) -> Unit = {},
-    onEditSong: (Song) -> Unit = {}
+    onEditSong: (Song) -> Unit = {},
+    onDeleteSongs: (List<Song>) -> Unit = {}
 ){
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { AppTab.entries.size})
     val coroutineScope = rememberCoroutineScope ()
@@ -103,7 +104,6 @@ fun MainScreen(
     LaunchedEffect(section) { stack.clear() }
 
     var showCreatedPlaylistDialog by remember { mutableStateOf(false) }
-    var showAddSongsDialog by remember { mutableStateOf(false) }
     var showRestoreDialog by remember { mutableStateOf(false) }
     var playlistForOptions by remember { mutableStateOf<Playlist?>(null) }
 
@@ -219,7 +219,7 @@ fun MainScreen(
                 onSongClick = {song -> viewModel.playSong(song, customQueue =  playlistSongs)},
                 onPlayAllClick = { playAll(playlistSongs) },
                 onShuffleClick = { shuffleAll(playlistSongs) },
-                onAddSongsClick = {showAddSongsDialog = true},
+                onAddSongsClick = { playlistForAddSongs = activePlaylist },
                 onRestoreClick = { showRestoreDialog = true },
                 recentSongs = recentSongs,
                 onBackClick = ::back,
@@ -382,8 +382,12 @@ fun MainScreen(
                                      songs = filteredSongs,
                                      currentSongId = currentSong?.id,
                                      isPlaying = isPlaying,
+                                     playlists = playlist,
                                      onSongClick = {song -> viewModel.playSong(song, customQueue = filteredSongs) },
-                                     onEditSong = onEditSong
+                                     onEditSong = onEditSong,
+                                     onAddToPlaylist = { id, list -> viewModel.addSongsToPlaylist(id, list.map { it.id }) },
+                                     onAddToQueue = { list -> list.forEach(viewModel::addToQueue) },
+                                     onDeleteSongs = onDeleteSongs
                                  )
                              }
                              AppTab.ALBUMS -> AlbumsGridScreen(

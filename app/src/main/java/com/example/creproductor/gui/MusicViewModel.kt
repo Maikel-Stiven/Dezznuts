@@ -49,6 +49,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.async
 import com.example.creproductor.data.isYoutube
+import com.example.creproductor.data.withoutBrokenTwins
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -700,7 +701,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     private fun publishSongs(songs: List<Song>){
         viewModelScope.launch(Dispatchers.Default) {
             val savedFavIds = getSavedFavoritesIds()
-            val updated = songs.map { song ->
+            val updated = songs.withoutBrokenTwins().map { song ->
                 if (savedFavIds.contains(song.id)) song.copy(isFavorite = true) else song
             }
             // Canciones que ya no están: fuera de la caché (las nuevas se resuelven en el precalentamiento).
@@ -728,7 +729,8 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                 .sortedByDescending { playCountMap[it.id] ?: 0 }
                 .take(30)
 
-            val updatedRecent = (listOf(song) + _recentPlayedSongs.value)
+            // YouTube Music es opcional: "Reproducción reciente" es solo de la biblioteca local.
+            val updatedRecent = (if (song.isYoutube) _recentPlayedSongs.value else listOf(song) + _recentPlayedSongs.value)
                 .distinctBy{it.id}
                 .take(30)
 
@@ -807,7 +809,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
 
     private fun ytSong(track: com.example.creproductor.data.YtTrack, meta: com.example.creproductor.data.RemoteMetaDataResult?) = Song(
         id = -(1L shl 62) - (track.url.hashCode().toLong() and 0xFFFFFFFFL),
-        title = track.title, artist = com.example.creproductor.data.YtMusic.cleanArtist(track.artist),
+        title = com.example.creproductor.data.YtMusic.cleanTitle(track.title, track.artist), artist = com.example.creproductor.data.YtMusic.cleanArtist(track.artist),
         album = meta?.album?.takeIf { it.isNotBlank() } ?: "YouTube Music",
         duration = track.durationSec * 1000, contentUri = Uri.parse(track.url),
         // La miniatura de YouTube es un fotograma de video (16:9, con bordes): la portada oficial es cuadrada y limpia.
@@ -815,7 +817,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     )
 
     private suspend fun ytMeta(track: com.example.creproductor.data.YtTrack) = kotlinx.coroutines.withTimeoutOrNull(2500) {
-        com.example.creproductor.data.CoverFetcher.fetchOfficialCover(track.title, com.example.creproductor.data.YtMusic.cleanArtist(track.artist))
+        com.example.creproductor.data.CoverFetcher.fetchOfficialCover(com.example.creproductor.data.YtMusic.cleanTitle(track.title, track.artist), com.example.creproductor.data.YtMusic.cleanArtist(track.artist))
     }
 
     private fun ytItem(song: Song, audioUrl: String) = MediaItem.Builder().setMediaId(song.id.toString()).setUri(audioUrl)
@@ -845,7 +847,8 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                     Toast.makeText(app, com.example.creproductor.i18n.I18n.tr(app, "No se pudo abrir la canción de YouTube Music"), Toast.LENGTH_SHORT).show()
                     return@launch
                 }
-            val song = ytSong(track, meta.await())
+            // Las tarjetas del inicio no traen duración: se toma la del audio ya abierto.
+            val song = ytSong(track.takeIf { it.durationSec > 0 } ?: track.copy(durationSec = resolved.durationSec), meta.await())
             val controller = mediaController ?: return@launch
             _currentQueue.value = listOf(song)
             _currentSong.value = song
@@ -867,7 +870,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
             } ?: return@launch
             ytPlayed += next.url
             val nextResolved = runCatching { withContext(Dispatchers.IO) { com.example.creproductor.data.YtMusic.resolve(next.url) } }.getOrNull() ?: return@launch
-            val song = ytSong(next, ytMeta(next))
+            val song = ytSong(next.takeIf { it.durationSec > 0 } ?: next.copy(durationSec = nextResolved.durationSec), ytMeta(next))
             val controller = mediaController ?: return@launch
             if (controller.currentMediaItem?.mediaId != current.id.toString()) return@launch
             if (controller.currentMediaItemIndex != controller.mediaItemCount - 1) return@launch

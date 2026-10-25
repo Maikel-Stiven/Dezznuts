@@ -34,7 +34,7 @@ import com.example.creproductor.data.YtTrack
 import com.example.creproductor.i18n.tr
 
 /**
- * Pestaña "YT Music": buscador y, con sesión iniciada, tus canciones con "Me gusta". Todo es opcional: mientras
+ * Pestaña "YT Music": buscador, el inicio de YouTube Music (estantes y estados de ánimo) y, con sesión, tus "Me gusta". Todo es opcional: mientras
  * YouTube Music esté apagado solo explica qué es y ofrece activarlo. La reproducción pasa por el mismo reproductor.
  */
 @Composable
@@ -74,34 +74,11 @@ fun YtMusicScreen(onPlay: (YtTrack) -> Unit) {
         )
         when {
             query.isNotBlank() -> YtMusicResults(query, onPlay)
-            loggedIn -> {
-                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(tr("Tus canciones con Me gusta"), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
-                    TextButton(onClick = { YtLibrary.logout(context); CookieManager.getInstance().removeAllCookies(null); loggedIn = false }) { Text(tr("Cerrar sesión")) }
-                }
-                YtLikedList(reload, onPlay)
-            }
-            else -> Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                androidx.compose.material3.Surface(
-                    shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text(tr("Tus Me gusta, a mano"), style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            tr("Inicia sesión para ver tus canciones con Me gusta. La sesión se guarda solo en este teléfono y puedes cerrarla cuando quieras."),
-                            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
-                        )
-                        Button(onClick = { YtLogin.open = true }) { Text(tr("Iniciar sesión")) }
-                    }
-                }
-                Text(
-                    tr("Busca una canción y, al terminar, seguirá sola con las recomendadas de YouTube."),
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
-            }
+            else -> YtHomeContent(
+                loggedIn = loggedIn, reload = reload, onPlay = onPlay,
+                onLogin = { YtLogin.open = true },
+                onLogout = { YtLibrary.logout(context); CookieManager.getInstance().removeAllCookies(null); loggedIn = false }
+            )
         }
     }
 }

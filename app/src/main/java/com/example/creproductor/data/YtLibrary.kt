@@ -41,10 +41,13 @@ object YtLibrary {
         return parse(browse("VLLM", cookie))
     }
 
-    private fun browse(browseId: String, cookie: String?): String {
+    /** Pide una página de InnerTube; [params] filtra el inicio (por ejemplo por estado de ánimo). Con [cookie] es personalizada. */
+    internal fun browse(browseId: String, cookie: String?, params: String? = null): String {
+        val lang = java.util.Locale.getDefault()
         val body = JSONObject()
-            .put("context", JSONObject().put("client", JSONObject().put("clientName", "WEB_REMIX").put("clientVersion", "1.20241023.01.00").put("hl", "es")))
-            .put("browseId", browseId).toString()
+            .put("context", JSONObject().put("client", JSONObject().put("clientName", "WEB_REMIX").put("clientVersion", "1.20241023.01.00")
+                .put("hl", lang.language.ifBlank { "es" }).apply { if (lang.country.isNotBlank()) put("gl", lang.country) }))
+            .put("browseId", browseId).apply { if (params != null) put("params", params) }.toString()
         val c = URL("$ORIGIN/youtubei/v1/browse?prettyPrint=false").openConnection() as HttpURLConnection
         try {
             c.connectTimeout = 10000; c.readTimeout = 15000
@@ -80,11 +83,11 @@ object YtLibrary {
         return out
     }
 
-    private fun runsText(column: JSONObject?): String =
+    internal fun runsText(column: JSONObject?): String =
         column?.optJSONObject("musicResponsiveListItemFlexColumnRenderer")?.optJSONObject("text")?.optJSONArray("runs")
             ?.let { r -> (0 until r.length()).joinToString("") { r.getJSONObject(it).optString("text") } }.orEmpty()
 
-    private fun toTrack(item: JSONObject): YtTrack? {
+    internal fun toTrack(item: JSONObject): YtTrack? {
         val videoId = item.optJSONObject("playlistItemData")?.optString("videoId")?.takeIf { it.isNotEmpty() } ?: return null
         val cols = item.optJSONArray("flexColumns") ?: return null
         val title = runsText(cols.optJSONObject(0)).ifBlank { return null }

@@ -10,3 +10,11 @@ class YtMusicTest {
         assertEquals("Los Cuervos del Sur", YtMusic.cleanArtist("Los Cuervos del Sur"))
     }
 }
+
+class YtMusicCleanTitleTest {
+    @org.junit.Test fun quitaElArtistaYElRuidoSoloSiElPrefijoEsElArtista() {
+        org.junit.Assert.assertEquals("Canción", YtMusic.cleanTitle("Banda - Canción (Official Video)", "Banda - Topic"))
+        org.junit.Assert.assertEquals("Remastered 2011 - Canción", YtMusic.cleanTitle("Remastered 2011 - Canción", "Banda"))
+        org.junit.Assert.assertEquals("Canción", YtMusic.cleanTitle("Canción (Official Video)", "Banda"))
+    }
+}

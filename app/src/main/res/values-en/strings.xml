@@ -31,6 +31,7 @@
     <string name="s_d97f1097b8">Previous</string>
     <string name="s_892a534334">Off · signal untouched</string>
     <string name="s_4b819e3f3d">Appearance</string>
+    <string name="s_4ac3b31103">Apply</string>
     <string name="s_6a2262aa75">File</string>
     <string name="s_467bed2d82">Drag the points on the curve. No effect with audio offload.</string>
     <string name="s_5eb846492d">Drag and pinch to frame (1:1)</string>
@@ -42,7 +43,10 @@
     <string name="s_acdac205f5">Audio</string>
     <string name="s_3e5dedf3ba">Hi-Res audio</string>
     <string name="s_980a92c105">Advanced</string>
+    <string name="s_5bdda331cf">Blue</string>
     <string name="s_392b32127f">Add to favorites</string>
+    <string name="s_33ff741f6e">Add to queue</string>
+    <string name="s_9afe9a7a2b">Add to a list</string>
     <string name="s_e969efd598">Add songs</string>
     <string name="s_57ba168547">Add songs +</string>
     <string name="s_c7ed724d85">You haven\'t created a playlist yet</string>
@@ -54,11 +58,13 @@
     <string name="s_72ddaf49d6">Band</string>
     <string name="s_c72dc64b3a">Bands, presets and per-output profiles</string>
     <string name="s_497ac5c11b">Library</string>
+    <string name="s_954773cf25">White</string>
     <string name="s_f48076e5cc">Deleting…</string>
     <string name="s_d7b82b2125">Delete</string>
     <string name="s_519bf6d6fc">Clear image cache</string>
     <string name="s_3d7a44fbea">Buttons and progress take the cover\'s tone</string>
     <string name="s_ef7a7252e2">Ember</string>
+    <string name="s_065346eba6">Brightness</string>
     <string name="s_ed8807bfa5">Album video loop, Wi-Fi only (community service artwork.boidu.dev)</string>
     <string name="s_6b0c1969c7">Search your whole library by title, artist or album.</string>
     <string name="s_5e94e4c84a">Search for a song and, when it ends, it will carry on with YouTube\'s recommendations.</string>
@@ -93,6 +99,8 @@
     <string name="s_f394d0254e">Sign out</string>
     <string name="s_21f72c3cc4">Light</string>
     <string name="s_ddfb28da05">Play queue</string>
+    <string name="s_cb33b51b55">Custom color</string>
+    <string name="s_1bc627cbcf">Accent color</string>
     <string name="s_57527a36c5">Cover color in the player</string>
     <string name="s_237f04207d">Lossy</string>
     <string name="s_a2d7268014">Keep</string>
@@ -108,6 +116,7 @@
     <string name="s_3c369a756d">Equalizer curve: drag the points to change frequency and gain</string>
     <string name="s_c0664e4020">DEZZNUTS needs permission to read the audio files on this phone. It uploads nothing to the internet.</string>
     <string name="s_462fc3b8c4">Work out artist and title from the file name</string>
+    <string name="s_bc3ba3ba44">From the theme</string>
     <string name="s_464c34559a">Turn shuffle off</string>
     <string name="s_fc3ae14dd1">Downloads</string>
     <string name="s_ef187497c3">Stop</string>
@@ -178,6 +187,8 @@
     <string name="s_21d934b417">Sign in to see your liked songs. The session is stored only on this phone and you can sign out any time.</string>
     <string name="s_9c18b1ef16">Sign in</string>
     <string name="s_98403ff8d1">Sign in and see your liked songs</string>
+    <string name="s_4f70d8c37e">Home</string>
+    <string name="s_b998e73105">Saturation</string>
     <string name="s_74245b1393">Go to artist</string>
     <string name="s_e87b4364dc">Go to album</string>
     <string name="s_f7c71d363f">DONE</string>
@@ -187,6 +198,7 @@
     <string name="s_caba50770a">Tracks from a CUE sheet can\'t be cut</string>
     <string name="s_6e7c6f3dc7">Lyrics</string>
     <string name="s_3d90cd9a1e">Word-by-word lyrics</string>
+    <string name="s_e263b90fdf">Lime</string>
     <string name="s_f3b2257862">Clear</string>
     <string name="s_b50ffe9ac5">Clear search</string>
     <string name="s_fa5607cb2e">List added to the queue</string>
@@ -195,13 +207,16 @@
     <string name="s_91acde292c">Done</string>
     <string name="s_d968292229">Most played and hours of music</string>
     <string name="s_66eb000113">Material You</string>
+    <string name="s_f3b81e5828">Likes</string>
     <string name="s_1f2b6ac990">Melancholic</string>
     <string name="s_c0af43ec1e">My YouTube Music</string>
     <string name="s_bf51adae89">Moods:</string>
+    <string name="s_1634c2c3af">Purple</string>
     <string name="s_8c9c76a2cf">Move the curve to save your own</string>
     <string name="s_e4f75d5280">More</string>
     <string name="s_977c75651c">More options</string>
     <string name="s_6334d01118">Most played</string>
+    <string name="s_2ac7694229">Orange</string>
     <string name="s_d43e9e8749">AMOLED black</string>
     <string name="s_816c52fd2b">No</string>
     <string name="s_540b823878">We couldn\'t find any music</string>
@@ -222,6 +237,7 @@
     <string name="s_92490130ae">None of that list\'s songs were found in your library</string>
     <string name="s_896aefef0e">Couldn\'t save the tags</string>
     <string name="s_0a644cb8b8">Couldn\'t open the YouTube Music song</string>
+    <string name="s_c2bef4f52a">Couldn\'t load.</string>
     <string name="s_f2606d8b3e">Couldn\'t load. Check your connection or sign in again.</string>
     <string name="s_f5696aeb96">Couldn\'t reach YouTube Music. Check your connection or try later.</string>
     <string name="s_ffa177d205">Couldn\'t delete</string>
@@ -232,6 +248,7 @@
     <string name="s_4da5f53f5a">Omarchy</string>
     <string name="s_64fd3e588e">Options</string>
     <string name="s_bff39342a6">Track options</string>
+    <string name="s_0285f6d35a">Source</string>
     <string name="s_8e0f5ed990">Pause</string>
     <string name="s_39fc573771">Pause the music after a while</string>
     <string name="s_38ae1ac63e">Allow access</string>
@@ -251,6 +268,7 @@
     <string name="s_15fef5ec47">Recently added</string>
     <string name="s_de611f39e3">Trim the playing song (ringtones, clips)</string>
     <string name="s_14f7836294">Get them back after reinstalling or on another phone</string>
+    <string name="s_adec7b4f23">Retry</string>
     <string name="s_9704b99261">Relax</string>
     <string name="s_cf24f03c8a">Reorder track</string>
     <string name="s_a9b5d7d93c">Repeat off</string>
@@ -268,6 +286,8 @@
     <string name="s_3706518a53">Restore backup</string>
     <string name="s_4158f0f7c9">Restore playlist</string>
     <string name="s_2a762728cb">Restore playlists</string>
+    <string name="s_696f812324">Red</string>
+    <string name="s_2c0d557df1">Pink</string>
     <string name="s_4373399b0e">Path</string>
     <string name="s_88e6839729">Sakura</string>
     <string name="s_b58bfe183f">Float output, offload, bit-perfect, ReplayGain and fades</string>
@@ -276,6 +296,7 @@
     <string name="s_f3852d02dd">The title, artist, album and duration will be sent to lrclib.net. It is saved to use offline.</string>
     <string name="s_f7b4423ea6">Saved as a new file in Music/DEZZNUTS; the original is not modified.</string>
     <string name="s_cf8e47e3e7">Carry on with YouTube\'s recommendations</string>
+    <string name="s_4c6fdc4a20">Select all</string>
     <string name="s_8973c434ac">Quick picks</string>
     <string name="s_60f9315dce">Signed in on this phone</string>
     <string name="s_c4d83a3b6d">Next</string>
@@ -292,15 +313,18 @@
     <string name="s_6ae1bcaff6">Theme</string>
     <string name="s_7dce3ee58e">Timer</string>
     <string name="s_8a3c344036">All</string>
+    <string name="s_8ac662256d">Hue</string>
     <string name="s_40454f1544">Bring in a playlist from another player</string>
     <string name="s_7e3125dccb">Your music, no ads, no subscriptions</string>
     <string name="s_8fb8d7bb8a">Your music, no fuss</string>
+    <string name="s_3aaea13502">Teal</string>
     <string name="s_3b61a2bb47">Your Likes, at hand</string>
     <string name="s_c0f68f8187">Your liked songs</string>
     <string name="s_98a5efa60b">Title</string>
     <string name="s_7963ef51f2">SEE ALL</string>
     <string name="s_dd6ef1b2c3">See more</string>
     <string name="s_486f7ff02b">See all</string>
+    <string name="s_daba544d2b">Green</string>
     <string name="s_e1fb15444a">Version, license and credits</string>
     <string name="s_84a715a785">Back</string>
     <string name="s_d0edcaa68d">YT Music</string>
@@ -316,4 +340,5 @@
     <string name="s_2c64db8938">Album</string>
     <string name="s_c010a7dc0c">Unknown album</string>
     <string name="s_797807e2b1">Albums</string>
+    <string name="s_2ef335d2c9">Amber</string>
 </resources>

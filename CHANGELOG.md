@@ -2,6 +2,27 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versionado semántico.
 
+## [Sin publicar]
+
+### Novedades
+- **Unificación de interfaces** (rama `unificacion-interfaces`): se integra lo de la rama `temas/interfaces` de Maikel.
+  - **Color de acento a medida** sobre cualquier tema: colores rápidos y un selector con tono, intensidad y brillo.
+  - **Selector de tema con vistas previas** en miniatura (barra, portada, lista y reproductor) en vez de círculos de color.
+  - **Inicio de YouTube Music** en la pestaña YT: estados de ánimo y estantes (con tu cuenta es el personalizado);
+    los álbumes y listas se abren en una hoja con sus canciones. Mismo cliente InnerTube que los «Me gusta».
+- **Selección múltiple** en Canciones (pulsación larga): añadir a una lista, a la cola o eliminar de una vez.
+
+### Correcciones
+- **Canciones duplicadas a 0:00** con archivos de descargadores (Snaptube y similares): se descartan las entradas rotas
+  que tienen una gemela buena (misma ruta, o mismo título y artista).
+- **«Añadir canciones» de una lista** no hacía nada desde el detalle de la lista.
+- **«Reproducción reciente»** ya no incluye canciones de YouTube Music (es opcional y no es de la biblioteca).
+- Las canciones de YouTube Music ya no ofrecen editar etiquetas, cortar, borrar, ir al álbum ni añadir a listas, ni
+  muestran ruta/archivo ni el corazón de favoritos; la duración se toma del audio si la tarjeta no la trae.
+- **Portadas HD y en movimiento**: una sola puerta a iTunes con caché y separación entre peticiones (antes la portada
+  HD, la animada y el editor pedían lo mismo por separado); el servicio de portadas animadas respeta su límite, se
+  espera a que la canción se quede un momento antes de preguntar y saltar de canción cancela lo pendiente.
+
 ## [1.1.0] - 2026-10-24
 
 ### Novedades

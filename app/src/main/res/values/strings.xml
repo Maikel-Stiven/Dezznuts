@@ -32,6 +32,7 @@
     <string name="s_d97f1097b8">Anterior</string>
     <string name="s_892a534334">Apagado · señal sin tocar</string>
     <string name="s_4b819e3f3d">Apariencia</string>
+    <string name="s_4ac3b31103">Aplicar</string>
     <string name="s_6a2262aa75">Archivo</string>
     <string name="s_467bed2d82">Arrastra los puntos sobre la curva. Sin efecto con audio offload.</string>
     <string name="s_5eb846492d">Arrastra y pellizca para encuadrar (1:1)</string>
@@ -43,7 +44,10 @@
     <string name="s_acdac205f5">Audio</string>
     <string name="s_3e5dedf3ba">Audio Hi/Res</string>
     <string name="s_980a92c105">Avanzado</string>
+    <string name="s_5bdda331cf">Azul</string>
     <string name="s_392b32127f">Añadir a favoritos</string>
+    <string name="s_33ff741f6e">Añadir a la cola</string>
+    <string name="s_9afe9a7a2b">Añadir a una lista</string>
     <string name="s_e969efd598">Añadir canciones</string>
     <string name="s_57ba168547">Añadir canciones +</string>
     <string name="s_c7ed724d85">Aún no has creado una lista de reproducción</string>
@@ -55,11 +59,13 @@
     <string name="s_72ddaf49d6">Banda</string>
     <string name="s_c72dc64b3a">Bandas, presets y perfiles por salida</string>
     <string name="s_497ac5c11b">Biblioteca</string>
+    <string name="s_954773cf25">Blanco</string>
     <string name="s_f48076e5cc">Borrando…</string>
     <string name="s_d7b82b2125">Borrar</string>
     <string name="s_519bf6d6fc">Borrar caché de imágenes</string>
     <string name="s_3d7a44fbea">Botones y progreso toman el tono de la portada</string>
     <string name="s_ef7a7252e2">Brasa</string>
+    <string name="s_065346eba6">Brillo</string>
     <string name="s_ed8807bfa5">Bucle de video del álbum, solo con Wi-Fi (servicio comunitario artwork.boidu.dev)</string>
     <string name="s_6b0c1969c7">Busca en toda tu biblioteca por título, artista o álbum.</string>
     <string name="s_5e94e4c84a">Busca una canción y, al terminar, seguirá sola con las recomendadas de YouTube.</string>
@@ -94,6 +100,8 @@
     <string name="s_f394d0254e">Cerrar sesión</string>
     <string name="s_21f72c3cc4">Claro</string>
     <string name="s_ddfb28da05">Cola de reproducción</string>
+    <string name="s_cb33b51b55">Color a medida</string>
+    <string name="s_1bc627cbcf">Color de acento</string>
     <string name="s_57527a36c5">Color de la carátula en el reproductor</string>
     <string name="s_237f04207d">Con pérdida</string>
     <string name="s_a2d7268014">Conservar</string>
@@ -109,6 +117,7 @@
     <string name="s_3c369a756d">Curva del ecualizador: arrastra los puntos para cambiar frecuencia y ganancia</string>
     <string name="s_c0664e4020">DEZZNUTS necesita permiso para leer los archivos de audio de este teléfono. No sube nada a internet.</string>
     <string name="s_462fc3b8c4">Deducir artista y título del nombre del archivo</string>
+    <string name="s_bc3ba3ba44">Del tema</string>
     <string name="s_464c34559a">Desactivar aleatorio</string>
     <string name="s_fc3ae14dd1">Descargas</string>
     <string name="s_ef187497c3">Detener</string>
@@ -179,6 +188,8 @@
     <string name="s_21d934b417">Inicia sesión para ver tus canciones con Me gusta. La sesión se guarda solo en este teléfono y puedes cerrarla cuando quieras.</string>
     <string name="s_9c18b1ef16">Iniciar sesión</string>
     <string name="s_98403ff8d1">Iniciar sesión y ver tus canciones con Me gusta</string>
+    <string name="s_4f70d8c37e">Inicio</string>
+    <string name="s_b998e73105">Intensidad</string>
     <string name="s_74245b1393">Ir al artista</string>
     <string name="s_e87b4364dc">Ir al álbum</string>
     <string name="s_f7c71d363f">LISTO</string>
@@ -188,6 +199,7 @@
     <string name="s_caba50770a">Las pistas de una hoja CUE no se pueden cortar</string>
     <string name="s_6e7c6f3dc7">Letra</string>
     <string name="s_3d90cd9a1e">Letra palabra por palabra</string>
+    <string name="s_e263b90fdf">Lima</string>
     <string name="s_f3b2257862">Limpiar</string>
     <string name="s_b50ffe9ac5">Limpiar busqueda</string>
     <string name="s_fa5607cb2e">Lista agregada a la cola</string>
@@ -196,13 +208,16 @@
     <string name="s_91acde292c">Listo</string>
     <string name="s_d968292229">Lo más escuchado y las horas de música</string>
     <string name="s_66eb000113">Material You</string>
+    <string name="s_f3b81e5828">Me gusta</string>
     <string name="s_1f2b6ac990">Melancólico</string>
     <string name="s_c0af43ec1e">Mi YouTube Music</string>
     <string name="s_bf51adae89">Moods:</string>
+    <string name="s_1634c2c3af">Morado</string>
     <string name="s_8c9c76a2cf">Mueve la curva para guardar el tuyo</string>
     <string name="s_e4f75d5280">Más</string>
     <string name="s_977c75651c">Más opciones</string>
     <string name="s_6334d01118">Más reproducidas</string>
+    <string name="s_2ac7694229">Naranja</string>
     <string name="s_d43e9e8749">Negro AMOLED</string>
     <string name="s_816c52fd2b">No</string>
     <string name="s_540b823878">No encontramos música</string>
@@ -223,6 +238,7 @@
     <string name="s_92490130ae">No se encontró en tu biblioteca ninguna canción de esa lista</string>
     <string name="s_896aefef0e">No se pudieron guardar los tags</string>
     <string name="s_0a644cb8b8">No se pudo abrir la canción de YouTube Music</string>
+    <string name="s_c2bef4f52a">No se pudo cargar.</string>
     <string name="s_f2606d8b3e">No se pudo cargar. Revisa la conexión o inicia sesión de nuevo.</string>
     <string name="s_f5696aeb96">No se pudo consultar YouTube Music. Revisa la conexión o inténtalo más tarde.</string>
     <string name="s_ffa177d205">No se pudo eliminar</string>
@@ -233,6 +249,7 @@
     <string name="s_4da5f53f5a">Omarchy</string>
     <string name="s_64fd3e588e">Opciones</string>
     <string name="s_bff39342a6">Opciones de pista</string>
+    <string name="s_0285f6d35a">Origen</string>
     <string name="s_8e0f5ed990">Pausar</string>
     <string name="s_39fc573771">Pausar la música pasado un tiempo</string>
     <string name="s_38ae1ac63e">Permitir acceso</string>
@@ -252,6 +269,7 @@
     <string name="s_15fef5ec47">Recién agregadas</string>
     <string name="s_de611f39e3">Recortar la canción que suena (tonos, fragmentos)</string>
     <string name="s_14f7836294">Recuperarlas al reinstalar o en otro teléfono</string>
+    <string name="s_adec7b4f23">Reintentar</string>
     <string name="s_9704b99261">Relax</string>
     <string name="s_cf24f03c8a">Reordenar pista</string>
     <string name="s_a9b5d7d93c">Repetición desactivada</string>
@@ -269,6 +287,8 @@
     <string name="s_3706518a53">Restaurar copia</string>
     <string name="s_4158f0f7c9">Restaurar lista de reproducción</string>
     <string name="s_2a762728cb">Restaurar listas de reproducción</string>
+    <string name="s_696f812324">Rojo</string>
+    <string name="s_2c0d557df1">Rosa</string>
     <string name="s_4373399b0e">Ruta</string>
     <string name="s_88e6839729">Sakura</string>
     <string name="s_b58bfe183f">Salida float, offload, bit-perfect, ReplayGain y fundidos</string>
@@ -277,6 +297,7 @@
     <string name="s_f3852d02dd">Se enviará a lrclib.net el título, artista, álbum y duración. Se guarda para usarla sin conexión.</string>
     <string name="s_f7b4423ea6">Se guarda como archivo nuevo en Música/DEZZNUTS; el original no se modifica.</string>
     <string name="s_cf8e47e3e7">Seguir con las recomendadas de YouTube</string>
+    <string name="s_4c6fdc4a20">Seleccionar todo</string>
     <string name="s_8973c434ac">Selección rápida</string>
     <string name="s_60f9315dce">Sesión iniciada en este teléfono</string>
     <string name="s_c4d83a3b6d">Siguiente</string>
@@ -293,15 +314,18 @@
     <string name="s_6ae1bcaff6">Tema</string>
     <string name="s_7dce3ee58e">Temporizador</string>
     <string name="s_8a3c344036">Todas</string>
+    <string name="s_8ac662256d">Tono</string>
     <string name="s_40454f1544">Traer una lista de otro reproductor</string>
     <string name="s_7e3125dccb">Tu música, sin anuncios ni suscripciones</string>
     <string name="s_8fb8d7bb8a">Tu música, sin vueltas</string>
+    <string name="s_3aaea13502">Turquesa</string>
     <string name="s_3b61a2bb47">Tus Me gusta, a mano</string>
     <string name="s_c0f68f8187">Tus canciones con Me gusta</string>
     <string name="s_98a5efa60b">Título</string>
     <string name="s_7963ef51f2">VER TODOS</string>
     <string name="s_dd6ef1b2c3">Ver más</string>
     <string name="s_486f7ff02b">Ver todo</string>
+    <string name="s_daba544d2b">Verde</string>
     <string name="s_e1fb15444a">Versión, licencia y créditos</string>
     <string name="s_84a715a785">Volver</string>
     <string name="s_d0edcaa68d">YT Music</string>
@@ -317,4 +341,5 @@
     <string name="s_2c64db8938">Álbum</string>
     <string name="s_c010a7dc0c">Álbum desconocido</string>
     <string name="s_797807e2b1">Álbumes</string>
+    <string name="s_2ef335d2c9">Ámbar</string>
 </resources>

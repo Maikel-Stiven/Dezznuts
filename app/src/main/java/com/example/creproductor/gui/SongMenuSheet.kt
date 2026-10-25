@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.creproductor.data.Playlist
 import com.example.creproductor.data.Song
+import com.example.creproductor.data.isYoutube
 
 /** Acciones del menú (⋮) de una canción, tal como las define la maqueta. */
 class SongMenuActions(
@@ -69,6 +70,8 @@ fun SongMenuSheet(
     var pickingPlaylist by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     val isCueTrack = song.cueStartMs >= 0
+    // Una canción de YouTube Music no es un archivo: nada de álbum local, etiquetas, cortador ni borrado.
+    val isYt = song.isYoutube
 
     // Cada acción cierra el menú y luego ejecuta.
     fun run(block: () -> Unit): () -> Unit = { onDismiss(); block() }
@@ -103,13 +106,13 @@ fun SongMenuSheet(
             } else {
                 MenuRow(Icons.Default.SkipNext, "Reproducir a continuación", run(actions.onPlayNext))
                 MenuRow(Icons.AutoMirrored.Filled.QueueMusic, "Agregar al final de la cola", run(actions.onAddToQueue))
-                MenuRow(Icons.AutoMirrored.Filled.PlaylistAdd, "Agregar a una playlist", { pickingPlaylist = true })
-                MenuRow(Icons.Default.Album, "Ir al álbum", run(actions.onGoToAlbum))
+                if (!isYt) MenuRow(Icons.AutoMirrored.Filled.PlaylistAdd, "Agregar a una playlist", { pickingPlaylist = true })
+                if (!isYt) MenuRow(Icons.Default.Album, "Ir al álbum", run(actions.onGoToAlbum))
                 MenuRow(Icons.Default.Person, "Ir al artista", run(actions.onGoToArtist))
-                if (!isCueTrack) MenuRow(Icons.Default.Edit, "Editor de etiquetas", run(actions.onEditTags))
+                if (!isCueTrack && !isYt) MenuRow(Icons.Default.Edit, "Editor de etiquetas", run(actions.onEditTags))
                 MenuRow(Icons.Default.Info, "Acerca de", run(actions.onAbout))
-                MenuRow(Icons.Default.ContentCut, "Cortador de audio", run(actions.onAudioCutter))
-                if (!isCueTrack) MenuRow(Icons.Default.DeleteForever, "Eliminar del dispositivo", { confirmDelete = true }, tint = MaterialTheme.colorScheme.error)
+                if (!isYt) MenuRow(Icons.Default.ContentCut, "Cortador de audio", run(actions.onAudioCutter))
+                if (!isCueTrack && !isYt) MenuRow(Icons.Default.DeleteForever, "Eliminar del dispositivo", { confirmDelete = true }, tint = MaterialTheme.colorScheme.error)
             }
         }
     }

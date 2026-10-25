@@ -36,6 +36,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -309,6 +315,12 @@ class MainActivity : ComponentActivity() {
                                                     section = section,
                                                     onSectionChange = { section = it },
                                                     onEditSong = editSong,
+                                                    onDeleteSongs = { list ->
+                                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                                            val request = MediaStore.createDeleteRequest(contentResolver, list.map { it.contentUri })
+                                                            deleteLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
+                                                        } else list.forEach(viewModel::deleteSongLegacy)
+                                                    },
                                                     onExportPlaylist = { playlistToExport = it; saveM3u.launch("${it.name}.m3u8") },
                                                     versionName = versionName,
                                                     onAction = ::runAction
@@ -515,29 +527,95 @@ private fun android.content.Context.displayName(uri: android.net.Uri): String? =
         if (it.moveToFirst()) it.getString(0) else null
     }
 
+/**
+ * Lista de canciones con selección múltiple: una pulsación larga entra en modo selección; la barra superior permite
+ * añadir a una lista, a la cola o eliminar de una vez.
+ */
 @Composable
 fun SongListScreen(
     songs: List<Song>,
     currentSongId: Long? = null,
     isPlaying: Boolean = false,
+    playlists: List<com.example.creproductor.data.Playlist> = emptyList(),
     onSongClick: (Song) -> Unit,
-    onEditSong: (Song) -> Unit
+    onEditSong: (Song) -> Unit,
+    onAddToPlaylist: (playlistId: String, songs: List<Song>) -> Unit = { _, _ -> },
+    onAddToQueue: (List<Song>) -> Unit = {},
+    onDeleteSongs: (List<Song>) -> Unit = {}
 ) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(8.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        items(items = songs, key = { it.id }) { song ->
-            val isSelected = song.id == currentSongId
-            SongItem(
-                song = song,
-                isSelected = isSelected,
-                isPlaying = isSelected && isPlaying,
-                onClick = { onSongClick(song) },
-                onEditClick = { onEditSong(song) }
-            )
+    // Por id: si la biblioteca se recarga o el filtro cambia, la selección se conserva sin referirse a objetos viejos.
+    val selected = remember { mutableStateListOf<Long>() }
+    val inSelection = selected.isNotEmpty()
+    var confirmDelete by remember { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = inSelection) { selected.clear() }
+    fun chosen() = songs.filter { it.id in selected }
+
+    Column(Modifier.fillMaxSize()) {
+        if (inSelection) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { selected.clear() }) { Icon(Icons.Default.Close, contentDescription = tr("Cerrar")) }
+                Text(
+                    "${selected.size}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = { selected.clear(); selected.addAll(songs.map { it.id }) }) {
+                    Icon(Icons.Default.SelectAll, contentDescription = tr("Seleccionar todo"))
+                }
+                Box {
+                    var menu by remember { mutableStateOf(false) }
+                    IconButton(onClick = { menu = true }) { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = tr("Añadir a una lista")) }
+                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(tr("Añadir a la cola")) },
+                            onClick = { menu = false; onAddToQueue(chosen()); selected.clear() }
+                        )
+                        playlists.forEach { pl ->
+                            DropdownMenuItem(
+                                text = { Text(pl.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                onClick = { menu = false; onAddToPlaylist(pl.id, chosen()); selected.clear() }
+                            )
+                        }
+                    }
+                }
+                IconButton(onClick = { confirmDelete = true }) {
+                    Icon(Icons.Default.Delete, contentDescription = tr("Eliminar"), tint = MaterialTheme.colorScheme.error)
+                }
+            }
         }
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            items(items = songs, key = { it.id }) { song ->
+                val isCurrent = song.id == currentSongId
+                SongItem(
+                    song = song,
+                    isSelected = isCurrent,
+                    isPlaying = isCurrent && isPlaying,
+                    checked = if (inSelection) song.id in selected else null,
+                    onClick = {
+                        if (inSelection) { if (!selected.remove(song.id)) selected.add(song.id) } else onSongClick(song)
+                    },
+                    onLongClick = { if (!selected.remove(song.id)) selected.add(song.id) },
+                    onEditClick = { onEditSong(song) }
+                )
+            }
+        }
+    }
+
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text(tr("¿Eliminar del dispositivo?")) },
+            text = { Text("${selected.size}") },
+            confirmButton = {
+                TextButton(onClick = { confirmDelete = false; onDeleteSongs(chosen()); selected.clear() }) {
+                    Text(tr("Eliminar"), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(tr("Cancelar")) } }
+        )
     }
 }
 
@@ -549,14 +627,20 @@ fun formatDuration(durationMs: Long): String{
 }
 
 @Composable
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 fun SongItem(
     song: Song,
     isSelected: Boolean = false,
     isPlaying: Boolean = false,
+    /** `null` fuera del modo selección; si no, si esta fila está marcada. */
+    checked: Boolean? = null,
+    onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
     onEditClick: () -> Unit
 ) {
-    val backgroundColor = if (isSelected){
+    val backgroundColor = if (checked == true) {
+        MaterialTheme.colorScheme.secondaryContainer
+    } else if (isSelected){
         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
     }else{
         MaterialTheme.colorScheme.background
@@ -566,10 +650,13 @@ fun SongItem(
                 .fillMaxWidth()
                 .clip(MaterialTheme.shapes.medium)
                 .background(backgroundColor)
-                .clickable(onClick = onClick)
+                .combinedClickable(onClick = onClick, onLongClick = onLongClick)
                 .padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (checked != null) {
+                Checkbox(checked = checked, onCheckedChange = { onClick() })
+            }
             Box(
                 modifier = Modifier
                     .size(52.dp)
@@ -626,7 +713,7 @@ fun SongItem(
                 )
             }
 
-            IconButton(onClick = onEditClick) {
+            if (checked == null) IconButton(onClick = onEditClick) {
                 Icon(
                     imageVector = Icons.Default.MoreVert,
                     contentDescription = tr("Opciones"),

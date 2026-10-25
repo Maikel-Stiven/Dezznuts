@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import com.example.creproductor.data.AudioQuality
 import com.example.creproductor.data.QualityTier
 import com.example.creproductor.data.Song
+import com.example.creproductor.data.isYoutube
 
 /** Ficha técnica de la canción: archivo, calidad y salida real. Se abre desde el menú (⋮) del reproductor. */
 @Composable
@@ -30,7 +31,13 @@ fun TrackInfoDialog(song: Song, audioInfo: String, onEdit: () -> Unit = {}, onDi
         QualityTier.LOSSY -> "Con pérdida"
     }
     val file = AudioQuality.label(song.mimeType, song.sampleRate, song.bitsPerSample, song.bitrate)
-    val rows = listOf(
+    val isYt = song.isYoutube
+    val rows = if (isYt) listOf(
+        "Título" to song.title,
+        "Artista" to song.artist,
+        "Origen" to "YouTube Music",
+        "Reproduciendo" to audioInfo.ifEmpty { "—" }
+    ) else listOf(
         "Título" to song.title,
         "Artista" to song.artist,
         "Álbum" to song.album,
@@ -54,6 +61,6 @@ fun TrackInfoDialog(song: Song, audioInfo: String, onEdit: () -> Unit = {}, onDi
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Cerrar")) } },
-        dismissButton = { TextButton(onClick = { onDismiss(); onEdit() }) { Text(tr("Editar etiquetas")) } }
+        dismissButton = if (isYt) null else ({ TextButton(onClick = { onDismiss(); onEdit() }) { Text(tr("Editar etiquetas")) } })
     )
 }

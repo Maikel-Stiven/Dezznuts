@@ -49,6 +49,8 @@ fun AnimatedCoverLayer(song: Song, isPlaying: Boolean, active: Boolean, modifier
     if (!active || !allowed) return
     var url by remember(song.id) { mutableStateOf<String?>(null) }
     LaunchedEffect(song.id) {
+        // Al saltar de canción en cadena no se pregunta por cada una: se espera a que la elegida se quede un momento.
+        kotlinx.coroutines.delay(700)
         url = if (!networkAllowsVideo(context)) null
         else runCatching { AnimatedCover.find(context, song) }.getOrNull()
     }

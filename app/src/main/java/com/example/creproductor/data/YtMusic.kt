@@ -57,7 +57,7 @@ object YtMusic {
     }
 
     /** Lo que sale de abrir una canción: el audio y las recomendadas de YouTube ("a continuación"). */
-    class Resolved(val audioUrl: String, val related: List<YtTrack>, val at: Long = System.currentTimeMillis())
+    class Resolved(val audioUrl: String, val related: List<YtTrack>, val durationSec: Long = 0, val at: Long = System.currentTimeMillis())
 
     // Las direcciones de audio duran horas: volver a una canción ya abierta (o la siguiente, que se prepara antes de
     // que acabe la actual) no repite la ida y vuelta a YouTube, que es lo que más tarda.
@@ -79,10 +79,23 @@ object YtMusic {
         val related = info.relatedItems.filterIsInstance<StreamInfoItem>().map {
             YtTrack(it.url, it.name, it.uploaderName.orEmpty(), it.duration, it.thumbnails.maxByOrNull { t -> t.width }?.url)
         }
-        Resolved(audio, related).also { synchronized(cache) { cache[trackUrl] = it } }.also { locks.remove(trackUrl) }
+        Resolved(audio, related, info.duration).also { synchronized(cache) { cache[trackUrl] = it } }.also { locks.remove(trackUrl) }
     }
 
     fun audioUrl(trackUrl: String): String = resolve(trackUrl).audioUrl
+
+    /** "Artista - Canción (Official Video)" → "Canción" para buscar portadas; si el prefijo no es el artista, no se toca. */
+    fun cleanTitle(raw: String, artist: String): String {
+        val p = YoutubeTitleCleaner.parseFileName(raw)
+        fun n(x: String) = x.lowercase().filter { it.isLetterOrDigit() }
+        val a = n(artist); val pa = n(p.cleanArtist)
+        val hasPrefix = p.cleanArtist != "Artista desconocido"
+        return when {
+            !hasPrefix -> p.cleanTitle.ifBlank { raw }
+            pa.isNotEmpty() && a.isNotEmpty() && (a.contains(pa) || pa.contains(a)) -> p.cleanTitle.ifBlank { raw }
+            else -> raw
+        }
+    }
 
     /** "Artista - Topic" / "ArtistaVEVO" → "Artista", para buscar la portada oficial. */
     fun cleanArtist(raw: String) = raw.replace(Regex("(?i)\\s*-\\s*topic$"), "").replace(Regex("(?i)vevo$"), "").trim()
