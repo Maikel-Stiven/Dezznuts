@@ -5,6 +5,8 @@ import androidx.compose.material.icons.filled.Lyrics
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -91,17 +93,14 @@ fun OptionsScreen(versionName: String, onAction: (AppAction) -> Unit, onClose: (
         LazyColumn(Modifier.fillMaxSize().padding(inner)) {
             item { SectionTitle("Apariencia") }
             item {
-                ListItem(
-                    leadingContent = { Icon(Icons.Default.ColorLens, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                    headlineContent = { Text(tr("Tema"), style = MaterialTheme.typography.titleSmall) },
-                    supportingContent = {
-                        Column(Modifier.padding(top = 10.dp)) {
-                            ThemeSwatches()
-                            Text(tr(ThemeSetting.mode.label), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
-                        }
-                    },
-                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background)
-                )
+                // Sin ListItem: sus medidas intrínsecas no admiten las listas perezosas del selector.
+                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 12.dp)) {
+                        Icon(Icons.Default.ColorLens, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(tr("Tema"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 16.dp))
+                    }
+                    ThemePicker()
+                }
             }
             item {
                 PrefSwitch(

@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 
 /**
  * Identidad DEZZNUTS: el morado de siempre (#BB86FC) sobre negro neutro, con turquesa de acento. Es la base de toda la
@@ -145,14 +146,31 @@ fun ThemeMode.swatch(): Pair<Color, Color> = when (this) {
     ThemeMode.DYNAMIC -> Color(0xFF1F1F1F) to Color(0xFF8AB4F8)
 }
 
+/** Esquinas del tema (dp) para dibujar su vista previa; Omarchy es el único recto. */
+fun ThemeMode.previewCorner() = if (this == ThemeMode.OMARCHY) 0 else 8
+
 object ThemeSetting {
     private const val KEY = "theme_mode"
+    private const val KEY_ACCENT = "accent_color"
     var mode by mutableStateOf(ThemeMode.DEZZ)
         private set
 
+    /** Color de acento propio (ARGB) que sustituye al del tema, o `null` para el del tema. */
+    var accent by mutableStateOf<Int?>(null)
+        private set
+
     fun load(context: Context) {
-        val name = context.getSharedPreferences("dezznuts_prefs", Context.MODE_PRIVATE).getString(KEY, null)
+        val prefs = context.getSharedPreferences("dezznuts_prefs", Context.MODE_PRIVATE)
+        val name = prefs.getString(KEY, null)
         mode = ThemeMode.entries.firstOrNull { it.name == name } ?: ThemeMode.DEZZ
+        accent = if (prefs.contains(KEY_ACCENT)) prefs.getInt(KEY_ACCENT, 0) else null
+    }
+
+    fun setAccent(context: Context, argb: Int?) {
+        accent = argb
+        context.getSharedPreferences("dezznuts_prefs", Context.MODE_PRIVATE).edit().apply {
+            if (argb == null) remove(KEY_ACCENT) else putInt(KEY_ACCENT, argb)
+        }.apply()
     }
 
     fun set(context: Context, value: ThemeMode) {
@@ -164,11 +182,26 @@ object ThemeSetting {
     val dynamicAvailable get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 }
 
+/**
+ * Pone [accent] como color principal de cualquier tema y le saca los contenedores y textos a juego (con fondo oscuro o
+ * claro). Idea del selector de acento de Maikel (rama temas/interfaces).
+ */
+fun androidx.compose.material3.ColorScheme.withAccent(accent: Color, light: Boolean): androidx.compose.material3.ColorScheme {
+    val onAccent = if (accent.luminance() > 0.5f) Color(0xFF101010) else Color.White
+    val container = lerp(surface, accent, if (light) 0.22f else 0.30f)
+    val onContainer = if (light) lerp(accent, Color.Black, 0.6f) else lerp(accent, Color.White, 0.55f)
+    return copy(
+        primary = accent, onPrimary = onAccent, primaryContainer = container, onPrimaryContainer = onContainer,
+        secondary = accent, onSecondary = onAccent, secondaryContainer = container, onSecondaryContainer = onContainer,
+        tertiary = accent
+    )
+}
+
 @Composable
 fun DEZZNUTStheme(content: @Composable () -> Unit){
     val context = LocalContext.current
     val mode = ThemeSetting.mode
-    val scheme = when {
+    val base = when {
         mode == ThemeMode.OMARCHY -> OmarchyColors
         mode == ThemeMode.PREMIUM -> PremiumColors
         mode == ThemeMode.SAKURA -> SakuraColors
@@ -180,6 +213,8 @@ fun DEZZNUTStheme(content: @Composable () -> Unit){
         mode == ThemeMode.DYNAMIC && ThemeSetting.dynamicAvailable -> dynamicDarkColorScheme(context)
         else -> DezzColors
     }
+    val accent = ThemeSetting.accent
+    val scheme = if (accent != null) base.withAccent(Color(accent), light = mode == ThemeMode.LIGHT) else base
     // Con el tema claro los iconos de la barra de estado deben ser oscuros.
     val view = LocalView.current
     if (!view.isInEditMode) SideEffect {

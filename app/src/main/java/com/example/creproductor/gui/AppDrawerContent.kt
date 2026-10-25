@@ -70,38 +70,6 @@ private val DRAWER_GROUPS = listOf(
     "Más" to listOf(AppAction.Options, AppAction.ClearImageCache, AppAction.About, AppAction.SendFeedback)
 )
 
-/** Selector de tema de un vistazo: un círculo por tema (fondo + acento); el elegido lleva anillo. */
-@Composable
-fun ThemeSwatches(modifier: Modifier = Modifier) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    androidx.compose.foundation.layout.FlowRow(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        com.example.creproductor.ui.theme.ThemeMode.entries
-            .filter { it != com.example.creproductor.ui.theme.ThemeMode.DYNAMIC || com.example.creproductor.ui.theme.ThemeSetting.dynamicAvailable }
-            .forEach { m ->
-                val (bg, accent) = m.swatch()
-                val selected = com.example.creproductor.ui.theme.ThemeSetting.mode == m
-                val name = tr(m.label)
-                androidx.compose.foundation.layout.Box(
-                    Modifier
-                        .size(40.dp)
-                        .clip(androidx.compose.foundation.shape.CircleShape)
-                        .border(if (selected) 2.dp else 1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, androidx.compose.foundation.shape.CircleShape)
-                        .background(bg)
-                        .clickable(onClickLabel = name) { com.example.creproductor.ui.theme.ThemeSetting.set(context, m) }
-                        .semantics { contentDescription = name; this.selected = selected }
-                ) {
-                    androidx.compose.foundation.layout.Box(
-                        Modifier.align(Alignment.Center).size(16.dp).clip(androidx.compose.foundation.shape.CircleShape).background(accent)
-                    )
-                }
-            }
-    }
-}
-
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun AppDrawerContent(versionName: String, onAction: (AppAction) -> Unit, onCloseDrawer: () -> Unit) {
@@ -139,7 +107,7 @@ fun AppDrawerContent(versionName: String, onAction: (AppAction) -> Unit, onClose
             HorizontalDivider()
             Column(Modifier.padding(horizontal = 28.dp, vertical = 14.dp)) {
                 Text(tr("Tema"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 10.dp))
-                ThemeSwatches()
+                ThemePicker(showAccent = false)
             }
         }
     }
