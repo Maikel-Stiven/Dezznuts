@@ -110,7 +110,7 @@ fun QuickSelectionScreen(
 
         // Moods: agrupados por género fuera del hilo principal; los que no tienen canciones no se muestran.
         val moods by produceState(emptyMap<Mood, List<Song>>(), allSongs) {
-            value = withContext(Dispatchers.Default) { Moods.group(allSongs) { it.genre } }
+            value = withContext(Dispatchers.Default) { Moods.group(allSongs, genreOf = { it.genre }, textOf = { "${it.title} ${it.album} ${it.path.substringBeforeLast('/')}" }, artistOf = { it.artist }) }
         }
         if (moods.isNotEmpty()) {
             Text(tr("Moods:"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
