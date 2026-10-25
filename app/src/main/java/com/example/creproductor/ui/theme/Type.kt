@@ -29,14 +29,15 @@ private val Silkscreen = FontFamily(Font(R.font.silkscreen, FontWeight.Normal), 
 /** Premium: Manrope en todo. Omarchy: pixel en títulos y monoespaciada en el resto (estilo terminal). */
 private fun scale(titles: FontFamily, body: FontFamily, titleWeight: FontWeight, tracking: Double, titleScale: Float = 1f) = Typography().let { t ->
     // Una pixel como Silkscreen es ancha: sus títulos se achican (titleScale) para que quepan igual que los normales.
-    fun TextStyle.t() = copy(fontFamily = titles, fontWeight = titleWeight, letterSpacing = tracking.sp, fontSize = fontSize * titleScale, lineHeight = lineHeight * titleScale)
+    fun TextStyle.t(extra: Float = 1f) = copy(fontFamily = titles, fontWeight = titleWeight, letterSpacing = tracking.sp, fontSize = fontSize * titleScale * extra, lineHeight = lineHeight * titleScale * extra)
     fun TextStyle.b() = copy(fontFamily = body)
     t.copy(
         displayLarge = t.displayLarge.t(), displayMedium = t.displayMedium.t(), displaySmall = t.displaySmall.t(),
         headlineLarge = t.headlineLarge.t(), headlineMedium = t.headlineMedium.t(), headlineSmall = t.headlineSmall.t(),
         titleLarge = t.titleLarge.t(), titleMedium = t.titleMedium.t(), titleSmall = t.titleSmall.t(),
         bodyLarge = t.bodyLarge.b(), bodyMedium = t.bodyMedium.b(), bodySmall = t.bodySmall.b(),
-        labelLarge = t.labelLarge.t(), labelMedium = t.labelMedium.t(), labelSmall = t.labelSmall.b()
+        // Los botones y chips llevan etiquetas: un poco más pequeñas aún, que con una pixel ancha se partían («REPRODUC/IR»).
+        labelLarge = t.labelLarge.t(0.85f), labelMedium = t.labelMedium.t(0.85f), labelSmall = t.labelSmall.b()
     )
 }
 

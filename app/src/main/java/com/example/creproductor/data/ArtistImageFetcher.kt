@@ -14,7 +14,7 @@ import java.io.File
 
 object ArtistImageFetcher {
 
-    private const val PREFS_NAME = "artist_photos_cache"
+    private const val PREFS_NAME = "artist_photos_cache_v2"   // v2: las fotos de v1 podían ser de otro artista
 
     /** Carpeta (dentro de `cacheDir`) donde Coil guarda las imágenes; la comparten el cargador y el diálogo de borrado. */
     const val IMAGE_CACHE_DIR = "artist_images_cache"
@@ -80,11 +80,14 @@ object ArtistImageFetcher {
                 val json = JSONObject(responseText)
                 val results = json.optJSONArray("data")
 
-                if (results != null && results.length() > 0){
-                    val firstItem = results.getJSONObject(0)
-                    val photoUrl = firstItem.optString("picture_big", null)
+                // Solo vale un resultado que se llame igual: el primero de Deezer suele ser otro artista parecido
+                // ("Aurora Vega" → "aurorawave"), y mostrar la cara de otro es peor que no mostrar nada.
+                val match = (0 until (results?.length() ?: 0)).map { results!!.getJSONObject(it) }
+                    .firstOrNull { CoverFetcher.sameName(cleanArtist, it.optString("name")) }
+                if (match != null){
+                    val photoUrl = match.optString("picture_big", null)
 
-                    if (!photoUrl.isNullOrBlank()){
+                    if (!photoUrl.isNullOrBlank() && !photoUrl.contains("/artist//")){
                         prefs.edit { putString(cleanArtist, photoUrl) }
                         return@withContext photoUrl
                     }

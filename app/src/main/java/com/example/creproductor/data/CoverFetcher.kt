@@ -24,6 +24,9 @@ object CoverFetcher {
     /** Sin mayúsculas, acentos ni signos: «Ramírez» y «Ramirez» son el mismo artista para iTunes y para YouTube. */
     private fun norm(s: String) = java.text.Normalizer.normalize(s.lowercase(), java.text.Normalizer.Form.NFD).filter { it.isLetterOrDigit() }
 
+    /** ¿Mismo nombre, sin mayúsculas, acentos ni signos? */
+    fun sameName(a: String, b: String) = norm(a).let { it.isNotEmpty() && it == norm(b) }
+
     /**
      * ¿El resultado remoto es la misma canción? Evita sobrescribir las etiquetas con el primer
      * resultado de iTunes cuando este no tiene nada que ver. El título debe contenerse en un

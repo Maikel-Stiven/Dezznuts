@@ -17,9 +17,16 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). V
   «Reproducir todo», Accesos directos y estantes.
 - **Tipografía Silkscreen** de Maikel en el tema Omarchy (sustituye a Pixelify Sans).
 - Código: lista de canciones y mini-reproductor salen de `MainActivity` a `gui/`.
+- **Visualizador tipo CAVA** (Opciones, apagado de fábrica): barras de frecuencia que suben de golpe y caen con
+  gravedad en la mitad baja del reproductor. Usa un procesador «espía» en la cadena de audio (la señal pasa idéntica):
+  sin permisos y también con YouTube Music; no hay datos con audio offload.
 - **Selección múltiple** en Canciones (pulsación larga): añadir a una lista, a la cola o eliminar de una vez.
 
 ### Correcciones
+- **Fotos de artista de otro artista**: se tomaba el primer resultado de Deezer sin comprobar el nombre («Aurora Vega»
+  mostraba a «aurorawave»); ahora solo vale un resultado con el mismo nombre (la caché antigua se descarta).
+- Botones «Reproducir/Aleatorio» de álbum, artista, género y lista sin partirse en dos líneas; pestañas de la búsqueda
+  con el color de la activa distinto al de las demás; etiquetas de Omarchy más pequeñas para que quepan.
 - **Canciones duplicadas a 0:00** con archivos de descargadores (Snaptube y similares): se descartan las entradas rotas
   que tienen una gemela buena (misma ruta, o mismo título y artista).
 - **«Añadir canciones» de una lista** no hacía nada desde el detalle de la lista.

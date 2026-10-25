@@ -145,6 +145,7 @@ fun GenreDetail (
                         Button(
                             onClick = onPlayAllCLick,
                             modifier = Modifier.weight(1f),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                             shape = MaterialTheme.shapes.small
                         ) {
                             Icon(
@@ -153,12 +154,13 @@ fun GenreDetail (
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(tr("REPRODUCIR"))
+                            Text(tr("REPRODUCIR"), maxLines = 1, softWrap = false)
                         }
 
                         OutlinedButton(
                             onClick = onShuffleClick,
                             modifier = Modifier.weight(1f),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                             shape = MaterialTheme.shapes.small,
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = MaterialTheme.colorScheme.primary
@@ -170,7 +172,7 @@ fun GenreDetail (
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(tr("ALEATORIO"))
+                            Text(tr("ALEATORIO"), maxLines = 1, softWrap = false)
                         }
                     }
                 }

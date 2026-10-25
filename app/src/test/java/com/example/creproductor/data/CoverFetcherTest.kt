@@ -24,4 +24,9 @@ class CoverFetcherTest {
 
     @Test fun ignoraAcentosEnElArtista() =
         org.junit.Assert.assertTrue(CoverFetcher.isSameSong("Todo Lo Fue", "Lenin Ramirez", "Todo Lo Fue", "Lenin Ramírez"))
+
+    @Test fun mismoNombreSinAcentosNiMayusculas() {
+        assertTrue(CoverFetcher.sameName("Lenin Ramírez", "lenin ramirez"))
+        org.junit.Assert.assertFalse(CoverFetcher.sameName("Aurora Vega", "aurorawave"))
+    }
 }

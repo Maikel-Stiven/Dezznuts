@@ -266,6 +266,8 @@ fun SearchOverlayScreen(
                    Tab(
                        selected = selectedTabItem == index,
                        onClick = {selectedTabItem = index},
+                       selectedContentColor = MaterialTheme.colorScheme.onSurface,
+                       unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                        text = {Text(tr(tab.title))}
                    )
                }
@@ -273,6 +275,8 @@ fun SearchOverlayScreen(
                    Tab(
                        selected = selectedTabItem == SearchSubTab.entries.size,
                        onClick = { selectedTabItem = SearchSubTab.entries.size },
+                       selectedContentColor = MaterialTheme.colorScheme.onSurface,
+                       unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                        text = { Text(tr("YouTube Music")) }
                    )
                }
