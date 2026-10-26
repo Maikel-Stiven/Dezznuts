@@ -29,6 +29,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.example.creproductor.data.ArtistImageFetcher
 import coil.ImageLoader
 import coil.disk.DiskCache
@@ -67,6 +71,21 @@ import coil.Coil
 
 
 private const val FEEDBACK_URL = "https://github.com/Maikel-Stiven/Dezznuts/issues/new"
+
+/**
+ * Al mandar la app al fondo, suelta el foco de cualquier campo de texto y cierra el teclado.
+ * Android recuerda el campo enfocado y, al volver, reabre el IME aunque el usuario ya esté en otra
+ * pantalla (por ejemplo, el menú de una canción). Sin foco no hay teclado que reaparezca.
+ */
+@Composable
+private fun ClearImeOnBackground() {
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
+        focusManager.clearFocus(force = true)
+        keyboard?.hide()
+    }
+}
 
 class MainActivity : ComponentActivity() {
 
@@ -115,6 +134,7 @@ class MainActivity : ComponentActivity() {
         com.example.creproductor.gui.NavSetting.load(this)
         setContent {
             DEZZNUTStheme {
+                ClearImeOnBackground()
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -169,7 +189,15 @@ class MainActivity : ComponentActivity() {
                     // El ⋮ de cualquier canción abre el menú de acciones (SongMenuSheet).
                     var songMenuFor by remember { mutableStateOf<Song?>(null) }
                     var songInfoFor by remember { mutableStateOf<Song?>(null) }
-                    val editSong: (Song) -> Unit = { song -> songMenuFor = song }
+                    val focusManager = LocalFocusManager.current
+                    val keyboardController = LocalSoftwareKeyboardController.current
+                    // Abrir el menú de una canción también suelta el foco: si el buscador lo conserva,
+                    // el IME queda encima de la hoja (y reaparece al volver a la app).
+                    val editSong: (Song) -> Unit = { song ->
+                        focusManager.clearFocus(force = true)
+                        keyboardController?.hide()
+                        songMenuFor = song
+                    }
                     fun openCutter(song: Song) {
                         // Las pistas de una hoja CUE son un tramo de un archivo largo: se cortaría el archivo entero.
                         if (song.cueStartMs >= 0) { Toast.makeText(this@MainActivity, com.example.creproductor.i18n.I18n.tr(this@MainActivity, "Las pistas de una hoja CUE no se pueden cortar"), Toast.LENGTH_LONG).show(); return }

@@ -60,6 +60,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -105,6 +106,17 @@ fun SearchOverlayScreen(
 ){
 
     val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+
+    /**
+     * Cierra el teclado y suelta el foco. Ocultar el IME no basta: si el campo sigue enfocado,
+     * Android lo vuelve a mostrar al regresar a la app, aunque ya estés en otra pantalla.
+     */
+    fun dismissKeyboard() {
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
+    }
+
     var selectedTabItem by remember { mutableIntStateOf(0) }
 
     var songsLimit by remember(searchQuery) { mutableIntStateOf(10) }
@@ -183,7 +195,7 @@ fun SearchOverlayScreen(
                             if (searchQuery.isNotBlank()){
                                 onAddSearchHistory(searchQuery)
                             }
-                            keyboardController?.hide()
+                            dismissKeyboard()
                         }
                     ),
                     colors = TextFieldDefaults.colors(
@@ -225,7 +237,7 @@ fun SearchOverlayScreen(
                             .fillMaxWidth()
                             .clickable{
                                 onHistoryItemClick(item)
-                                keyboardController?.hide()
+                                dismissKeyboard()
                             }
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -296,7 +308,7 @@ fun SearchOverlayScreen(
                 }
             }
             if (onYtTab) {
-                YtMusicResults(searchQuery) { keyboardController?.hide(); onYtPlay(it) }
+                YtMusicResults(searchQuery) { dismissKeyboard(); onYtPlay(it) }
             } else LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 16.dp),
@@ -325,7 +337,7 @@ fun SearchOverlayScreen(
                                 if (searchQuery.isNotBlank()){
                                     onAddSearchHistory(searchQuery)
                                 }
-                                keyboardController?.hide()
+                                dismissKeyboard()
                                 onSongClick(song, matchingSongs)
                             },
                             onEditClick = { onEditSong(song) }
@@ -459,7 +471,7 @@ fun SearchOverlayScreen(
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             modifier = Modifier.clickable {
                                 if (searchQuery.isNotBlank()) onAddSearchHistory(searchQuery)
-                                keyboardController?.hide(); onYtPlay(t)
+                                dismissKeyboard(); onYtPlay(t)
                             }
                         )
                     }

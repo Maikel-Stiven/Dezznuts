@@ -25,6 +25,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import android.webkit.CookieManager
@@ -44,6 +46,16 @@ fun YtMusicScreen(onPlay: (YtTrack) -> Unit) {
     var loggedIn by remember { mutableStateOf(YtLibrary.isLoggedIn(context)) }
     var reload by remember { mutableStateOf(0) }
     var query by remember { mutableStateOf("") }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    // Al reproducir se suelta el buscador. Si el campo conserva el foco, Android vuelve a mostrar el
+    // teclado al regresar a la app, incluso encima del reproductor o del menú de la canción.
+    val playTrack: (YtTrack) -> Unit = { track ->
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
+        onPlay(track)
+    }
 
     if (!enabled) {
         Column(Modifier.fillMaxSize().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
@@ -73,7 +85,14 @@ fun YtMusicScreen(onPlay: (YtTrack) -> Unit) {
         // Cabecera de la interfaz de Maikel: título, lupa y sesión.
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(tr("YT Music"), style = MaterialTheme.typography.headlineSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, modifier = Modifier.weight(1f))
-            IconButton(onClick = { searching = !searching; if (!searching) query = "" }) {
+            IconButton(onClick = {
+                searching = !searching
+                if (!searching) {
+                    query = ""
+                    focusManager.clearFocus(force = true)
+                    keyboardController?.hide()
+                }
+            }) {
                 Icon(if (searching) Icons.Default.Close else Icons.Default.Search, contentDescription = tr("Buscar en YouTube Music"))
             }
             androidx.compose.material3.OutlinedButton(
@@ -92,7 +111,7 @@ fun YtMusicScreen(onPlay: (YtTrack) -> Unit) {
             trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Default.Close, contentDescription = tr("Limpiar")) } },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
         )
-        if (searching && query.isNotBlank()) YtMusicResults(query, onPlay)
-        else YtHomeContent(loggedIn = loggedIn, reload = reload, onPlay = onPlay, onLogin = { YtLogin.open = true })
+        if (searching && query.isNotBlank()) YtMusicResults(query, playTrack)
+        else YtHomeContent(loggedIn = loggedIn, reload = reload, onPlay = playTrack, onLogin = { YtLogin.open = true })
     }
 }
