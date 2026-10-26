@@ -87,6 +87,23 @@ private fun ClearImeOnBackground() {
     }
 }
 
+/**
+ * Al abrir el reproductor completo, la búsqueda (por ejemplo la de YT Music) puede conservar el foco.
+ * Ocultar solo el IME no basta: al escribir o al volver a la pantalla, Android lo reabre encima del
+ * reproductor. Se suelta el foco para que el teclado no pueda abrirse desde el reproductor.
+ */
+@Composable
+private fun ClearImeOnFullPlayer(visible: Boolean) {
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    LaunchedEffect(visible) {
+        if (visible) {
+            focusManager.clearFocus(force = true)
+            keyboard?.hide()
+        }
+    }
+}
+
 class MainActivity : ComponentActivity() {
 
     private val viewModel: MusicViewModel by viewModels()
@@ -150,6 +167,7 @@ class MainActivity : ComponentActivity() {
 
                     var songToEdit by remember { mutableStateOf<Song?>(null) }
                     var isPlayerFullScreenVisible by remember { mutableStateOf(false) }
+                    ClearImeOnFullPlayer(isPlayerFullScreenVisible)
                     // Notificación tocada: se abre el reproductor completo (si aún no hay canción, se muestra en cuanto cargue).
                     LaunchedEffect(openPlayerRequest.value) {
                         if (openPlayerRequest.value) { isPlayerFullScreenVisible = true; openPlayerRequest.value = false }
