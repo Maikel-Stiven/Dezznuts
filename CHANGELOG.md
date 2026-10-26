@@ -2,6 +2,12 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versionado semántico.
 
+## [1.2.1] - 2026-10-26
+
+### Correcciones
+- **El teclado ya no se queda encima del reproductor**: al abrir la pantalla completa se suelta el foco de la búsqueda y se oculta el IME. Si minimizas el teclado con su botón y vuelves a abrir la canción, ya no aparece el cursor/flecha de la búsqueda sobre el menú del reproductor. También se suelta al elegir una canción de YT Music o al salir de la app al fondo.
+- **YouTube Music al cerrar desde recientes**: la canción sigue sonando y se recupera al volver a la app, en vez de detener la reproducción; se reconstruye desde la sesión de medios.
+
 ## [1.2.0] - 2026-10-25
 
 ### Novedades

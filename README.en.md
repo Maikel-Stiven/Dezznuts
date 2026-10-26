@@ -11,14 +11,14 @@
 ![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.2-7F52FF?logo=kotlin&logoColor=white)
 ![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?logo=jetpackcompose&logoColor=white)
-![Version](https://img.shields.io/badge/version-1.2.0-brightgreen)
+![Version](https://img.shields.io/badge/version-1.2.1-brightgreen)
 ![PRs](https://img.shields.io/badge/PRs-welcome-brightgreen)
 
 </div>
 
 Features other players lock behind a paywall (auto-tagging, audio cutter, equalizer, sleep timer…), offered freely, "just for the love of it".
 
-> ✅ **Version 1.2.0**. Grab the APK from [Releases](../../releases/latest) and read the [CHANGELOG](CHANGELOG.md). What still needs real-phone testing is in [Known issues](#-known-issues).
+> ✅ **Version 1.2.1**. Grab the APK from [Releases](../../releases/latest) and read the [CHANGELOG](CHANGELOG.md). What still needs real-phone testing is in [Known issues](#-known-issues).
 
 ## 📸 Screenshots
 

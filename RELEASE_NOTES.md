@@ -1,18 +1,9 @@
-### Novedades
-- **Interfaz de Maikel como base**: barra de navegación inferior (YT Music · Biblioteca · Inicio · Buscar · Ajustes) y
-  sin menú lateral; todo vive en **Ajustes**. Se puede volver a pestañas arriba en Ajustes → Apariencia → Navegación.
-- **Pestaña YT Music rehecha**: estados de ánimo, Selección rápida con «Reproducir todo», Accesos directos y estantes
-  del inicio de YouTube Music (personalizado si inicias sesión).
-- **Temas**: selector con vistas previas, **color de acento a medida** sobre cualquier tema y la tipografía Silkscreen
-  de Maikel en Omarchy.
-- **Visualizador tipo CAVA** (opcional, en Ajustes): barras de frecuencia en el reproductor, sin permisos.
-- **Selección múltiple** en Canciones: añadir a una lista o a la cola, o eliminar varias de una vez.
-
 ### Correcciones
-- Canciones **duplicadas a 0:00** con archivos de Snaptube y similares; «Añadir canciones» de una lista; moods para
-  canciones sin género; fotos de artista de otro artista; «Reproducción reciente» sin canciones de YouTube Music.
-- Canciones de YT Music sin opciones de archivo local (editar etiquetas, cortar, borrar…).
-- Portadas HD y animadas con menos peticiones y sin repetir; menos memoria si no inicias sesión en YT Music.
+- **El teclado ya no se queda encima del reproductor**: al abrir la pantalla completa se suelta el foco de la búsqueda y se oculta el IME. Si minimizas el teclado con su botón y vuelves a abrir la canción, ya no aparece el cursor/flecha de la búsqueda sobre el menú.
+- **YouTube Music sigue sonando al cerrar desde recientes**: al volver a la app se recupera la canción desde la sesión de medios, en lugar de detener la reproducción.
+- **Búsqueda**: el foco y el teclado se sueltan al elegir una canción de YT Music y al salir al fondo.
+
+> Esta versión incluye las novedades de **1.2.0**.
 
 Gracias a quienes lo hicieron posible:
 - **@Pedroj-64**: diseño, temas, reproductor, letras, YouTube Music, Android Auto, widget, estadísticas, inglés y optimización.

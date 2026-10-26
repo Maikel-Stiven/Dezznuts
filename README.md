@@ -11,7 +11,7 @@
 ![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.2-7F52FF?logo=kotlin&logoColor=white)
 ![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?logo=jetpackcompose&logoColor=white)
-![Versión](https://img.shields.io/badge/versi%C3%B3n-1.2.0-brightgreen)
+![Versión](https://img.shields.io/badge/versi%C3%B3n-1.2.1-brightgreen)
 ![PRs](https://img.shields.io/badge/PRs-bienvenidos-brightgreen)
 
 </div>
@@ -20,7 +20,7 @@ Reproductor de música **local** para Android, open source y gratuito. La idea e
 funciones que otros reproductores suelen cobrar (etiquetado automático, cortador de audio,
 ecualizador, temporizador), "solo por amor al arte".
 
-> ✅ **Versión 1.2.0**. Descarga el APK en [Releases](../../releases/latest) y mira el
+> ✅ **Versión 1.2.1**. Descarga el APK en [Releases](../../releases/latest) y mira el
 > [CHANGELOG](CHANGELOG.md). Lo que aún falta probar en teléfonos reales está en
 > [Problemas conocidos](#-problemas-conocidos).
 
