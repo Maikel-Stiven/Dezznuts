@@ -120,6 +120,10 @@ private const val FIRST_PUBLISH_SIZE = 100
 private const val PUBLISH_GROWTH = 4
 private const val MAX_DELETED_PLAYLISTS = 10
 
+/** Extras del MediaItem de YouTube Music: permiten reconstruir la canción desde la sesión de medios. */
+private const val YT_EXTRA_URL = "yt_url"
+private const val YT_EXTRA_DURATION_MS = "yt_duration_ms"
+
 class MusicViewModel (application: Application) : AndroidViewModel(application) {
 
     private val scanner = MediaStoreScanner(application.applicationContext)
@@ -432,10 +436,19 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                             val foundSong = activeQueue.find { it.id.toString() == idStr }
                                 ?: (_uiState.value as? UiState.Success)?.songs?.find { it.id.toString() == idStr }
 
-                            if (foundSong !== null){
-                                _currentSong.value = foundSong
-                                registerSongPlay(foundSong)
-                                if (foundSong.isYoutube) ytContinue(foundSong)
+                            // Una canción de YouTube no está en la biblioteca local: si la app se cerró
+                            // desde recientes, la cola en memoria se perdió, pero el MediaItem sigue en el
+                            // servicio. Se reconstruye para que la UI no quede vacía mientras suena.
+                            val song = foundSong ?: mediaItem?.let {
+                                ytSongFromMediaItem(it, controller.duration.coerceAtLeast(0L))
+                            }
+                            if (song !== null){
+                                _currentSong.value = song
+                                if (foundSong !== null) registerSongPlay(foundSong)
+                                if (song.isYoutube) {
+                                    if (foundSong === null) restoreQueueFromController(controller, song)
+                                    ytContinue(song)
+                                }
                             }
                         }
                         // Un cambio de cola (incluida la restauración inicial de setMediaItems) no es una
@@ -444,6 +457,8 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                         if (reason != Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) persistPosition()
                     }
                 })
+                // El servicio sobrevive a deslizar la app fuera de recientes y puede seguir sonando.
+                restoreCurrentFromController(controller)
             },
             ContextCompat.getMainExecutor(context)
         )
@@ -822,8 +837,67 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
 
     private fun ytItem(song: Song, audioUrl: String) = MediaItem.Builder().setMediaId(song.id.toString()).setUri(audioUrl)
         .setMediaMetadata(androidx.media3.common.MediaMetadata.Builder()
-            .setTitle(song.title).setArtist(song.artist).setAlbumTitle(song.album).setArtworkUri(song.albumArtUri).build())
+            .setTitle(song.title).setArtist(song.artist).setAlbumTitle(song.album).setArtworkUri(song.albumArtUri)
+            // La sesión de medios sobrevive al cierre de la app; estos extras permiten reconstruir la
+            // canción con su URL de YouTube y su duración (la URL de audio caduca y no sirve para repetirla).
+            .setExtras(Bundle().apply {
+                putString(YT_EXTRA_URL, song.contentUri.toString())
+                putLong(YT_EXTRA_DURATION_MS, song.duration)
+            })
+            .build())
         .build()
+
+    /**
+     * Reconstruye una canción de YouTube desde el MediaItem que quedó en la sesión de medios.
+     * Devuelve null para canciones locales: esas se restauran desde `last_song_id` y la biblioteca.
+     */
+    private fun ytSongFromMediaItem(item: MediaItem, durationFallbackMs: Long = 0L): Song? {
+        val id = item.mediaId.toLongOrNull() ?: return null
+        if (id > -(1L shl 61)) return null
+        val meta = item.mediaMetadata
+        val title = meta.title?.toString()?.takeIf { it.isNotBlank() } ?: return null
+        val extras = meta.extras
+        val duration = extras?.getLong(YT_EXTRA_DURATION_MS, 0L)?.takeIf { it > 0L } ?: durationFallbackMs
+        val url = extras?.getString(YT_EXTRA_URL) ?: item.localConfiguration?.uri?.toString().orEmpty()
+        return Song(
+            id = id,
+            title = title,
+            artist = meta.artist?.toString().orEmpty(),
+            album = meta.albumTitle?.toString()?.takeIf { it.isNotBlank() } ?: "YouTube Music",
+            duration = duration,
+            contentUri = Uri.parse(url),
+            albumArtUri = meta.artworkUri,
+            genre = "YouTube Music"
+        )
+    }
+
+    /** Reconstruye la cola visible desde la sesión (por si el proceso murió mientras seguía sonando). */
+    private fun restoreQueueFromController(controller: MediaController, current: Song) {
+        val allSongs = (_uiState.value as? UiState.Success)?.songs.orEmpty()
+        val items = (0 until controller.mediaItemCount).mapNotNull { index ->
+            val item = controller.getMediaItemAt(index)
+            val id = item.mediaId.toLongOrNull() ?: return@mapNotNull null
+            val fallback = if (index == controller.currentMediaItemIndex) controller.duration.coerceAtLeast(0L) else 0L
+            if (id <= -(1L shl 61)) ytSongFromMediaItem(item, fallback)
+            else allSongs.find { it.id == id }
+        }
+        if (items.size == controller.mediaItemCount && items.any { it.id == current.id }) {
+            _currentQueue.value = items
+        } else if (_currentQueue.value.none { it.id == current.id }) {
+            _currentQueue.value = listOf(current)
+        }
+    }
+
+    /** Al conectar con el servicio, muestra la canción de YouTube que sigue sonando aunque la app se haya cerrado. */
+    private fun restoreCurrentFromController(controller: MediaController) {
+        val item = controller.currentMediaItem ?: return
+        val id = item.mediaId.toLongOrNull() ?: return
+        if (id > -(1L shl 61)) return // local: lo restaura `restoreDashboardLists`
+        val song = ytSongFromMediaItem(item, controller.duration.coerceAtLeast(0L)) ?: return
+        _currentSong.value = song
+        _currentPositionMs.value = controller.currentPosition.coerceAtLeast(0L)
+        restoreQueueFromController(controller, song)
+    }
 
     /**
      * Reproduce una canción de YouTube Music. Su dirección de audio caduca, así que se pide justo ahora. La canción y
