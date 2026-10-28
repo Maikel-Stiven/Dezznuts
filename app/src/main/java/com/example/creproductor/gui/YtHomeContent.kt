@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,11 +18,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -62,7 +68,13 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun YtHomeContent(
-    loggedIn: Boolean, reload: Int, onPlay: (YtTrack) -> Unit, onLogin: () -> Unit
+    loggedIn: Boolean,
+    reload: Int,
+    onPlay: (YtTrack) -> Unit,
+    onLogin: () -> Unit,
+    onOpenItem: (YtItem) -> Unit = {},
+    onTrackOptionsClick: (YtTrack) -> Unit = {},
+    onCreatePlaylistClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var mood by remember { mutableStateOf<YtMood?>(null) }
@@ -87,7 +99,7 @@ internal fun YtHomeContent(
         return
     }
 
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
         item {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (loggedIn) FilterChip(selected = false, onClick = { showLiked = true }, label = { Text(tr("Me gusta")) })
@@ -106,7 +118,7 @@ internal fun YtHomeContent(
                 }
             }
             else -> {
-                // Orden de la pantalla de Maikel: Selección rápida (con «Reproducir todo»), Accesos directos y los estantes.
+                // Orden de la pantalla: Selección rápida (con «Reproducir todo»), Accesos directos y los estantes.
                 val quick = feed.shelves.firstOrNull()?.items?.mapNotNull { it.track }.orEmpty()
                 val rest = feed.shelves.drop(1)
                 if (quick.isNotEmpty()) {
@@ -124,6 +136,15 @@ internal fun YtHomeContent(
                             headlineContent = { Text(t.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             supportingContent = { Text(t.artist, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             leadingContent = { AsyncImage(t.thumbnail, null, contentScale = ContentScale.Crop, modifier = Modifier.size(48.dp).clip(MaterialTheme.shapes.small)) },
+                            trailingContent = {
+                                IconButton(onClick = { onTrackOptionsClick(t) }) {
+                                    Icon(
+                                        imageVector = Icons.Default.MoreVert,
+                                        contentDescription = tr("Opciones"),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             modifier = Modifier.clickable { onPlay(t) }
                         )
@@ -135,7 +156,7 @@ internal fun YtHomeContent(
                     Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         val likedLabel = tr("Música que te gustó")
                         val cells = listOf(Triple(likedLabel, null as String?, { if (loggedIn) showLiked = true else onLogin() })) +
-                            shortcuts.map { it -> Triple(it.title, it.thumbnail, { it.track?.let(onPlay) ?: run { opened = it } }) }
+                                shortcuts.map { it -> Triple(it.title, it.thumbnail, { it.track?.let(onPlay) ?: run { opened = it; onOpenItem(it) } }) }
                         cells.chunked(3).forEach { row ->
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 row.forEach { (title, thumb, act) -> ShortcutTile(Modifier.weight(1f), title, thumb, act) }
@@ -148,7 +169,60 @@ internal fun YtHomeContent(
                     Text(shelf.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp))
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(shelf.items, key = { it.track?.url ?: it.browseId ?: it.title }) { item ->
-                            YtItemCard(item) { item.track?.let(onPlay) ?: run { opened = item } }
+                            YtItemCard(item) { item.track?.let(onPlay) ?: run { opened = item; onOpenItem(item) } }
+                        }
+                    }
+                }
+
+                // Sección "Tus playlists"
+                item {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            tr("Tus playlists"),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = onCreatePlaylistClick) {
+                            Icon(Icons.Default.Add, contentDescription = tr("Crear playlist"))
+                        }
+                    }
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        item(key = "yt_create_playlist_tile") {
+                            Surface(
+                                modifier = Modifier
+                                    .size(140.dp)
+                                    .clip(MaterialTheme.shapes.medium)
+                                    .clickable(onClick = onCreatePlaylistClick),
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh
+                            ) {
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.Add,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(36.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(
+                                        tr("Crear playlist"),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -172,6 +246,11 @@ internal fun YtHomeContent(
                             headlineContent = { Text(t.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             supportingContent = { Text(t.artist, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             leadingContent = { AsyncImage(t.thumbnail, null, contentScale = ContentScale.Crop, modifier = Modifier.size(44.dp).clip(MaterialTheme.shapes.small)) },
+                            trailingContent = {
+                                IconButton(onClick = { onTrackOptionsClick(t) }) {
+                                    Icon(Icons.Default.MoreVert, contentDescription = null)
+                                }
+                            },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             modifier = Modifier.clickable { opened = null; onPlay(t) }
                         )
@@ -200,7 +279,7 @@ private fun ShortcutTile(modifier: Modifier, title: String, thumbnail: String?, 
     Surface(modifier.height(124.dp).clip(MaterialTheme.shapes.medium).clickable(onClick = onClick), color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.medium) {
         Column(Modifier.padding(8.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             if (thumbnail != null) AsyncImage(thumbnail, null, contentScale = ContentScale.Crop, modifier = Modifier.size(56.dp).clip(MaterialTheme.shapes.small))
-            else androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.ThumbUp, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(56.dp).padding(12.dp))
+            else Icon(Icons.Default.ThumbUp, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(56.dp).padding(12.dp))
             Text(title, style = MaterialTheme.typography.labelMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
         }
     }
