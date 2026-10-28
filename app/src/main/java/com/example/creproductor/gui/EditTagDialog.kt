@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -68,7 +70,7 @@ fun EditTagDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Editar etiquetas de audio") },
+        title = { Text(tr("Editar etiquetas de audio")) },
         text = {
             Column(
                 modifier = Modifier
@@ -87,7 +89,7 @@ fun EditTagDialog(
                     if (selectedCoverUri != null) {
                         AsyncImage(
                             model = selectedCoverUri,
-                            contentDescription = "Portada",
+                            contentDescription = tr("Portada"),
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
@@ -140,14 +142,14 @@ fun EditTagDialog(
                             )
                         }
                     ) {
-                        Text("Galeria")
+                        Text(tr("Galeria"))
                     }
                 }
 
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Título") },
+                    label = { Text(tr("Título")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -155,7 +157,7 @@ fun EditTagDialog(
                 OutlinedTextField(
                     value = artist,
                     onValueChange = { artist = it },
-                    label = { Text("Artista") },
+                    label = { Text(tr("Artista")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -172,7 +174,7 @@ fun EditTagDialog(
                 OutlinedTextField(
                     value = album,
                     onValueChange = { album = it },
-                    label = { Text("Álbum") },
+                    label = { Text(tr("Álbum")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -186,12 +188,12 @@ fun EditTagDialog(
                     onSave(title, artist, album, selectedCoverUri.takeIf { it != song.albumArtUri?.toString() })
                 }
             ) {
-                Text("Guardar")
+                Text(tr("Guardar"))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss)  {
-                Text("Cancelar")
+                Text(tr("Cancelar"))
             }
         }
     )

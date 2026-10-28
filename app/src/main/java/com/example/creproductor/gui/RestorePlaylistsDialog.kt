@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,10 +24,10 @@ import com.example.creproductor.data.Playlist
 fun RestorePlaylistsDialog(deleted: List<Playlist>, onRestore: (String) -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Restaurar listas de reproducción") },
+        title = { Text(tr("Restaurar listas de reproducción")) },
         text = {
             if (deleted.isEmpty()) {
-                Text("No hay listas borradas para restaurar.")
+                Text(tr("No hay listas borradas para restaurar."))
             } else {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
                     deleted.forEach { p ->
@@ -37,13 +39,13 @@ fun RestorePlaylistsDialog(deleted: List<Playlist>, onRestore: (String) -> Unit,
                                 Text(p.name, style = MaterialTheme.typography.bodyLarge)
                                 Text("${p.songIds.size} canciones", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            TextButton(onClick = { onRestore(p.id) }) { Text("Restaurar") }
+                            TextButton(onClick = { onRestore(p.id) }) { Text(tr("Restaurar")) }
                         }
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } }
+        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Cerrar")) } }
     )
 }
 
@@ -53,8 +55,8 @@ fun PlaylistOptionsDialog(playlist: Playlist, onDelete: () -> Unit, onExport: ()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(playlist.name) },
-        text = { Text("Exporta la lista como M3U para usarla en otro reproductor, o elimínala (podrás recuperarla con \"Restaurar listas de reproducción\"; las canciones no se borran del dispositivo).") },
-        confirmButton = { TextButton(onClick = { onExport(); onDismiss() }) { Text("Exportar M3U") } },
-        dismissButton = { TextButton(onClick = { onDelete(); onDismiss() }) { Text("Eliminar lista", color = androidx.compose.material3.MaterialTheme.colorScheme.error) } }
+        text = { Text(tr("Exporta la lista como M3U para usarla en otro reproductor, o elimínala (podrás recuperarla con \"Restaurar listas de reproducción\"; las canciones no se borran del dispositivo).")) },
+        confirmButton = { TextButton(onClick = { onExport(); onDismiss() }) { Text(tr("Exportar M3U")) } },
+        dismissButton = { TextButton(onClick = { onDelete(); onDismiss() }) { Text(tr("Eliminar lista"), color = androidx.compose.material3.MaterialTheme.colorScheme.error) } }
     )
 }

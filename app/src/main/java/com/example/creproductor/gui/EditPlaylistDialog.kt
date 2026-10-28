@@ -1,5 +1,6 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -120,7 +121,7 @@ fun EditPlaylistDialog(
                     ){
                         Icon(
                             imageVector = Icons.Default.Edit,
-                            contentDescription = "Editar portada",
+                            contentDescription = tr("Editar portada"),
                             tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(18.dp)
                         )
@@ -130,7 +131,7 @@ fun EditPlaylistDialog(
                 OutlinedTextField(
                     value = playlistName,
                     onValueChange = {playlistName = it},
-                    label = {Text("Nombre de la lista")},
+                    label = {Text(tr("Nombre de la lista"))},
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -145,12 +146,12 @@ fun EditPlaylistDialog(
                 },
                 enabled = playlistName.isNotBlank()
             ) {
-                Text("Guardar")
+                Text(tr("Guardar"))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar")
+                Text(tr("Cancelar"))
             }
         }
     )

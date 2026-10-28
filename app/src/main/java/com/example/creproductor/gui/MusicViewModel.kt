@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import android.app.Application
 import android.content.ComponentName
 import android.content.Context
@@ -46,6 +48,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.async
+import com.example.creproductor.data.isYoutube
+import com.example.creproductor.data.withoutBrokenTwins
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -175,6 +179,9 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     /** Respaldo en memoria de `id → nº de reproducciones` (origen de "Más reproducidas"). */
     private val playCountMap = mutableMapOf<Long, Int>()
 
+    /** Reproducciones por id de canción (para las estadísticas). */
+    fun playCounts(): Map<Long, Int> = playCountMap.toMap()
+
     /** Canciones ordenadas por número de reproducciones (descendente). */
     private val _mostPlayedSongs = MutableStateFlow<List<Song>>(emptyList())
     val mostPlayedSongs: StateFlow<List<Song>> = _mostPlayedSongs.asStateFlow()
@@ -295,13 +302,12 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         _currentQueue.value = _currentQueue.value.ifEmpty { (_uiState.value as? UiState.Success)?.songs ?: emptyList() } + song
         saveCurrentQueueIds(_currentQueue.value.map { it.id })
         controller.addMediaItems(buildMediaItems(listOf(song)))
-        Toast.makeText(getApplication(), "Agregada a la cola", Toast.LENGTH_SHORT).show()
+        Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "Agregada a la cola"), Toast.LENGTH_SHORT).show()
     }
 
     /**
      * Pone la canción justo después de la que suena; si no hay nada sonando, la reproduce.
-     * ponytail: con el aleatorio activo Media3 la coloca en un punto al azar del orden aleatorio; para respetarlo
-     * haría falta un ShuffleOrder propio en el servicio.
+     * Con el aleatorio activo el servicio reordena el orden aleatorio para que de verdad sea la siguiente.
      */
     fun playNextInQueue(song: Song) {
         val controller = mediaController
@@ -311,7 +317,13 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         _currentQueue.value = queue.subList(0, at) + song + queue.subList(at, queue.size)
         saveCurrentQueueIds(_currentQueue.value.map { it.id })
         controller.addMediaItems(at, buildMediaItems(listOf(song)))
-        Toast.makeText(getApplication(), "Suena a continuación", Toast.LENGTH_SHORT).show()
+        if (controller.shuffleModeEnabled) {
+            controller.sendCustomCommand(
+                SessionCommand(MusicService.ACTION_PLAY_NEXT_SHUFFLE, Bundle.EMPTY),
+                Bundle().apply { putInt(MusicService.EXTRA_INDEX, at) }
+            )
+        }
+        Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "Suena a continuación"), Toast.LENGTH_SHORT).show()
     }
 
     /** Borra el archivo (Android < 11; en 11+ lo hace el sistema con su propia confirmación) y recarga la biblioteca. */
@@ -319,7 +331,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         viewModelScope.launch(Dispatchers.IO) {
             val ok = runCatching { getApplication<Application>().contentResolver.delete(song.contentUri, null, null) > 0 }.getOrDefault(false)
             withContext(Dispatchers.Main) {
-                if (!ok) Toast.makeText(getApplication(), "No se pudo eliminar", Toast.LENGTH_LONG).show()
+                if (!ok) Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "No se pudo eliminar"), Toast.LENGTH_LONG).show()
                 loadSongs(silent = true)
             }
         }
@@ -327,7 +339,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
 
     fun addSongToPlaylist(playlistId: String, song: Song) {
         addSongsToPlaylist(playlistId, listOf(song.id))
-        Toast.makeText(getApplication(), "Agregada a la lista", Toast.LENGTH_SHORT).show()
+        Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "Agregada a la lista"), Toast.LENGTH_SHORT).show()
     }
 
     /** Estado del temporizador de apagado: 0 = apagado, -1 = al final de la canción, otro = hora de fin (ms). */
@@ -474,6 +486,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                             if (foundSong !== null){
                                 _currentSong.value = foundSong
                                 registerSongPlay(foundSong)
+                                if (foundSong.isYoutube) ytContinue(foundSong)
                             }
                         }
                         // Un cambio de cola (incluida la restauración inicial de setMediaItems) no es una
@@ -560,6 +573,8 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     private fun persistPosition() {
         val controller = mediaController ?: return
         val songId = controller.currentMediaItem?.mediaId?.toLongOrNull() ?: return
+        // Una canción de YouTube no se puede restaurar al reabrir: no pisa la última canción local ni su posición.
+        if (songId <= -(1L shl 61)) return
         // Al terminar la pista la posición es la duración; guardar 0 evita reabrir en el final.
         val position = if (controller.playbackState == Player.STATE_ENDED) 0L else controller.currentPosition
         prefs.edit {
@@ -737,7 +752,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     private fun publishSongs(songs: List<Song>){
         viewModelScope.launch(Dispatchers.Default) {
             val savedFavIds = getSavedFavoritesIds()
-            val updated = songs.map { song ->
+            val updated = songs.withoutBrokenTwins().map { song ->
                 if (savedFavIds.contains(song.id)) song.copy(isFavorite = true) else song
             }
             // Canciones que ya no están: fuera de la caché (las nuevas se resuelven en el precalentamiento).
@@ -765,7 +780,8 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                 .sortedByDescending { playCountMap[it.id] ?: 0 }
                 .take(30)
 
-            val updatedRecent = (listOf(song) + _recentPlayedSongs.value)
+            // YouTube Music es opcional: "Reproducción reciente" es solo de la biblioteca local.
+            val updatedRecent = (if (song.isYoutube) _recentPlayedSongs.value else listOf(song) + _recentPlayedSongs.value)
                 .distinctBy{it.id}
                 .take(30)
 
@@ -775,7 +791,8 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
             }
 
             saveRecentIds(updatedRecent.map {it.id})
-            prefs.edit { putLong("last_song_id", song.id) }
+            // Las de YouTube no existen en la biblioteca: al reabrir la app no se podrían restaurar.
+            if (!song.isYoutube) prefs.edit { putLong("last_song_id", song.id) }
         }
     }
 
@@ -786,6 +803,14 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     }
 
     fun playSong(song: Song, customQueue: List<Song>? = null){
+        // Una canción de YouTube Music no tiene archivo: su "uri" es la dirección de la página y el audio se pide al
+        // abrirla. Así también suenan desde Reproducción reciente, Más reproducidas o la cola.
+        if (song.isYoutube) {
+            playYt(com.example.creproductor.data.YtTrack(
+                song.contentUri.toString(), song.title, song.artist, song.duration / 1000, song.albumArtUri?.toString()
+            ))
+            return
+        }
 
         val queueToUse= if (!customQueue.isNullOrEmpty()) customQueue else (_uiState.value as? UiState.Success)?.songs ?: listOf(song)
 
@@ -822,6 +847,97 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                     controller.play()
                 }
             }
+        }
+    }
+
+    private val ytPlayed = LinkedHashSet<String>()
+
+    private fun sameTitle(a: String, b: String): Boolean {
+        fun n(t: String) = t.lowercase().substringBefore("(").filter { it.isLetterOrDigit() }
+        val x = n(a); val y = n(b)
+        return x.isNotEmpty() && y.isNotEmpty() && (x.contains(y) || y.contains(x))
+    }
+
+    private fun ytSong(track: com.example.creproductor.data.YtTrack, meta: com.example.creproductor.data.RemoteMetaDataResult?) = Song(
+        id = -(1L shl 62) - (track.url.hashCode().toLong() and 0xFFFFFFFFL),
+        title = com.example.creproductor.data.YtMusic.cleanTitle(track.title, track.artist), artist = com.example.creproductor.data.YtMusic.cleanArtist(track.artist),
+        album = meta?.album?.takeIf { it.isNotBlank() } ?: "YouTube Music",
+        duration = track.durationSec * 1000, contentUri = Uri.parse(track.url),
+        // La miniatura de YouTube es un fotograma de video (16:9, con bordes): la portada oficial es cuadrada y limpia.
+        albumArtUri = (meta?.highResCoverUrl ?: track.thumbnail)?.let(Uri::parse), genre = "YouTube Music"
+    )
+
+    private suspend fun ytMeta(track: com.example.creproductor.data.YtTrack) = kotlinx.coroutines.withTimeoutOrNull(2500) {
+        com.example.creproductor.data.CoverFetcher.fetchOfficialCover(com.example.creproductor.data.YtMusic.cleanTitle(track.title, track.artist), com.example.creproductor.data.YtMusic.cleanArtist(track.artist))
+    }
+
+    private fun ytItem(song: Song, audioUrl: String) = MediaItem.Builder().setMediaId(song.id.toString()).setUri(audioUrl)
+        .setMediaMetadata(androidx.media3.common.MediaMetadata.Builder()
+            .setTitle(song.title).setArtist(song.artist).setAlbumTitle(song.album).setArtworkUri(song.albumArtUri).build())
+        .build()
+
+    /**
+     * Reproduce una canción de YouTube Music. Su dirección de audio caduca, así que se pide justo ahora. La canción y
+     * su portada se muestran al instante y la portada oficial (iTunes) se busca a la vez que la dirección. No se guarda
+     * como "última canción" ni en recientes porque no vive en MediaStore. Al empezar se prepara la siguiente
+     * recomendada por YouTube y se añade a la cola del reproductor, así que sigue sola (y el botón siguiente de la
+     * notificación funciona). Id sintético muy negativo: no choca con los de MediaStore (>0) ni con los de CUE.
+     */
+    fun playYt(track: com.example.creproductor.data.YtTrack) {
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            val t0 = SystemClock.elapsedRealtime()
+            ytPlayed.clear(); ytPlayed += track.url
+            val quick = ytSong(track, null)
+            _currentQueue.value = listOf(quick)
+            _currentSong.value = quick
+            _currentPositionMs.value = 0L
+            val meta = async { ytMeta(track) }
+            val resolved = runCatching { withContext(Dispatchers.IO) { com.example.creproductor.data.YtMusic.resolve(track.url) } }
+                .getOrElse {
+                    Toast.makeText(app, com.example.creproductor.i18n.I18n.tr(app, "No se pudo abrir la canción de YouTube Music"), Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+            // Las tarjetas del inicio no traen duración: se toma la del audio ya abierto.
+            val song = ytSong(track.takeIf { it.durationSec > 0 } ?: track.copy(durationSec = resolved.durationSec), meta.await())
+            val controller = mediaController ?: return@launch
+            _currentQueue.value = listOf(song)
+            _currentSong.value = song
+            controller.setMediaItem(ytItem(song, resolved.audioUrl))
+            controller.prepare()
+            controller.play()
+            Log.i("DezzYt", "[+${SystemClock.elapsedRealtime() - t0} ms] lista para sonar: ${song.title}")
+            // La siguiente recomendada la prepara ytContinue al empezar esta (onMediaItemTransition).
+        }
+    }
+
+    /** Añade al final de la cola la siguiente recomendada por YouTube (si sigues en esta canción cuando esté lista). */
+    private fun ytQueueNext(current: Song, resolved: com.example.creproductor.data.YtMusic.Resolved) {
+        if (!com.example.creproductor.data.YtMusic.isAutoNext(getApplication())) return
+        viewModelScope.launch {
+            // Otra subida de la misma canción (o la que ya sonó) no cuenta como recomendada.
+            val next = resolved.related.firstOrNull {
+                it.url !in ytPlayed && it.durationSec in 60..900 && !sameTitle(it.title, current.title)
+            } ?: return@launch
+            ytPlayed += next.url
+            val nextResolved = runCatching { withContext(Dispatchers.IO) { com.example.creproductor.data.YtMusic.resolve(next.url) } }.getOrNull() ?: return@launch
+            val song = ytSong(next.takeIf { it.durationSec > 0 } ?: next.copy(durationSec = nextResolved.durationSec), ytMeta(next))
+            val controller = mediaController ?: return@launch
+            if (controller.currentMediaItem?.mediaId != current.id.toString()) return@launch
+            if (controller.currentMediaItemIndex != controller.mediaItemCount - 1) return@launch
+            controller.addMediaItem(ytItem(song, nextResolved.audioUrl))
+            _currentQueue.value = _currentQueue.value + song
+            Log.i("DezzYt", "siguiente recomendada en cola: ${song.title}")
+        }
+    }
+
+    /** Al pasar a una canción de YouTube que es la última de la cola, prepara la siguiente (la dirección ya está en caché). */
+    private fun ytContinue(song: Song) {
+        val controller = mediaController ?: return
+        if (controller.currentMediaItemIndex != controller.mediaItemCount - 1) return
+        viewModelScope.launch {
+            val resolved = runCatching { withContext(Dispatchers.IO) { com.example.creproductor.data.YtMusic.resolve(song.contentUri.toString()) } }.getOrNull() ?: return@launch
+            ytQueueNext(song, resolved)
         }
     }
 
@@ -924,7 +1040,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                 SongCoverCache.invalidate(getApplication(), song)
                 loadSongs(silent = true)
             } else {
-                Toast.makeText(getApplication(), "No se pudieron guardar los tags", Toast.LENGTH_LONG).show()
+                Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "No se pudieron guardar los tags"), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -1095,7 +1211,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         runCatching { getApplication<Application>().contentResolver.openOutputStream(uri, "wt")!!.bufferedWriter().use { it.write(text) } }.isSuccess
     }
 
-    private fun toast(text: String) = Toast.makeText(getApplication(), text, Toast.LENGTH_LONG).show()
+    private fun toast(text: String) = Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), text), Toast.LENGTH_LONG).show()
 
     fun exportBackup(uri: Uri) {
         val byId = librarySongs.associateBy { it.id }
@@ -1254,13 +1370,13 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         saveCurrentQueueIds(updatedQueue.map { it.id })
 
         mediaController?.addMediaItems(buildMediaItems(playlistSongs))
-        Toast.makeText(getApplication(), "Lista agregada a la cola", Toast.LENGTH_SHORT).show()
+        Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "Lista agregada a la cola"), Toast.LENGTH_SHORT).show()
     }
 
     /** Copia las canciones de una playlist a otra */
     fun appendPlaylistToPlaylist (sourcePlaylist: Playlist, targetPlaylistId: String){
         addSongsToPlaylist(targetPlaylistId, sourcePlaylist.songIds)
-        Toast.makeText(getApplication(), "Canciones añadidas a la playlist", Toast.LENGTH_SHORT).show()
+        Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "Canciones añadidas a la playlist"), Toast.LENGTH_SHORT).show()
     }
 
     fun updatedPlaylist(playlistId: String, newName: String, newCoverUri: String?){
@@ -1282,7 +1398,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         }
         _playlists.value = updated
         savePlaylists(updated)
-        Toast.makeText(getApplication(), "Duplicados eliminados", Toast.LENGTH_LONG).show()
+        Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "Duplicados eliminados"), Toast.LENGTH_LONG).show()
     }
 
     /** Elimina del dispositivo las canciones dentro de la playlist*/

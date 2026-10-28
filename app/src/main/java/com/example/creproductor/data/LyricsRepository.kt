@@ -52,13 +52,17 @@ object LyricsRepository {
     fun online(context: Context, song: Song): Lyrics? {
         val artist = song.artist.takeUnless { it.isBlank() || it.startsWith("<") }
         val title = enc(song.title)
-        val exact = if (artist != null)
-            get("$BASE/get?track_name=$title&artist_name=${enc(artist)}&album_name=${enc(song.album)}&duration=${song.duration / 1000}")
+        val seconds = song.duration / 1000
+        // El álbum solo ayuda si es real: las canciones de YouTube Music llevan uno genérico y LRCLIB responde 503 con él.
+        val album = song.album.takeUnless { it.isBlank() || it.startsWith("<") || song.isYoutube }
+        // La búsqueda exacta es un atajo: si falla (404, 503, red), se sigue con la búsqueda general en vez de rendirse.
+        val exact = if (artist != null && album != null)
+            runCatching { get("$BASE/get?track_name=$title&artist_name=${enc(artist)}&album_name=${enc(album)}&duration=$seconds") }.getOrNull()
                 ?.let { runCatching { fromJson(JSONObject(it)) }.getOrNull() }
         else null
         val found = exact ?: get("$BASE/search?track_name=$title" + (artist?.let { "&artist_name=${enc(it)}" } ?: ""))
             ?.let { runCatching { JSONArray(it) }.getOrNull() }
-            ?.let { arr -> (0 until arr.length()).asSequence().mapNotNull { runCatching { fromJson(arr.getJSONObject(it)) }.getOrNull() }.firstOrNull() }
+            ?.let { arr -> bestMatch((0 until arr.length()).mapNotNull { runCatching { arr.getJSONObject(it) }.getOrNull() }, seconds) }
             ?: return null
         runCatching {
             cacheFile(context, song).apply { parentFile?.mkdirs() }.writeText(
@@ -68,6 +72,13 @@ object LyricsRepository {
         }
         return found
     }
+
+    /** Entre varias versiones, la sincronizada con la duración más parecida (la misma canción en otro disco dura distinto). */
+    private fun bestMatch(candidates: List<JSONObject>, seconds: Long): Lyrics? =
+        candidates.sortedWith(
+            compareByDescending<JSONObject> { !it.isNull("syncedLyrics") && it.optString("syncedLyrics").isNotBlank() }
+                .thenBy { if (seconds > 0) kotlin.math.abs(it.optDouble("duration", 0.0) - seconds) else 0.0 }
+        ).firstNotNullOfOrNull { runCatching { fromJson(it) }.getOrNull() }
 
     /** Preferir la sincronizada; si solo hay texto plano, esa. */
     private fun fromJson(o: JSONObject): Lyrics? {

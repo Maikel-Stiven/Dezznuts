@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.compose.foundation.background
 import com.example.creproductor.data.coverModel
 import androidx.compose.foundation.basicMarquee
@@ -107,10 +109,10 @@ fun QuickSelectionScreen(
 
         // Moods: agrupados por género fuera del hilo principal; los que no tienen canciones no se muestran.
         val moods by produceState(emptyMap<Mood, List<Song>>(), allSongs) {
-            value = withContext(Dispatchers.Default) { Moods.group(allSongs) { it.genre } }
+            value = withContext(Dispatchers.Default) { Moods.group(allSongs, genreOf = { it.genre }, textOf = { "${it.title} ${it.album} ${it.path.substringBeforeLast('/')}" }, artistOf = { it.artist }) }
         }
         if (moods.isNotEmpty()) {
-            Text("Moods:", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+            Text(tr("Moods:"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -139,15 +141,16 @@ fun SectionRow(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium)
+            // El título cede espacio (y se recorta) antes que "Ver todo", que nunca se parte en líneas.
+            Text(text = tr(title), style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             TextButton(onClick = onSeeAllClick) {
-                Text("VER TODOS", style = MaterialTheme.typography.labelMedium)
+                Text(tr("Ver todo"), style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false)
             }
         }
 
         if (songs.isEmpty()){
             Text(
-                text = emptyMessage,
+                text = tr(emptyMessage),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)

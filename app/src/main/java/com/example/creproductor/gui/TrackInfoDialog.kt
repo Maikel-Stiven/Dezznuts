@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
@@ -18,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import com.example.creproductor.data.AudioQuality
 import com.example.creproductor.data.QualityTier
 import com.example.creproductor.data.Song
+import com.example.creproductor.data.isYoutube
 
 /** Ficha técnica de la canción: archivo, calidad y salida real. Se abre desde el menú (⋮) del reproductor. */
 @Composable
@@ -28,7 +31,13 @@ fun TrackInfoDialog(song: Song, audioInfo: String, onEdit: () -> Unit = {}, onDi
         QualityTier.LOSSY -> "Con pérdida"
     }
     val file = AudioQuality.label(song.mimeType, song.sampleRate, song.bitsPerSample, song.bitrate)
-    val rows = listOf(
+    val isYt = song.isYoutube
+    val rows = if (isYt) listOf(
+        "Título" to song.title,
+        "Artista" to song.artist,
+        "Origen" to "YouTube Music",
+        "Reproduciendo" to audioInfo.ifEmpty { "—" }
+    ) else listOf(
         "Título" to song.title,
         "Artista" to song.artist,
         "Álbum" to song.album,
@@ -40,18 +49,18 @@ fun TrackInfoDialog(song: Song, audioInfo: String, onEdit: () -> Unit = {}, onDi
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Default.Info, contentDescription = null) },
-        title = { Text("Información técnica") },
+        title = { Text(tr("Información técnica")) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 rows.forEach { (k, v) ->
                     Column {
-                        Text(k, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                        Text(tr(k), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
                         Text(v, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } },
-        dismissButton = { TextButton(onClick = { onDismiss(); onEdit() }) { Text("Editar etiquetas") } }
+        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Cerrar")) } },
+        dismissButton = if (isYt) null else ({ TextButton(onClick = { onDismiss(); onEdit() }) { Text(tr("Editar etiquetas")) } })
     )
 }

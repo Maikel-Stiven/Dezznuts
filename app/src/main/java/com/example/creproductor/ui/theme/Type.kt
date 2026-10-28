@@ -1,5 +1,7 @@
 package com.example.creproductor.ui.theme
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
@@ -7,39 +9,47 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.creproductor.R
 
-/** Manrope (OFL), fuente variable: un solo archivo para todos los pesos (Android 8+; antes, el peso por defecto). */
+/** Fuentes variables (OFL): un solo archivo para todos los pesos (Android 8+; antes, el peso por defecto). */
 @OptIn(ExperimentalTextApi::class)
-private fun manrope(weight: FontWeight) = Font(
-    R.font.manrope, weight,
-    variationSettings = FontVariation.Settings(FontVariation.weight(weight.weight))
-)
+private fun variable(res: Int, weight: FontWeight) =
+    Font(res, weight, variationSettings = FontVariation.Settings(FontVariation.weight(weight.weight)))
 
-val Manrope = FontFamily(
-    manrope(FontWeight.Normal), manrope(FontWeight.Medium), manrope(FontWeight.SemiBold),
-    manrope(FontWeight.Bold), manrope(FontWeight.ExtraBold)
+private val Manrope = FontFamily(
+    variable(R.font.manrope, FontWeight.Normal), variable(R.font.manrope, FontWeight.Medium),
+    variable(R.font.manrope, FontWeight.SemiBold), variable(R.font.manrope, FontWeight.Bold),
+    variable(R.font.manrope, FontWeight.ExtraBold)
 )
+/** Silkscreen (OFL), la tipografía pixel que Maikel eligió para su interfaz «Omarge» (rama temas/interfaces). */
+private val Silkscreen = FontFamily(Font(R.font.silkscreen, FontWeight.Normal), Font(R.font.silkscreen_bold, FontWeight.Bold))
 
-private fun style(size: Int, line: Int, weight: FontWeight, tracking: Double = 0.0) = TextStyle(
-    fontFamily = Manrope, fontWeight = weight, fontSize = size.sp, lineHeight = line.sp, letterSpacing = tracking.sp
+/** Premium: Manrope en todo. Omarchy: pixel en títulos y monoespaciada en el resto (estilo terminal). */
+private fun scale(titles: FontFamily, body: FontFamily, titleWeight: FontWeight, tracking: Double, titleScale: Float = 1f) = Typography().let { t ->
+    // Una pixel como Silkscreen es ancha: sus títulos se achican (titleScale) para que quepan igual que los normales.
+    fun TextStyle.t(extra: Float = 1f) = copy(fontFamily = titles, fontWeight = titleWeight, letterSpacing = tracking.sp, fontSize = fontSize * titleScale * extra, lineHeight = lineHeight * titleScale * extra)
+    fun TextStyle.b() = copy(fontFamily = body)
+    t.copy(
+        displayLarge = t.displayLarge.t(), displayMedium = t.displayMedium.t(), displaySmall = t.displaySmall.t(),
+        headlineLarge = t.headlineLarge.t(), headlineMedium = t.headlineMedium.t(), headlineSmall = t.headlineSmall.t(),
+        titleLarge = t.titleLarge.t(), titleMedium = t.titleMedium.t(), titleSmall = t.titleSmall.t(),
+        bodyLarge = t.bodyLarge.b(), bodyMedium = t.bodyMedium.b(), bodySmall = t.bodySmall.b(),
+        // Los botones y chips llevan etiquetas: un poco más pequeñas aún, que con una pixel ancha se partían («REPRODUC/IR»).
+        labelLarge = t.labelLarge.t(0.85f), labelMedium = t.labelMedium.t(0.85f), labelSmall = t.labelSmall.b()
+    )
+}
+
+val PremiumTypography = scale(Manrope, Manrope, FontWeight.Bold, 0.0)
+val OmarchyTypography = scale(Silkscreen, FontFamily.Monospace, FontWeight.Bold, 0.5, titleScale = 0.72f)
+
+val PremiumShapes = Shapes(
+    extraSmall = RoundedCornerShape(6.dp), small = RoundedCornerShape(10.dp), medium = RoundedCornerShape(14.dp),
+    large = RoundedCornerShape(20.dp), extraLarge = RoundedCornerShape(28.dp)
 )
-
-val Typography = Typography(
-    displayLarge = style(52, 60, FontWeight.ExtraBold, -1.0),
-    displayMedium = style(42, 50, FontWeight.ExtraBold, -0.8),
-    displaySmall = style(34, 42, FontWeight.Bold, -0.5),
-    headlineLarge = style(30, 38, FontWeight.Bold, -0.4),
-    headlineMedium = style(26, 34, FontWeight.Bold, -0.3),
-    headlineSmall = style(22, 30, FontWeight.Bold, -0.2),
-    titleLarge = style(20, 28, FontWeight.Bold, -0.1),
-    titleMedium = style(16, 24, FontWeight.SemiBold),
-    titleSmall = style(15, 21, FontWeight.SemiBold),
-    bodyLarge = style(16, 24, FontWeight.Normal),
-    bodyMedium = style(14, 20, FontWeight.Normal),
-    bodySmall = style(12, 17, FontWeight.Medium),
-    labelLarge = style(14, 20, FontWeight.SemiBold, 0.1),
-    labelMedium = style(12, 16, FontWeight.SemiBold, 0.3),
-    labelSmall = style(11, 14, FontWeight.Bold, 0.4),
+/** Esquinas casi rectas, como una terminal. */
+val OmarchyShapes = Shapes(
+    extraSmall = RoundedCornerShape(2.dp), small = RoundedCornerShape(2.dp), medium = RoundedCornerShape(4.dp),
+    large = RoundedCornerShape(4.dp), extraLarge = RoundedCornerShape(6.dp)
 )

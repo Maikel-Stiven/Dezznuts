@@ -1,5 +1,7 @@
 package com.example.creproductor
 
+import com.example.creproductor.gui.formatDuration
+
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

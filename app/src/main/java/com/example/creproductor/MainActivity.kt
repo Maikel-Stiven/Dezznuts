@@ -1,11 +1,10 @@
 package com.example.creproductor
 
+import com.example.creproductor.i18n.tr
+
 import com.example.creproductor.gui.CoverAccentTheme
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.unit.Density
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.fadeIn
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -25,41 +24,25 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.example.creproductor.data.ArtistImageFetcher
 import coil.ImageLoader
-import coil.compose.AsyncImage
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import com.example.creproductor.data.Song
 import com.example.creproductor.data.SongCover
 import com.example.creproductor.data.SongCoverFetcher
-import com.example.creproductor.data.coverModel
 import com.example.creproductor.gui.AboutDialog
 import com.example.creproductor.gui.AppAction
+import com.example.creproductor.gui.BottomPlayerBar
 import com.example.creproductor.gui.AppSection
-import com.example.creproductor.gui.SettingsScreen
+import com.example.creproductor.gui.OptionsScreen
 import com.example.creproductor.gui.StatusScreen
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
 import com.example.creproductor.gui.LocalAnimationsEnabled
 import com.example.creproductor.gui.AudioCutterDialog
 import com.example.creproductor.gui.ClearImageCacheDialog
@@ -69,7 +52,6 @@ import com.example.creproductor.gui.DuplicatesDialog
 import com.example.creproductor.gui.EqualizerDialog
 import com.example.creproductor.gui.FixUnknownArtistsDialog
 import com.example.creproductor.gui.HiFiAudioDialog
-import com.example.creproductor.gui.CoverQualityStrip
 import com.example.creproductor.gui.MainScreen
 import com.example.creproductor.gui.MusicViewModel
 import com.example.creproductor.gui.NavRequest
@@ -79,13 +61,9 @@ import com.example.creproductor.gui.SongMenuActions
 import com.example.creproductor.gui.SongMenuSheet
 import com.example.creproductor.gui.TrackInfoDialog
 import com.example.creproductor.gui.UiState
-import com.example.creproductor.ui.theme.AppStyle
 import com.example.creproductor.ui.theme.DEZZNUTStheme
 import kotlinx.coroutines.launch
 import coil.Coil
-import com.example.creproductor.gui.PlayingEqualizerIcon
-import com.example.creproductor.gui.ThemeDialog
-import com.example.creproductor.ui.theme.AppAccentPreset
 
 
 private const val FEEDBACK_URL = "https://github.com/Maikel-Stiven/Dezznuts/issues/new"
@@ -133,20 +111,15 @@ class MainActivity : ComponentActivity() {
             .build()
         Coil.setImageLoader (imageLoader)
 
+        com.example.creproductor.ui.theme.ThemeSetting.load(this)
+        com.example.creproductor.gui.NavSetting.load(this)
         setContent {
-            val appStyle by viewModel.appStyle.collectAsStateWithLifecycle()
-            val isAdaptiveAccent by viewModel.isAdaptiveAccent.collectAsStateWithLifecycle()
-            val accentPreset by viewModel.accentPreset.collectAsStateWithLifecycle()
-            val customAccentColor by viewModel.customAccentColor.collectAsStateWithLifecycle()
-            DEZZNUTStheme(
-                appStyle = appStyle,
-                accentPreset = accentPreset,
-                customAccentColor = customAccentColor
-            ) {
+            DEZZNUTStheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
+                    com.example.creproductor.gui.YtLoginHost()
                     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                     val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
                     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
@@ -161,7 +134,6 @@ class MainActivity : ComponentActivity() {
                     LaunchedEffect(openPlayerRequest.value) {
                         if (openPlayerRequest.value) { isPlayerFullScreenVisible = true; openPlayerRequest.value = false }
                     }
-                    var showThemeDialog by remember { mutableStateOf(false) }
                     var showClearImageCacheDialog by remember { mutableStateOf(false) }
                     var showHiFiAudioDialog by remember { mutableStateOf(false) }
                     var showEqualizerDialog by remember { mutableStateOf(false) }
@@ -173,7 +145,7 @@ class MainActivity : ComponentActivity() {
                     // Android 9 o menos: guardar en la carpeta pública de Música exige el permiso de escritura.
                     var pendingCut by remember { mutableStateOf<(() -> Unit)?>(null) }
                     val writePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
-                        if (ok) pendingCut?.invoke() else Toast.makeText(this@MainActivity, "Sin permiso no se puede guardar el corte", Toast.LENGTH_LONG).show()
+                        if (ok) pendingCut?.invoke() else Toast.makeText(this@MainActivity, com.example.creproductor.i18n.I18n.tr(this@MainActivity, "Sin permiso no se puede guardar el corte"), Toast.LENGTH_LONG).show()
                         pendingCut = null
                     }
                     var showSleepTimerDialog by remember { mutableStateOf(false) }
@@ -200,7 +172,7 @@ class MainActivity : ComponentActivity() {
                     val editSong: (Song) -> Unit = { song -> songMenuFor = song }
                     fun openCutter(song: Song) {
                         // Las pistas de una hoja CUE son un tramo de un archivo largo: se cortaría el archivo entero.
-                        if (song.cueStartMs >= 0) { Toast.makeText(this@MainActivity, "Las pistas de una hoja CUE no se pueden cortar", Toast.LENGTH_LONG).show(); return }
+                        if (song.cueStartMs >= 0) { Toast.makeText(this@MainActivity, com.example.creproductor.i18n.I18n.tr(this@MainActivity, "Las pistas de una hoja CUE no se pueden cortar"), Toast.LENGTH_LONG).show(); return }
                         viewModel.pauseIfPlaying()
                         songToCut = song
                     }
@@ -209,6 +181,10 @@ class MainActivity : ComponentActivity() {
                         viewModel.loadSongs(silent = true)
                     }
                     var section by rememberSaveable { mutableStateOf(AppSection.HOME) }
+                    var showOptionsScreen by remember { mutableStateOf(false) }
+                    var navReset by remember { mutableIntStateOf(0) }
+                    val homePager = androidx.compose.foundation.pager.rememberPagerState(initialPage = 0, pageCount = { com.example.creproductor.gui.AppTab.entries.size })
+                    var showStatsDialog by remember { mutableStateOf(false) }
                     // Copia de seguridad y M3U: el usuario elige el archivo con el selector del sistema (sin permisos extra).
                     val saveBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
                         uri?.let(viewModel::exportBackup)
@@ -225,9 +201,9 @@ class MainActivity : ComponentActivity() {
                         if (uri != null && p != null) viewModel.exportPlaylistM3u(p.id, uri)
                         playlistToExport = null
                     }
+                    val navStyle = com.example.creproductor.gui.rememberNavStyle()
                     fun runAction(action: AppAction) {
                         when (action) {
-                            AppAction.AppTheme -> showThemeDialog = true
                             AppAction.Equalizer -> showEqualizerDialog = true
                             AppAction.SearchDuplicates -> showDuplicatesDialog = true
                             AppAction.FixUnknownArtists -> showFixArtistsDialog = true
@@ -235,7 +211,7 @@ class MainActivity : ComponentActivity() {
                             AppAction.AudioCutter -> {
                                 val playing = currentSong
                                 if (playing != null) openCutter(playing)
-                                else Toast.makeText(this@MainActivity, "Elige una canción desde su menú ⋮ → Cortador de audio", Toast.LENGTH_LONG).show()
+                                else Toast.makeText(this@MainActivity, com.example.creproductor.i18n.I18n.tr(this@MainActivity, "Elige una canción desde su menú ⋮ → Cortador de audio"), Toast.LENGTH_LONG).show()
                             }
                             AppAction.SleepTimer -> showSleepTimerDialog = true
                             AppAction.ExportBackup -> saveBackup.launch("dezznuts-copia-${java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).format(java.util.Date())}.txt")
@@ -244,11 +220,13 @@ class MainActivity : ComponentActivity() {
                             AppAction.ClearImageCache -> showClearImageCacheDialog = true
                             AppAction.HiFiAudio -> showHiFiAudioDialog = true
                             AppAction.About -> showAboutDialog = true
+                            AppAction.Options -> if (navStyle == com.example.creproductor.gui.NavStyle.BOTTOM) section = AppSection.SETTINGS else showOptionsScreen = true
+                            AppAction.Stats -> showStatsDialog = true
                             AppAction.SendFeedback -> {
                                 // Los comentarios van a los "issues" del repositorio.
                                 runCatching {
                                     startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(FEEDBACK_URL)))
-                                }.onFailure { Toast.makeText(this@MainActivity, "No hay navegador para abrir el enlace", Toast.LENGTH_LONG).show() }
+                                }.onFailure { Toast.makeText(this@MainActivity, com.example.creproductor.i18n.I18n.tr(this@MainActivity, "No hay navegador para abrir el enlace"), Toast.LENGTH_LONG).show() }
                             }
                         }
                     }
@@ -300,17 +278,30 @@ class MainActivity : ComponentActivity() {
                                     Box(modifier = Modifier.fillMaxSize()) {
                                         // Lo que queda bajo el reproductor a pantalla completa no anima (no se ve).
                                         CompositionLocalProvider(LocalAnimationsEnabled provides !isPlayerFullScreenVisible) {
-                                        Column(modifier = Modifier.fillMaxSize()) {
+                                        // Recorte y barras del sistema: a los lados en apaisado y abajo (barra de gestos/3 botones), que el
+                                        // mini-reproductor ya no comparte con una barra de navegación propia.
+                                        Row(modifier = Modifier.fillMaxSize().windowInsetsPadding(
+                                            androidx.compose.foundation.layout.WindowInsets.displayCutout.union(androidx.compose.foundation.layout.WindowInsets.systemBars)
+                                                .only(androidx.compose.foundation.layout.WindowInsetsSides.Horizontal + androidx.compose.foundation.layout.WindowInsetsSides.Bottom)
+                                        )) {
+                                        Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
                                             Box(modifier = Modifier.weight(1f)) {
                                                 MainScreen(
                                                     viewModel = viewModel,
                                                     section = section,
                                                     onSectionChange = { section = it },
                                                     onEditSong = editSong,
+                                                    onDeleteSongs = { list ->
+                                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                                            val request = MediaStore.createDeleteRequest(contentResolver, list.map { it.contentUri })
+                                                            deleteLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
+                                                        } else list.forEach(viewModel::deleteSongLegacy)
+                                                    },
                                                     onExportPlaylist = { playlistToExport = it; saveM3u.launch("${it.name}.m3u8") },
-                                                    settingsContent = {
-                                                        SettingsScreen(versionName = versionName, onAction = ::runAction)
-                                                    }
+                                                    pagerState = homePager,
+                                                    navReset = navReset,
+                                                    versionName = versionName,
+                                                    onAction = ::runAction
                                                 )
                                             }
 
@@ -333,16 +324,12 @@ class MainActivity : ComponentActivity() {
                                                 }
                                             }
 
-                                            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
-                                                AppSection.entries.forEach { item ->
-                                                    NavigationBarItem(
-                                                        selected = section == item,
-                                                        onClick = { section = item },
-                                                        icon = { Icon(item.icon, contentDescription = null) },
-                                                        label = { Text(item.title) }
-                                                    )
-                                                }
+                                            // Interfaz de Maikel: barra inferior (opcional), bajo el mini-reproductor.
+                                            if (com.example.creproductor.gui.rememberNavStyle() == com.example.creproductor.gui.NavStyle.BOTTOM) {
+                                                com.example.creproductor.gui.AppBottomBar(section, homePager, { section = it }, onNavigate = { navReset++ })
                                             }
+
+                                        }
                                         }
                                         }
 
@@ -357,55 +344,37 @@ class MainActivity : ComponentActivity() {
                                             // únicamente la barra de progreso, así el resto del reproductor no se recompone cada 500 ms.
                                             val currentPositionMs by viewModel.currentPositionMs.collectAsStateWithLifecycle()
 
-                                           if (isAdaptiveAccent){
-                                               CoverAccentTheme(playingSong) {
-                                                   FullScreenPlayer(
-                                                       song = playingSong,
-                                                       songs = activeSongsQueue,
-                                                       isPlaying = isPlaying,
-                                                       currentPositionMs = { currentPositionMs },
-                                                       repeatMode = repeatMode,
-                                                       isShuffleEnabled = isShuffleEnabled,
-                                                       audioInfo = audioInfo,
-                                                       onOpenEqualizer = { showEqualizerDialog = true },
-                                                       onEditSong = editSong,
-                                                       onToggleShuffle = { viewModel.toggleShuffle() },
-                                                       onTogglePlayPause = { viewModel.togglePlayPause() },
-                                                       onNextClick = { viewModel.playNext() },
-                                                       onPreviousClick = { viewModel.playPrevious() },
-                                                       onSeekTo = { pos -> viewModel.seekTo(pos)},
-                                                       onSongSelected = {song -> viewModel.playSong(song, customQueue = activeSongsQueue)},
-                                                       onToggleRepeatMode = {viewModel.toggleRepeatMode()},
-                                                       onRemoveQueue = {song -> viewModel.removeFromQueue(song)},
-                                                       onMoveQueueItem = { from, to -> viewModel.moveQueueItem(from, to) },
-                                                       onDismiss = { isPlayerFullScreenVisible = false },
-                                                       onToggleFavorite = { song -> viewModel.toggleFavorite(song) }
-                                                   )
-                                               }
-                                           }else{
-                                               FullScreenPlayer(
-                                                   song = playingSong,
-                                                   songs = activeSongsQueue,
-                                                   isPlaying = isPlaying,
-                                                   currentPositionMs = { currentPositionMs },
-                                                   repeatMode = repeatMode,
-                                                   isShuffleEnabled = isShuffleEnabled,
-                                                   audioInfo = audioInfo,
-                                                   onOpenEqualizer = { showEqualizerDialog = true },
-                                                   onEditSong = editSong,
-                                                   onToggleShuffle = { viewModel.toggleShuffle() },
-                                                   onTogglePlayPause = { viewModel.togglePlayPause() },
-                                                   onNextClick = { viewModel.playNext() },
-                                                   onPreviousClick = { viewModel.playPrevious() },
-                                                   onSeekTo = { pos -> viewModel.seekTo(pos)},
-                                                   onSongSelected = {song -> viewModel.playSong(song, customQueue = activeSongsQueue)},
-                                                   onToggleRepeatMode = {viewModel.toggleRepeatMode()},
-                                                   onRemoveQueue = {song -> viewModel.removeFromQueue(song)},
-                                                   onMoveQueueItem = { from, to -> viewModel.moveQueueItem(from, to) },
-                                                   onDismiss = { isPlayerFullScreenVisible = false },
-                                                   onToggleFavorite = { song -> viewModel.toggleFavorite(song) }
-                                               )
-                                           }
+                                            // El reproductor reparte la altura entre portada y controles: con texto del sistema muy grande
+                                            // la portada desaparecía, así que aquí el texto admite hasta 1,15×.
+                                            val playerDensity = LocalDensity.current
+                                            CompositionLocalProvider(
+                                                LocalDensity provides Density(playerDensity.density, fontScale = playerDensity.fontScale.coerceAtMost(1.15f))
+                                            ) {
+                                            CoverAccentTheme(playingSong) {
+                                            FullScreenPlayer(
+                                                song = playingSong,
+                                                songs = activeSongsQueue,
+                                                isPlaying = isPlaying,
+                                                currentPositionMs = { currentPositionMs },
+                                                repeatMode = repeatMode,
+                                                isShuffleEnabled = isShuffleEnabled,
+                                                audioInfo = audioInfo,
+                                                onOpenEqualizer = { showEqualizerDialog = true },
+                                                onEditSong = editSong,
+                                                onToggleShuffle = { viewModel.toggleShuffle() },
+                                                onTogglePlayPause = { viewModel.togglePlayPause() },
+                                                onNextClick = { viewModel.playNext() },
+                                                onPreviousClick = { viewModel.playPrevious() },
+                                                onSeekTo = { pos -> viewModel.seekTo(pos)},
+                                                onSongSelected = {song -> viewModel.playSong(song, customQueue = activeSongsQueue)},
+                                                onToggleRepeatMode = {viewModel.toggleRepeatMode()},
+                                                onRemoveQueue = {song -> viewModel.removeFromQueue(song)},
+                                                onMoveQueueItem = { from, to -> viewModel.moveQueueItem(from, to) },
+                                                onDismiss = { isPlayerFullScreenVisible = false },
+                                                onToggleFavorite = { song -> viewModel.toggleFavorite(song) }
+                                            )
+                                            }
+                                            }
                                         }
                                     }
                             }
@@ -468,20 +437,6 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        if (showThemeDialog){
-                            ThemeDialog (
-                                currentStyle = appStyle,
-                                isAdaptiveAccent = isAdaptiveAccent,
-                                currentPreset = accentPreset,
-                                customAccentColor = customAccentColor,
-                                onStyleSelected = { viewModel.setAppStyle(it) },
-                                onAdaptiveAccentToggled = { viewModel.setAdaptiveAccent(it) },
-                                onAccentPresetSelected = { viewModel.setAccentPreset(it) },
-                                onCustomAccentColorPicked = { viewModel.setCustomAccentColor(it) },
-                                onDismiss = { showThemeDialog = false }
-                            )
-                        }
-
                         if (showScanScreen) {
                             val scanProgress by viewModel.scanProgress.collectAsStateWithLifecycle()
                             ScanScreen(
@@ -498,6 +453,10 @@ class MainActivity : ComponentActivity() {
                         }
 
                         if (showAboutDialog) AboutDialog(versionName) { showAboutDialog = false }
+                        if (showOptionsScreen) Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                            OptionsScreen(versionName = versionName, onAction = ::runAction, onClose = { showOptionsScreen = false })
+                        }
+                        if (showStatsDialog) com.example.creproductor.gui.StatsDialog((uiState as? UiState.Success)?.songs.orEmpty(), viewModel.playCounts()) { showStatsDialog = false }
 
                         if (showClearImageCacheDialog) {
                             ClearImageCacheDialog(onDismiss = { showClearImageCacheDialog = false })
@@ -550,232 +509,3 @@ private fun android.content.Context.displayName(uri: android.net.Uri): String? =
     contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
         if (it.moveToFirst()) it.getString(0) else null
     }
-
-@Composable
-fun SongListScreen(
-    songs: List<Song>,
-    currentSongId: Long? = null,
-    isPlaying: Boolean = false,
-    onSongClick: (Song) -> Unit,
-    onEditSong: (Song) -> Unit
-) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(8.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        items(items = songs, key = { it.id }) { song ->
-            val isSelected = song.id == currentSongId
-            SongItem(
-                song = song,
-                isSelected = isSelected,
-                isPlaying = isSelected && isPlaying,
-                onClick = { onSongClick(song) },
-                onEditClick = { onEditSong(song) }
-            )
-        }
-    }
-}
-
-fun formatDuration(durationMs: Long): String{
-    val totalSeconds = durationMs / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return if (seconds < 10) "$minutes:0$seconds" else "$minutes:$seconds"
-}
-
-@Composable
-fun SongItem(
-    song: Song,
-    isSelected: Boolean = false,
-    isPlaying: Boolean = false,
-    onClick: () -> Unit,
-    onEditClick: () -> Unit
-) {
-    val backgroundColor = if (isSelected){
-        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-    }else{
-        MaterialTheme.colorScheme.background
-    }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(MaterialTheme.shapes.medium)
-                .background(backgroundColor)
-                .clickable(onClick = onClick)
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(MaterialTheme.shapes.small)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
-            ) {
-                if (song.albumArtUri != null) {
-                    AsyncImage(
-                        model = song.coverModel,
-                        contentDescription = "Portada",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.MusicNote,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(26.dp)
-                    )
-                }
-                // Calidad (Lossless / Hi-Res) en la base de la portada: el título conserva todo el ancho de la fila.
-                CoverQualityStrip(song.quality, Modifier.align(Alignment.BottomCenter))
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = song.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = "${displayArtist(song.artist)} • ${formatDuration(song.duration)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            if (isSelected){
-                PlayingEqualizerIcon(
-                    color = MaterialTheme.colorScheme.primary,
-                    isPlaying = isPlaying,
-                    modifier = Modifier.padding(end = 6.dp)
-                )
-            }
-
-            IconButton(onClick = onEditClick) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "Opciones",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        }
-
-}
-
-/**
- * Mini-reproductor flotante. Tocar o deslizar hacia arriba abre el reproductor; deslizar a los lados cambia de canción.
- */
-@Composable
-fun BottomPlayerBar(
-    song: Song,
-    isPlaying: Boolean,
-    onTogglePlayPause: () -> Unit,
-    onBarClick: () -> Unit = {},
-    onNext: () -> Unit = {},
-    onPrevious: () -> Unit = {}
-) {
-    val swipePx = with(LocalDensity.current) { 56.dp.toPx() }
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 6.dp)
-            .pointerInput(Unit) {
-                var dx = 0f; var dy = 0f
-                detectDragGestures(
-                    onDragStart = { dx = 0f; dy = 0f },
-                    onDragEnd = {
-                        when {
-                            -dy > swipePx && -dy > kotlin.math.abs(dx) -> onBarClick()
-                            dx < -swipePx -> onNext()
-                            dx > swipePx -> onPrevious()
-                        }
-                    }
-                ) { change, drag -> change.consume(); dx += drag.x; dy += drag.y }
-            },
-        onClick = onBarClick,
-        shape = MaterialTheme.shapes.large,
-        tonalElevation = 6.dp,
-        shadowElevation = 12.dp,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 8.dp, end = 10.dp, top = 8.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(MaterialTheme.shapes.small)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
-            ) {
-                if (song.albumArtUri != null) {
-                    AsyncImage(
-                        model = song.coverModel,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.MusicNote,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = song.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.basicMarquee()
-                )
-                Text(
-                    text = displayArtist(song.artist),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            FilledIconButton(
-                onClick = onTogglePlayPause,
-                modifier = Modifier.size(44.dp),
-                shape = CircleShape
-            ) {
-                Icon(
-                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = if (isPlaying) "Pausar" else "Reproducir"
-                )
-            }
-            IconButton(onClick = onNext) {
-                Icon(Icons.Default.SkipNext, contentDescription = "Siguiente", tint = MaterialTheme.colorScheme.onSurface)
-            }
-        }
-    }
-}
-
-/** "<unknown>" de MediaStore o vacío → "Artista desconocido". */
-fun displayArtist(artist: String): String =
-    if (artist.isBlank() || artist.equals("<unknown>", ignoreCase = true)) "Artista desconocido" else artist

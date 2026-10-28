@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.activity.compose.BackHandler
 import com.example.creproductor.data.coverModel
 import androidx.compose.animation.core.animateFloat
@@ -23,9 +25,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -99,6 +103,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.creproductor.data.RepeatMode
 import com.example.creproductor.data.Song
+import com.example.creproductor.data.isYoutube
 import java.util.concurrent.TimeUnit
 import kotlin.math.absoluteValue
 import kotlinx.coroutines.Dispatchers
@@ -225,8 +230,15 @@ fun FullScreenPlayer(
             .graphicsLayer { translationY = dragY },
         color = MaterialTheme.colorScheme.background
     ) {
+        val coverContext = LocalContext.current
+        val animatedCoverOn = remember { isAnimatedCoverOn(coverContext) }
+        val (tiltX, tiltY) = rememberCoverTilt(remember { isCoverMotionOn(coverContext) })
         Box(Modifier.fillMaxSize()) {
         CoverBackdrop(song, isPlaying)
+        // Visualizador tipo CAVA (opcional): barras de fondo en la mitad baja del reproductor.
+        if (remember { com.example.creproductor.data.Visualizer.isOn(coverContext) }) {
+            CavaVisualizer(isPlaying, Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.45f).padding(horizontal = 8.dp).graphicsLayer { alpha = 0.55f })
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -245,7 +257,7 @@ fun FullScreenPlayer(
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Cerrar reproductor",
+                        contentDescription = tr("Cerrar reproductor"),
                         modifier = Modifier.size(32.dp)
                     )
                 }
@@ -254,8 +266,9 @@ fun FullScreenPlayer(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "REPRODUCIENDO DESDE",
+                        text = tr("REPRODUCIENDO DESDE"),
                         style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                     )
                     Text(
@@ -268,7 +281,7 @@ fun FullScreenPlayer(
                 IconButton(onClick = { showTrackInfo = true }) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Información técnica"
+                        contentDescription = tr("Información técnica")
                     )
                 }
             }
@@ -293,15 +306,22 @@ fun FullScreenPlayer(
 
                 val currentPagerSong = songs.getOrNull(page)
 
+                // La portada es el mayor cuadrado que cabe: en pantallas bajas o con texto grande ya no se aplasta ni
+                // se solapa con el selector Canción/Letra.
+                BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f)
+                        .size(minOf(maxWidth, maxHeight))
                         .graphicsLayer {
                             val pageOffset = (pagerState.currentPage - page + pagerState.currentPageOffsetFraction).absoluteValue
                             val scale = (1f - (pageOffset * 0.12f)).coerceIn(0.88f, 1f)
                             scaleX = scale
                             scaleY = scale
+                            if (page == pagerState.currentPage) {
+                                cameraDistance = 16f * density
+                                rotationX = tiltX.value
+                                rotationY = -tiltY.value
+                            }
                         }
                         .shadow(24.dp, MaterialTheme.shapes.large)
                         .clip(MaterialTheme.shapes.large)
@@ -317,10 +337,11 @@ fun FullScreenPlayer(
                                 .decoderDispatcher(Dispatchers.IO)
                                 .crossfade(true)
                                 .build(),
-                            contentDescription = "Portada",
+                            contentDescription = tr("Portada"),
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
+                        if (currentPagerSong != null) AnimatedCoverLayer(currentPagerSong, isPlaying, page == pagerState.currentPage && animatedCoverOn)
                     } else {
                         Icon(
                             imageVector = Icons.Default.MusicNote,
@@ -333,6 +354,7 @@ fun FullScreenPlayer(
                     if (page == pagerState.currentPage) {
                         CoverChips(song, audioInfo, Modifier.align(Alignment.BottomStart).padding(12.dp))
                     }
+                }
                 }
             }
 
@@ -356,10 +378,11 @@ fun FullScreenPlayer(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                IconButton(onClick = { onToggleFavorite(song) }) {
+                // Los favoritos son de la biblioteca local: una canción de YouTube Music no se puede guardar ahí.
+                if (!song.isYoutube) IconButton(onClick = { onToggleFavorite(song) }) {
                     Icon(
                         imageVector = if (song.isFavorite) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
-                        contentDescription = if (song.isFavorite) "Quitar de favoritos" else "Añadir a favoritos",
+                        contentDescription = tr(if (song.isFavorite) "Quitar de favoritos" else "Añadir a favoritos"),
                         tint = if (song.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         modifier = Modifier.size(28.dp)
                     )
@@ -378,7 +401,7 @@ fun FullScreenPlayer(
                 IconButton(onClick = onToggleShuffle) {
                     Icon(
                         imageVector = Icons.Default.Shuffle,
-                        contentDescription = if (isShuffleEnabled) "Desactivar aleatorio" else "Activar aleatorio",
+                        contentDescription = tr(if (isShuffleEnabled) "Desactivar aleatorio" else "Activar aleatorio"),
                         tint = if (isShuffleEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
                 }
@@ -390,7 +413,7 @@ fun FullScreenPlayer(
                     },
                     modifier = Modifier.size(56.dp)
                 ) {
-                    Icon(Icons.Default.SkipPrevious, contentDescription = "Anterior", modifier = Modifier.size(40.dp))
+                    Icon(Icons.Default.SkipPrevious, contentDescription = tr("Anterior"), modifier = Modifier.size(40.dp))
                 }
                 FilledIconButton(
                     onClick = onTogglePlayPause,
@@ -403,12 +426,12 @@ fun FullScreenPlayer(
                 ) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "Pausar" else "Reproducir",
+                        contentDescription = tr(if (isPlaying) "Pausar" else "Reproducir"),
                         modifier = Modifier.size(40.dp)
                     )
                 }
                 IconButton(onClick = { safeClick { onNextClick() } }, modifier = Modifier.size(56.dp)) {
-                    Icon(Icons.Default.SkipNext, contentDescription = "Siguiente", modifier = Modifier.size(40.dp))
+                    Icon(Icons.Default.SkipNext, contentDescription = tr("Siguiente"), modifier = Modifier.size(40.dp))
                 }
                 IconButton(onClick = onToggleRepeatMode) {
                     Icon(imageVector = repeatIcon, contentDescription = modelLabel, tint = repeatTint)
@@ -421,13 +444,13 @@ fun FullScreenPlayer(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 IconButton(onClick = onOpenEqualizer) {
-                    Icon(Icons.Default.Tune, contentDescription = "Ecualizador", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                    Icon(Icons.Default.Tune, contentDescription = tr("Ecualizador"), tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
                 }
                 IconButton(onClick = {
                     showQueueBottomSheet = true
                     onOpenQueueClick()
                 }) {
-                    Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = "Cola de reproducción", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                    Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = tr("Cola de reproducción"), tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
                 }
             }
         }
@@ -478,7 +501,7 @@ fun FullScreenPlayer(
                     ) {
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowDown,
-                            contentDescription = "Cerrar Cola",
+                            contentDescription = tr("Cerrar Cola"),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(28.dp)
                         )
@@ -493,7 +516,7 @@ fun FullScreenPlayer(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "Cola de reproducción",
+                        text = tr("Cola de reproducción"),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -506,7 +529,7 @@ fun FullScreenPlayer(
                         IconButton(onClick = onToggleShuffle) {
                             Icon(
                                 imageVector = Icons.Default.Shuffle,
-                                contentDescription = "Aleatorio",
+                                contentDescription = tr("Aleatorio"),
                                 tint = if (isShuffleEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -616,7 +639,7 @@ fun FullScreenPlayer(
                             ){
                                 Icon(
                                     imageVector = Icons.Default.DragHandle,
-                                    contentDescription = "Reordenar pista",
+                                    contentDescription = tr("Reordenar pista"),
                                     tint = if (isBeingDragged) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                     modifier = Modifier
                                         .padding( end = 8.dp)
@@ -700,7 +723,7 @@ fun FullScreenPlayer(
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.RemoveCircleOutline,
-                                    contentDescription = "Quitar de la cola",
+                                    contentDescription = tr("Quitar de la cola"),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -712,7 +735,7 @@ fun FullScreenPlayer(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.MoreVert,
-                                    contentDescription = "Opciones",
+                                    contentDescription = tr("Opciones"),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -954,7 +977,7 @@ private fun CoverChips(song: Song, audioInfo: String, modifier: Modifier = Modif
 
 /**
  * Tema con el acento de la carátula: sustituye `primary` (botón de reproducir, progreso, favorito…) por el tono
- * dominante de la portada. Sin carátula o si es casi gris se queda el caramelo de la marca. La transición de color
+ * dominante de la portada. Es opcional ([isCoverAccentOn], apagado por defecto): sin ella, o sin carátula, o si es casi gris, se queda el morado de la marca. La transición de color
  * solo se anima donde los efectos visuales están permitidos (ver [rememberVisualEffectsEnabled]).
  */
 @Composable
@@ -963,6 +986,7 @@ fun CoverAccentTheme(song: Song, content: @Composable () -> Unit) {
     val base = MaterialTheme.colorScheme
     var accent by remember { mutableStateOf<Color?>(null) }
     LaunchedEffect(song.coverModel) {
+        if (!isCoverAccentOn(context)) return@LaunchedEffect
         accent = song.coverModel?.let { model ->
             kotlinx.coroutines.withContext(Dispatchers.IO) {
                 val request = ImageRequest.Builder(context).data(model).size(24).allowHardware(false).build()
@@ -975,6 +999,7 @@ fun CoverAccentTheme(song: Song, content: @Composable () -> Unit) {
             }
         }
     }
+    if (!remember { isCoverAccentOn(context) }) { content(); return }
     val target = accent ?: base.primary
     val color = if (rememberVisualEffectsEnabled())
         androidx.compose.animation.animateColorAsState(target, androidx.compose.animation.core.tween(500), label = "acento").value
@@ -982,9 +1007,17 @@ fun CoverAccentTheme(song: Song, content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = base.copy(
             primary = color,
-            onPrimary = Color(0xFF14110F),
+            onPrimary = Color(0xFF111111),
             primaryContainer = androidx.compose.ui.graphics.lerp(color, Color.Black, 0.6f)
         ),
         content = content
     )
 }
+
+private const val KEY_COVER_ACCENT = "cover_accent"
+
+fun isCoverAccentOn(context: android.content.Context): Boolean =
+    context.getSharedPreferences("dezznuts_prefs", android.content.Context.MODE_PRIVATE).getBoolean(KEY_COVER_ACCENT, false)
+
+fun setCoverAccent(context: android.content.Context, on: Boolean) =
+    context.getSharedPreferences("dezznuts_prefs", android.content.Context.MODE_PRIVATE).edit().putBoolean(KEY_COVER_ACCENT, on).apply()

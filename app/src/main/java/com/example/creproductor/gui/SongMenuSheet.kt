@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -38,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.creproductor.data.Playlist
 import com.example.creproductor.data.Song
+import com.example.creproductor.data.isYoutube
 
 /** Acciones del menú (⋮) de una canción, tal como las define la maqueta. */
 class SongMenuActions(
@@ -67,6 +70,8 @@ fun SongMenuSheet(
     var pickingPlaylist by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     val isCueTrack = song.cueStartMs >= 0
+    // Una canción de YouTube Music no es un archivo: nada de álbum local, etiquetas, cortador, borrado ni cola (su dirección de audio se pide al abrirla).
+    val isYt = song.isYoutube
 
     // Cada acción cierra el menú y luego ejecuta.
     fun run(block: () -> Unit): () -> Unit = { onDismiss(); block() }
@@ -80,7 +85,7 @@ fun SongMenuSheet(
                 headlineContent = { Text(song.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 supportingContent = {
                     val artist = if (song.artist.isBlank() || song.artist == "<unknown>") "Artista desconocido" else song.artist
-                    Text("$artist • ${com.example.creproductor.formatDuration(song.duration)}", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("$artist • ${formatDuration(song.duration)}", maxLines = 1, overflow = TextOverflow.Ellipsis)
                 },
                 colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent)
             )
@@ -89,7 +94,7 @@ fun SongMenuSheet(
             if (pickingPlaylist) {
                 if (playlists.isEmpty()) {
                     Text(
-                        "Aún no has creado una lista de reproducción",
+                        tr("Aún no has creado una lista de reproducción"),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(16.dp)
@@ -99,15 +104,15 @@ fun SongMenuSheet(
                     MenuRow(Icons.AutoMirrored.Filled.QueueMusic, p.name, { onDismiss(); actions.onAddToPlaylist(p.id) })
                 }
             } else {
-                MenuRow(Icons.Default.SkipNext, "Reproducir a continuación", run(actions.onPlayNext))
-                MenuRow(Icons.AutoMirrored.Filled.QueueMusic, "Agregar al final de la cola", run(actions.onAddToQueue))
-                MenuRow(Icons.AutoMirrored.Filled.PlaylistAdd, "Agregar a una playlist", { pickingPlaylist = true })
-                MenuRow(Icons.Default.Album, "Ir al álbum", run(actions.onGoToAlbum))
+                if (!isYt) MenuRow(Icons.Default.SkipNext, "Reproducir a continuación", run(actions.onPlayNext))
+                if (!isYt) MenuRow(Icons.AutoMirrored.Filled.QueueMusic, "Agregar al final de la cola", run(actions.onAddToQueue))
+                if (!isYt) MenuRow(Icons.AutoMirrored.Filled.PlaylistAdd, "Agregar a una playlist", { pickingPlaylist = true })
+                if (!isYt) MenuRow(Icons.Default.Album, "Ir al álbum", run(actions.onGoToAlbum))
                 MenuRow(Icons.Default.Person, "Ir al artista", run(actions.onGoToArtist))
-                if (!isCueTrack) MenuRow(Icons.Default.Edit, "Editor de etiquetas", run(actions.onEditTags))
+                if (!isCueTrack && !isYt) MenuRow(Icons.Default.Edit, "Editor de etiquetas", run(actions.onEditTags))
                 MenuRow(Icons.Default.Info, "Acerca de", run(actions.onAbout))
-                MenuRow(Icons.Default.ContentCut, "Cortador de audio", run(actions.onAudioCutter))
-                if (!isCueTrack) MenuRow(Icons.Default.DeleteForever, "Eliminar del dispositivo", { confirmDelete = true }, tint = MaterialTheme.colorScheme.error)
+                if (!isYt) MenuRow(Icons.Default.ContentCut, "Cortador de audio", run(actions.onAudioCutter))
+                if (!isCueTrack && !isYt) MenuRow(Icons.Default.DeleteForever, "Eliminar del dispositivo", { confirmDelete = true }, tint = MaterialTheme.colorScheme.error)
             }
         }
     }
@@ -115,10 +120,10 @@ fun SongMenuSheet(
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("¿Eliminar del dispositivo?") },
+            title = { Text(tr("¿Eliminar del dispositivo?")) },
             text = { Text("\"${song.title}\" se borrará del almacenamiento. No se puede deshacer.") },
-            confirmButton = { TextButton(onClick = { confirmDelete = false; onDismiss(); actions.onDelete() }) { Text("Eliminar") } },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancelar") } }
+            confirmButton = { TextButton(onClick = { confirmDelete = false; onDismiss(); actions.onDelete() }) { Text(tr("Eliminar")) } },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(tr("Cancelar")) } }
         )
     }
 }
@@ -126,7 +131,7 @@ fun SongMenuSheet(
 @Composable
 private fun MenuRow(icon: ImageVector, text: String, onClick: () -> Unit, tint: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Unspecified) {
     ListItem(
-        headlineContent = { Text(text, color = tint) },
+        headlineContent = { Text(tr(text), color = tint) },
         leadingContent = { Icon(icon, contentDescription = null, tint = if (tint == androidx.compose.ui.graphics.Color.Unspecified) MaterialTheme.colorScheme.onSurfaceVariant else tint) },
         colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
         modifier = Modifier.clickable(onClick = onClick)

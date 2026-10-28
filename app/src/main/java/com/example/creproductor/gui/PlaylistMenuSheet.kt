@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -40,7 +42,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.creproductor.data.Playlist
 import com.example.creproductor.data.Song
-import com.example.creproductor.formatDuration
 
 class PlaylistMenuActions(
     val onPlay: () -> Unit,
@@ -121,7 +122,7 @@ fun PlaylistMenuSheet(
 
                 if (availablePlaylist.isEmpty()){
                     Text(
-                        text = "No hay otras listas de reproducción creadas",
+                        text = tr("No hay otras listas de reproducción creadas"),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(16.dp)
@@ -209,12 +210,12 @@ fun PlaylistMenuSheet(
             title = {Text("Se eliminará la playlist \"${playlist.name}\". ¿Desea eliminar la playlist?")},
             confirmButton = {
                 TextButton(onClick =  {confirmDeletePlaylist = false; onDismiss();  actions.onDeletePlaylist() }) {
-                    Text("Eliminar")
+                    Text(tr("Eliminar"))
                 }
             },
             dismissButton = {
                 TextButton(onClick = {confirmDeletePlaylist = false}) {
-                    Text("Cancelar")
+                    Text(tr("Cancelar"))
                 }
             }
 
@@ -224,16 +225,16 @@ fun PlaylistMenuSheet(
     if (confirmDeleteFromDevice){
         AlertDialog(
             onDismissRequest = {confirmDeleteFromDevice = false},
-            title = {Text("¿Eliminar del dispositivo?")},
+            title = {Text(tr("¿Eliminar del dispositivo?"))},
             text = {Text("Se eliminaran las canciones de \"${playlist.name}\" del dispositivo. Esta acción no se puede deshacer")},
             confirmButton =  {
                 TextButton(onClick = {confirmDeleteFromDevice = false; onDismiss(); actions.onDeleteFromDevice()}) {
-                    Text("Elimnar canciones", color = MaterialTheme.colorScheme.error)
+                    Text(tr("Elimnar canciones"), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = {confirmDeleteFromDevice = false}) {
-                    Text("Cancelar")
+                    Text(tr("Cancelar"))
                 }
             }
         )
@@ -248,7 +249,7 @@ private fun MenuRow(
     tint: Color = Color.Unspecified
 ){
     ListItem(
-        headlineContent = {Text(text, color = tint)},
+        headlineContent = {Text(tr(text), color = tint)},
         leadingContent = {
             Icon(
                 imageVector = icon,

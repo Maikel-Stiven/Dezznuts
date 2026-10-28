@@ -21,6 +21,8 @@ import android.os.SystemClock
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
+import androidx.glance.appwidget.updateAll
+import kotlinx.coroutines.launch
 import androidx.media3.common.C
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaItem
@@ -36,7 +38,8 @@ import androidx.media3.extractor.metadata.id3.TextInformationFrame
 import androidx.media3.extractor.metadata.vorbis.VorbisComment
 import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaSession
-import androidx.media3.session.MediaSessionService
+import androidx.media3.session.LibraryResult
+import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import com.example.creproductor.R
@@ -47,6 +50,7 @@ import com.example.creproductor.data.MixerFormat
 import com.example.creproductor.data.EqBands
 import com.example.creproductor.data.Fade
 import com.example.creproductor.data.HiFiAudio
+import com.example.creproductor.data.Visualizer
 import com.example.creproductor.data.OutputClass
 import com.example.creproductor.data.OutputProfiles
 import com.example.creproductor.data.ProfileSettings
@@ -55,8 +59,8 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 
 @OptIn(UnstableApi :: class)
-class MusicService : MediaSessionService(){
-    private var mediaSession: MediaSession? = null
+class MusicService : MediaLibraryService(){
+    private var mediaSession: MediaLibrarySession? = null
     private var isFavorite = false
 
     private val prefs by lazy { getSharedPreferences("dezznuts_prefs", MODE_PRIVATE) }
@@ -68,6 +72,8 @@ class MusicService : MediaSessionService(){
     /** Ecualizador paramétrico + subida de ReplayGain del reproductor actual (ver [ParametricEqProcessor]). */
     private var eqProcessor = ParametricEqProcessor(enabledAtBuild = false)
     private var processorActive = false
+    /** ¿La cadena actual lleva el espía del visualizador? Cambiarlo exige recrear el reproductor (como el ecualizador). */
+    private var spectrumActive = false
     private var lastRoute: String? = null
 
     // Bit-perfect (ver BitPerfect): formato de mezcla activo y DAC al que se aplicó (null = modo normal), y el formato
@@ -109,6 +115,7 @@ class MusicService : MediaSessionService(){
                 // El procesador solo existe en la cadena si algo lo necesita; cambiar eso exige recrear el player.
                 if (needsProcessor() != processorActive) rebuildPlayer() else applyVolume()
             }
+            Visualizer.KEY -> if (Visualizer.isOn(this) != spectrumActive) rebuildPlayer()
             HiFiAudio.KEY_EQ_BANDS -> applyVolume()
             HiFiAudio.KEY_FADE_MS -> updateFade()
             HiFiAudio.KEY_PREFER_USB -> applyPreferredDevice()
@@ -171,6 +178,10 @@ class MusicService : MediaSessionService(){
         /** Temporizador de apagado: extra [EXTRA_MINUTES] (> 0 minutos, [SLEEP_END_OF_TRACK] o 0 para cancelar). */
         const val ACTION_SLEEP_TIMER = "ACTION_SLEEP_TIMER"
         const val EXTRA_MINUTES = "minutes"
+
+        /** Con el aleatorio activo, coloca la pista [EXTRA_INDEX] justo después de la que suena (ver [moveNextInShuffle]). */
+        const val ACTION_PLAY_NEXT_SHUFFLE = "ACTION_PLAY_NEXT_SHUFFLE"
+        const val EXTRA_INDEX = "index"
         const val SLEEP_END_OF_TRACK = -1
 
         /** Preferencia con el estado del temporizador: 0 = apagado, -1 = al final de la canción, otro = hora de fin (ms). */
@@ -184,9 +195,8 @@ class MusicService : MediaSessionService(){
         val player = buildPlayer()
         exoPlayer = player
         attachPlayerListener(player)
-        mediaSession = MediaSession.Builder(this, FadingPlayer(player))
+        mediaSession = MediaLibrarySession.Builder(this, FadingPlayer(player), CustomMediaSessionCallback())
             .setSessionActivity(openPlayerIntent())
-            .setCallback(CustomMediaSessionCallback())
             .build()
 
         updateNotificationLayout()
@@ -226,13 +236,15 @@ class MusicService : MediaSessionService(){
             .build()
 
         processorActive = needsProcessor()
+        spectrumActive = Visualizer.isOn(this)
         eqProcessor = ParametricEqProcessor(enabledAtBuild = processorActive)
 
         val renderersFactory = HiFiRenderersFactory(
             context = this,
             useFloatOutput = HiFiAudio.isFloatOutputEnabled(this),
             useOffload = HiFiAudio.isOffloadEnabled(this),
-            eqProcessor = eqProcessor
+            eqProcessor = eqProcessor,
+            spectrumTap = SpectrumTapProcessor(enabledAtBuild = spectrumActive)
         )
 
         val player = ExoPlayer.Builder(this, renderersFactory)
@@ -285,6 +297,21 @@ class MusicService : MediaSessionService(){
      * Al cambiar de canción hay que recalcular si el nuevo tema es favorito,
      * para que el botón de la notificación muestre el estado correcto.
      */
+    /** Guarda qué suena y si está sonando, y refresca los widgets de pantalla de inicio (si hay alguno colocado). */
+    private fun publishWidget(player: ExoPlayer) {
+        val meta = player.currentMediaItem?.mediaMetadata
+        prefs.edit()
+            .putString("widget_title", meta?.title?.toString())
+            .putString("widget_artist", meta?.artist?.toString())
+            .putBoolean("widget_playing", player.isPlaying)
+            .apply()
+        val manager = android.appwidget.AppWidgetManager.getInstance(this)
+        if (manager.getAppWidgetIds(android.content.ComponentName(this, com.example.creproductor.widget.DezzWidgetReceiver::class.java)).isEmpty()) return
+        widgetScope.launch { com.example.creproductor.widget.DezzWidget().updateAll(this@MusicService) }
+    }
+
+    private val widgetScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default)
+
     private fun attachPlayerListener(player: ExoPlayer) {
         // "Al final de la canción": el reproductor ya se pausó solo; se limpia el estado del temporizador.
         player.addListener(object : Player.Listener {
@@ -324,11 +351,13 @@ class MusicService : MediaSessionService(){
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 updateNotificationLayout()
                 updateFade()
+                publishWidget(player)
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 if (isPlaying) resumeAt = SystemClock.elapsedRealtime()
                 updateFade()
+                publishWidget(player)
             }
 
             override fun onPositionDiscontinuity(
@@ -647,8 +676,25 @@ class MusicService : MediaSessionService(){
         mediaSession?.setCustomLayout(listOf(closeButton, favoriteButton))
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
             return mediaSession
+    }
+
+    /**
+     * Media3 coloca una pista añadida en un punto al azar del orden aleatorio. Aquí se reconstruye ese orden
+     * (recorriendo la línea de tiempo en modo aleatorio) y se deja [index] justo detrás de la pista actual.
+     */
+    private fun moveNextInShuffle(player: Player, index: Int) {
+        val exo = player as? ExoPlayer ?: return
+        val timeline = exo.currentTimeline
+        if (!exo.shuffleModeEnabled || index !in 0 until timeline.windowCount) return
+        val order = ArrayList<Int>(timeline.windowCount)
+        var w = timeline.getFirstWindowIndex(true)
+        while (w != C.INDEX_UNSET) { order += w; w = timeline.getNextWindowIndex(w, Player.REPEAT_MODE_OFF, true) }
+        if (order.size != timeline.windowCount) return
+        order.remove(index)
+        order.add((order.indexOf(exo.currentMediaItemIndex) + 1).coerceAtLeast(0), index)
+        exo.setShuffleOrder(androidx.media3.exoplayer.source.ShuffleOrder.DefaultShuffleOrder(order.toIntArray(), System.nanoTime()))
     }
 
     override fun onTaskRemoved(rootIntent: Intent?){
@@ -683,7 +729,39 @@ class MusicService : MediaSessionService(){
     super.onDestroy()
     }
 
-    private inner class CustomMediaSessionCallback : MediaSession.Callback{
+    private val libraryExecutor = com.google.common.util.concurrent.MoreExecutors.listeningDecorator(java.util.concurrent.Executors.newSingleThreadExecutor())
+
+    private inner class CustomMediaSessionCallback : MediaLibrarySession.Callback {
+        // ---- Navegación (Android Auto, asistente, Wear) ----
+        override fun onGetLibraryRoot(
+            session: MediaLibrarySession, browser: MediaSession.ControllerInfo, params: MediaLibraryService.LibraryParams?
+        ): ListenableFuture<LibraryResult<MediaItem>> =
+            Futures.immediateFuture(LibraryResult.ofItem(LibraryBrowser.root(), params))
+
+        override fun onGetChildren(
+            session: MediaLibrarySession, browser: MediaSession.ControllerInfo, parentId: String,
+            page: Int, pageSize: Int, params: MediaLibraryService.LibraryParams?
+        ): ListenableFuture<LibraryResult<com.google.common.collect.ImmutableList<MediaItem>>> =
+            libraryExecutor.submit<LibraryResult<com.google.common.collect.ImmutableList<MediaItem>>> {
+                val all = LibraryBrowser.children(this@MusicService, parentId)
+                    ?: return@submit LibraryResult.ofError(LibraryResult.RESULT_ERROR_BAD_VALUE)
+                val from = (page * pageSize).coerceAtMost(all.size)
+                LibraryResult.ofItemList(all.subList(from, (from + pageSize).coerceAtMost(all.size)), params)
+            }
+
+        override fun onGetItem(session: MediaLibrarySession, browser: MediaSession.ControllerInfo, mediaId: String): ListenableFuture<LibraryResult<MediaItem>> =
+            libraryExecutor.submit<LibraryResult<MediaItem>> {
+                LibraryBrowser.item(this@MusicService, mediaId)?.let { LibraryResult.ofItem(it, null) }
+                    ?: LibraryResult.ofError(LibraryResult.RESULT_ERROR_BAD_VALUE)
+            }
+
+        /** Un cliente externo elige una pista solo por su `mediaId`: aquí se le pone la dirección reproducible. */
+        override fun onAddMediaItems(
+            mediaSession: MediaSession, controller: MediaSession.ControllerInfo, mediaItems: MutableList<MediaItem>
+        ): ListenableFuture<MutableList<MediaItem>> = libraryExecutor.submit<MutableList<MediaItem>> {
+            mediaItems.map { it.localConfiguration?.let { _ -> it } ?: (LibraryBrowser.item(this@MusicService, it.mediaId) ?: it) }.toMutableList()
+        }
+
         override fun onConnect(
             session: MediaSession,
             controller: MediaSession.ControllerInfo,
@@ -696,6 +774,7 @@ class MusicService : MediaSessionService(){
                 .add(SessionCommand(ACTION_CLOSE, Bundle.EMPTY))
                 .add(SessionCommand(ACTION_REFRESH_AUDIO, Bundle.EMPTY))
                 .add(SessionCommand(ACTION_SLEEP_TIMER, Bundle.EMPTY))
+                .add(SessionCommand(ACTION_PLAY_NEXT_SHUFFLE, Bundle.EMPTY))
                 .build()
 
             val playerCommands = connectionResult.availablePlayerCommands.buildUpon()
@@ -709,6 +788,29 @@ class MusicService : MediaSessionService(){
                 sessionCommands,
                 playerCommands
             )
+        }
+
+        /**
+         * El usuario pulsó play desde un auricular Bluetooth, el coche o el panel de medios con la app cerrada: se
+         * reconstruye la última cola desde lo guardado (ids de MediaStore) sin abrir la interfaz.
+         * Las pistas CUE tienen id negativo (no existen en MediaStore) y se omiten.
+         */
+        override fun onPlaybackResumption(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo
+        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+            val lastId = prefs.getLong("last_song_id", -1L)
+            val ids = (prefs.getString("last_queue_ids", "") ?: "").split(",").mapNotNull { it.trim().toLongOrNull() }
+                .filter { it > 0 }.ifEmpty { listOf(lastId).filter { it > 0 } }
+            if (ids.isEmpty()) return Futures.immediateFailedFuture(UnsupportedOperationException("Nada que reanudar"))
+            val items = ids.map {
+                MediaItem.Builder().setMediaId(it.toString())
+                    .setUri(android.content.ContentUris.withAppendedId(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, it))
+                    .build()
+            }
+            val index = ids.indexOf(lastId).coerceAtLeast(0)
+            val position = if (ids.getOrNull(index) == lastId) prefs.getLong("last_position_ms", 0L) else 0L
+            return Futures.immediateFuture(MediaSession.MediaItemsWithStartPosition(items, index, position))
         }
 
         override fun onCustomCommand(
@@ -729,6 +831,7 @@ class MusicService : MediaSessionService(){
                     rebuildPlayer()
                 }
                 ACTION_SLEEP_TIMER -> setSleepTimer(args.getInt(EXTRA_MINUTES, 0))
+                ACTION_PLAY_NEXT_SHUFFLE -> moveNextInShuffle(session.player, args.getInt(EXTRA_INDEX, -1))
             }
             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
         }

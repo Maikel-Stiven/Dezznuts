@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -24,6 +26,7 @@ import com.example.creproductor.data.QualityTier
 fun CoverQualityStrip(tier: QualityTier, modifier: Modifier = Modifier) {
     if (tier == QualityTier.LOSSY) return
     val hires = tier == QualityTier.HIRES
+    val qualityDescription = tr(if (hires) "Calidad Hi-Res" else "Calidad sin pérdida")
     Text(
         text = if (hires) "HI-RES" else "LOSSLESS",
         fontSize = 8.sp,
@@ -34,7 +37,7 @@ fun CoverQualityStrip(tier: QualityTier, modifier: Modifier = Modifier) {
         color = if (hires) MaterialTheme.colorScheme.onPrimary else Color.White,
         modifier = modifier
             .fillMaxWidth()
-            .semantics { contentDescription = if (hires) "Calidad Hi-Res" else "Calidad sin pérdida" }
+            .semantics { contentDescription = qualityDescription }
             .background(if (hires) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.6f))
             .padding(vertical = 1.dp)
     )

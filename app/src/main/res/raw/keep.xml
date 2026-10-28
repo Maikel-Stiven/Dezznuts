@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Los textos se buscan por nombre (I18n.kt): el recorte de recursos no debe quitarlos. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@string/s_*" />

@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.activity.compose.BackHandler
 import com.example.creproductor.data.coverModel
 import androidx.compose.foundation.background
@@ -49,7 +51,6 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.creproductor.data.Playlist
 import com.example.creproductor.data.Song
-import com.example.creproductor.formatDuration
 import com.example.creproductor.data.SongOrganizer
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
@@ -159,7 +160,7 @@ fun PlaylistScreenDetail(
                 IconButton(onClick = onBackClick) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Volver",
+                        contentDescription = tr("Volver"),
                         tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
@@ -238,6 +239,7 @@ fun PlaylistScreenDetail(
                                 Button(
                                     onClick = onPlayAllClick,
                                     modifier = Modifier.weight(1f),
+                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                                     shape = MaterialTheme.shapes.small
                                 ) {
                                     Icon(
@@ -246,12 +248,13 @@ fun PlaylistScreenDetail(
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("REPRODUCIR")
+                                    Text(tr("REPRODUCIR"), maxLines = 1, softWrap = false)
                                 }
 
                                 OutlinedButton(
                                     onClick = onShuffleClick,
                                     modifier = Modifier.weight(1f),
+                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                                     shape = MaterialTheme.shapes.small,
                                     colors = ButtonDefaults.outlinedButtonColors(
                                         contentColor = MaterialTheme.colorScheme.primary
@@ -263,12 +266,12 @@ fun PlaylistScreenDetail(
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("ALEATORIO")
+                                    Text(tr("ALEATORIO"), maxLines = 1, softWrap = false)
                                 }
                             }
                         }else{
                             Text(
-                                text = "Sin canciones",
+                                text = tr("Sin canciones"),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -280,7 +283,7 @@ fun PlaylistScreenDetail(
                                 shape = MaterialTheme.shapes.medium,
                                 modifier = Modifier.fillMaxWidth(0.85f)
                             ) {
-                                Text("Añadir canciones +")
+                                Text(tr("Añadir canciones +"))
                             }
 
                             Spacer(modifier = Modifier.height(10.dp))
@@ -296,7 +299,7 @@ fun PlaylistScreenDetail(
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Restaurar listas de reproducción")
+                                Text(tr("Restaurar listas de reproducción"))
                             }
                         }
                     }
@@ -308,7 +311,7 @@ fun PlaylistScreenDetail(
                             OutlinedTextField(
                                 value = query,
                                 onValueChange = { query = it },
-                                placeholder = { Text("Buscar") },
+                                placeholder = { Text(tr("Buscar")) },
                                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
@@ -318,11 +321,7 @@ fun PlaylistScreenDetail(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 PlaylistFilter.entries.forEach { f ->
-                                    FilterChip(
-                                        selected = filter == f,
-                                        onClick = { filter = f },
-                                        label = { Text(f.label) }
-                                    )
+                                    FilterChip(selected = filter == f, onClick = { filter = f }, label = { Text(tr(f.label)) })
                                 }
                             }
                         }
@@ -330,7 +329,7 @@ fun PlaylistScreenDetail(
                     if (visibleSongs.isEmpty()) {
                         item {
                             Text(
-                                "No hay canciones que coincidan",
+                                tr("No hay canciones que coincidan"),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(20.dp)
@@ -369,7 +368,7 @@ fun PlaylistScreenDetail(
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Añadir canciones"
+                    contentDescription = tr("Añadir canciones")
                 )
             }
         }
@@ -450,7 +449,7 @@ private fun  PlaylistTrackItem(
             val itemHeightPx = with(density) {68.dp.toPx()}
             Icon(
                 imageVector = Icons.Default.DragHandle,
-                contentDescription = "Reordenar",
+                contentDescription = tr("Reordenar"),
                 tint = if (isDraggingThisItem) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 modifier = Modifier
                     .padding(end = 12.dp)
@@ -557,7 +556,7 @@ private fun  PlaylistTrackItem(
         ) {
             Icon(
                 imageVector = Icons.Default.MoreVert,
-                contentDescription = "Opciones",
+                contentDescription = tr("Opciones"),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )

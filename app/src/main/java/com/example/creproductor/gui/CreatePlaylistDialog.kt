@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -68,7 +70,7 @@ fun CreationPlaylist(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Crear lista de reproducción",
+                text = tr("Crear lista de reproducción"),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -97,7 +99,7 @@ fun CreationPlaylist(
                     if (selectedCoverUri != null) {
                         AsyncImage(
                             model = selectedCoverUri,
-                            contentDescription = "Portada de la playlist",
+                            contentDescription = tr("Portada de la playlist"),
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
@@ -121,7 +123,7 @@ fun CreationPlaylist(
                     ){
                         Icon(
                             imageVector = Icons.Default.Edit,
-                            contentDescription = "Editar portada",
+                            contentDescription = tr("Editar portada"),
                             tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(18.dp)
                         )
@@ -131,7 +133,7 @@ fun CreationPlaylist(
                 OutlinedTextField(
                     value = playlistName,
                     onValueChange = {playlistName = it},
-                    label = {Text("Nombre de la lista nueva:")},
+                    label = {Text(tr("Nombre de la lista nueva:"))},
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -146,12 +148,12 @@ fun CreationPlaylist(
                 },
                 enabled = playlistName.isNotBlank()
             ) {
-                Text("crear")
+                Text(tr("crear"))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar")
+                Text(tr("Cancelar"))
             }
         }
     )

@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -55,22 +57,22 @@ fun DuplicatesDialog(songs: List<Song>, onDelete: (List<Song>) -> Unit, onDismis
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Default.FindInPage, contentDescription = null) },
-        title = { Text("Duplicados y WhatsApp") },
+        title = { Text(tr("Duplicados y WhatsApp")) },
         text = {
             Column {
                 PrimaryTabRow(selectedTabIndex = tab) {
-                    Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Duplicados") })
-                    Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("WhatsApp") })
+                    Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(tr("Duplicados")) })
+                    Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(tr("WhatsApp")) })
                 }
                 val list = if (tab == 0) groups?.flatMap { g -> listOf(g.keep to true) + g.copies.map { it to false } } else whatsApp?.map { it to false }
                 when {
-                    list == null -> Text("Buscando…", Modifier.padding(16.dp))
-                    list.isEmpty() -> Text(if (tab == 0) "No hay canciones repetidas." else "No hay audios de WhatsApp.", Modifier.padding(16.dp))
+                    list == null -> Text(tr("Buscando…"), Modifier.padding(16.dp))
+                    list.isEmpty() -> Text(tr(if (tab == 0) "No hay canciones repetidas." else "No hay audios de WhatsApp."), Modifier.padding(16.dp))
                     else -> LazyColumn(Modifier.weight(1f, fill = false)) {
                         items(list, key = { it.first.id }) { (song, keep) ->
                             Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
                                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    if (tab == 0) Text(if (keep) "Conservar" else "Copia", style = MaterialTheme.typography.labelSmall,
+                                    if (tab == 0) Text(tr(if (keep) "Conservar" else "Copia"), style = MaterialTheme.typography.labelSmall,
                                         color = if (keep) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
                                     Text(song.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
@@ -83,7 +85,7 @@ fun DuplicatesDialog(songs: List<Song>, onDelete: (List<Song>) -> Unit, onDismis
                         }
                     }
                 }
-                if (!canDelete) Text("En Android 10 o anterior, borra los archivos desde el gestor de archivos.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
+                if (!canDelete) Text(tr("En Android 10 o anterior, borra los archivos desde el gestor de archivos."), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
             }
         },
         confirmButton = {
@@ -94,6 +96,6 @@ fun DuplicatesDialog(songs: List<Song>, onDelete: (List<Song>) -> Unit, onDismis
                 }
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Cerrar")) } }
     )
 }

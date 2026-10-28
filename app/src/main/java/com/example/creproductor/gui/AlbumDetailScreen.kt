@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.activity.compose.BackHandler
 import com.example.creproductor.data.coverModel
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -60,7 +62,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.creproductor.data.Song
-import com.example.creproductor.formatDuration
 
 @Composable
 fun AlbumDetailScreen(
@@ -120,7 +121,7 @@ fun AlbumDetailScreen(
             IconButton(onClick = onBackClick) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Volver",
+                    contentDescription = tr("Volver"),
                     tint = MaterialTheme.colorScheme.onBackground
                 )
             }
@@ -224,6 +225,7 @@ fun AlbumDetailScreen(
                         Button(
                             onClick = onPlayAllClick,
                             modifier = Modifier.weight(1f),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                             shape = MaterialTheme.shapes.medium
                         ) {
                             Icon(
@@ -232,12 +234,13 @@ fun AlbumDetailScreen(
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("REPRODUCIR")
+                            Text(tr("REPRODUCIR"), maxLines = 1, softWrap = false)
                         }
 
                         OutlinedButton(
                             onClick = onShuffleClick,
                             modifier = Modifier.weight(1f),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                             shape = MaterialTheme.shapes.small,
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = MaterialTheme.colorScheme.primary,
@@ -251,7 +254,7 @@ fun AlbumDetailScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("ALEATORIO")
+                            Text(tr("ALEATORIO"), maxLines = 1, softWrap = false)
                         }
                     }
                 }
@@ -376,7 +379,7 @@ private fun AlbumTrackItem(
         ) {
             Icon(
                 imageVector = Icons.Default.MoreVert,
-                contentDescription = "Opciones de pista",
+                contentDescription = tr("Opciones de pista"),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 modifier = Modifier.size(20.dp)
 

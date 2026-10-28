@@ -46,7 +46,8 @@ private val extractionLimit = Semaphore(3)
 
 val Song.coverModel: SongCover
     get() = SongCover(
-        cacheKey = albumArtUri?.lastPathSegment?.let { "album_$it" }
+        cacheKey = if (albumArtUri?.scheme == "https") "web_${albumArtUri.toString().hashCode().toUInt().toString(16)}"
+            else albumArtUri?.lastPathSegment?.let { "album_$it" }
             ?: "song_${contentUri.lastPathSegment}",
         contentUri = contentUri,
         albumArtUri = albumArtUri,
@@ -62,7 +63,7 @@ class SongCoverFetcher(
     override suspend fun fetch(): FetchResult? = withContext(Dispatchers.IO) {
         if (missingMarker().exists()) return@withContext null
 
-        val bytes = readFromCache() ?: readFromMediaStore() ?: extractAndCache()
+        val bytes = readFromCache() ?: readFromWeb() ?: readFromMediaStore() ?: extractAndCache()
         if (bytes == null) {
             // Sin arte: se recuerda para no volver a abrir el archivo en cada aparición.
             runCatching { missingMarker().apply { parentFile?.mkdirs() }.writeText("") }
@@ -79,6 +80,20 @@ class SongCoverFetcher(
         val file = cacheFile()
         if (!file.isFile || file.length() == 0L) return null
         return runCatching { file.readBytes() }.getOrNull()
+    }
+
+    /** Miniatura de YouTube Music (https): se descarga una vez y queda en el mismo caché que las demás. */
+    private fun readFromWeb(): ByteArray? {
+        val uri = model.albumArtUri?.takeIf { it.scheme == "https" } ?: return null
+        val bytes = runCatching {
+            val c = java.net.URL(uri.toString()).openConnection() as java.net.HttpURLConnection
+            try {
+                c.connectTimeout = 8000; c.readTimeout = 8000
+                if (c.responseCode == 200) c.inputStream.use { it.readBytes() } else null
+            } finally { c.disconnect() }
+        }.getOrNull()?.takeIf { it.isNotEmpty() } ?: return null
+        runCatching { cacheFile().apply { parentFile?.mkdirs() }.writeBytes(bytes) }
+        return bytes
     }
 
     private fun readFromMediaStore(): ByteArray? {

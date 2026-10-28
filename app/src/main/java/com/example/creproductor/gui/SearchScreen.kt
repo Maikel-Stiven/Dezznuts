@@ -1,5 +1,11 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
+import kotlinx.coroutines.delay
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.activity.compose.BackHandler
 import com.example.creproductor.data.coverModel
 import androidx.compose.foundation.background
@@ -59,7 +65,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.example.creproductor.SongItem
 import com.example.creproductor.data.Song
 import com.example.creproductor.data.SongOrganizer
 
@@ -93,7 +98,10 @@ fun SearchOverlayScreen(
     onSongClick: (Song, List<Song>) -> Unit,
     onCloseSearch: () -> Unit,
     onAlbumClick: (albumName: String, albumSongs: List<Song>) -> Unit = { _, _ -> },
-    onArtistClick: (artistName: String, artistSongs: List<Song>) -> Unit = { _, _ -> }
+    onArtistClick: (artistName: String, artistSongs: List<Song>) -> Unit = { _, _ -> },
+    /** Pestaña extra "YouTube Music" (opcional, ver [com.example.creproductor.data.YtMusic]). */
+    ytEnabled: Boolean = false,
+    onYtPlay: (com.example.creproductor.data.YtTrack) -> Unit = {}
 ){
 
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -161,13 +169,13 @@ fun SearchOverlayScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onCloseSearch) {
-                    Icon(Icons.Default.Close, contentDescription = "cerrar búsqueda")
+                    Icon(Icons.Default.Close, contentDescription = tr("cerrar búsqueda"))
                 }
 
                 TextField(
                     value = searchQuery,
                     onValueChange = onQueryChange,
-                    placeholder = { Text("Canciones, álbumes o artistas") },
+                    placeholder = { Text(tr("Canciones, álbumes o artistas")) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(
@@ -190,7 +198,7 @@ fun SearchOverlayScreen(
                 if (searchQuery.isNotEmpty()){
                     TextButton(onClick = {onQueryChange("")}) {
                         Text(
-                            text = "Limpiar",
+                            text = tr("Limpiar"),
                             color = MaterialTheme.colorScheme.primary,
                             style = MaterialTheme.typography.labelMedium
                         )
@@ -201,7 +209,7 @@ fun SearchOverlayScreen(
 
         if (searchQuery.isBlank() && searchHistory.isEmpty()) {
             Text(
-                text = "Busca en toda tu biblioteca por título, artista o álbum.",
+                text = tr("Busca en toda tu biblioteca por título, artista o álbum."),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(24.dp)
@@ -240,7 +248,7 @@ fun SearchOverlayScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Eliminar del historial",
+                                contentDescription = tr("Eliminar del historial"),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -258,14 +266,38 @@ fun SearchOverlayScreen(
                    Tab(
                        selected = selectedTabItem == index,
                        onClick = {selectedTabItem = index},
-                       text = {Text(tab.title)}
+                       selectedContentColor = MaterialTheme.colorScheme.onSurface,
+                       unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                       text = {Text(tr(tab.title))}
+                   )
+               }
+               if (ytEnabled) {
+                   Tab(
+                       selected = selectedTabItem == SearchSubTab.entries.size,
+                       onClick = { selectedTabItem = SearchSubTab.entries.size },
+                       selectedContentColor = MaterialTheme.colorScheme.onSurface,
+                       unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                       text = { Text(tr("YouTube Music")) }
                    )
                }
            }
 
-            val currentSubTab = SearchSubTab.entries[selectedTabItem]
+            val onYtTab = ytEnabled && selectedTabItem == SearchSubTab.entries.size
+            val currentSubTab = SearchSubTab.entries[selectedTabItem.coerceAtMost(SearchSubTab.entries.lastIndex)]
 
-            LazyColumn(
+            // Resultados de YouTube Music debajo de los locales: llegan solos tras una pausa al escribir y no mueven nada
+            // de lo de arriba mientras cargan. Solo con YouTube Music activado.
+            val ytInline by produceState<List<com.example.creproductor.data.YtTrack>?>(null, searchQuery, ytEnabled) {
+                value = null
+                if (!ytEnabled || searchQuery.trim().length < 2) return@produceState
+                delay(700)
+                value = withContext(Dispatchers.IO) {
+                    runCatching { com.example.creproductor.data.YtMusic.search(searchQuery).take(5) }.getOrDefault(emptyList())
+                }
+            }
+            if (onYtTab) {
+                YtMusicResults(searchQuery) { keyboardController?.hide(); onYtPlay(it) }
+            } else LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -311,7 +343,7 @@ fun SearchOverlayScreen(
                                     onClick =  {songsLimit += 10}
                                 ) {
                                     Text(
-                                        text = "Ver más",
+                                        text = tr("Ver más"),
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.primary
                                     )
@@ -394,6 +426,40 @@ fun SearchOverlayScreen(
                                     allSongs.filter { it.artist.equals(song.artist, ignoreCase = true) }
                                 )
                                 onArtistClick(song.artist, sortedArtistSongs)
+                            }
+                        )
+                    }
+                }
+                // Sin red o sin resultados no se muestra nada (ni un indicador que gire para siempre).
+                if (ytEnabled && searchQuery.trim().length >= 2 && (ytInline == null || ytInline?.isNotEmpty() == true) &&
+                    (currentSubTab == SearchSubTab.ALL || currentSubTab == SearchSubTab.SONGS)) {
+                    item(key = "yt_header") {
+                        Row(
+                            Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                tr("También en YouTube Music"), style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f)
+                            )
+                            if (ytInline == null) CircularProgressIndicator(Modifier.size(18.dp).padding(end = 2.dp), strokeWidth = 2.dp)
+                            else TextButton(onClick = { selectedTabItem = SearchSubTab.entries.size }) { Text(tr("Ver todo")) }
+                        }
+                    }
+                    items(ytInline.orEmpty(), key = { "yt_${it.url}" }) { t ->
+                        ListItem(
+                            headlineContent = { Text(t.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            supportingContent = { Text("${t.artist} · %d:%02d".format(t.durationSec / 60, t.durationSec % 60), maxLines = 1) },
+                            leadingContent = {
+                                AsyncImage(
+                                    model = t.thumbnail, contentDescription = null, contentScale = ContentScale.Crop,
+                                    modifier = Modifier.size(48.dp).clip(MaterialTheme.shapes.small)
+                                )
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier.clickable {
+                                if (searchQuery.isNotBlank()) onAddSearchHistory(searchQuery)
+                                keyboardController?.hide(); onYtPlay(t)
                             }
                         )
                     }
@@ -514,6 +580,45 @@ private fun SearchCategoryItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+        }
+    }
+}
+
+/** Resultados de YouTube Music para [query]. Espera a que dejes de escribir antes de preguntar a la red. */
+@Composable
+internal fun YtMusicResults(query: String, onPlay: (com.example.creproductor.data.YtTrack) -> Unit) {
+    // null = buscando, Result.failure = sin red o YouTube no respondió.
+    val result by produceState<Result<List<com.example.creproductor.data.YtTrack>>?>(null, query) {
+        value = null
+        delay(600)
+        value = withContext(Dispatchers.IO) { runCatching { com.example.creproductor.data.YtMusic.search(query) } }
+        // El primer resultado es el que casi siempre se toca: se abre ya (queda en caché) y de paso se calienta
+        // lo más lento de YouTube, que la primera vez tarda ~3 s más que las siguientes.
+        value?.getOrNull()?.firstOrNull()?.let { withContext(Dispatchers.IO) { runCatching { com.example.creproductor.data.YtMusic.resolve(it.url) } } }
+    }
+    val list = result?.getOrNull()
+    when {
+        result == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        list == null -> Text(
+            tr("No se pudo consultar YouTube Music. Revisa la conexión o inténtalo más tarde."),
+            modifier = Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        list.isEmpty() -> Text(tr("Sin resultados."), modifier = Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        else -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
+            items(list, key = { it.url }) { t ->
+                ListItem(
+                    headlineContent = { Text(t.title, maxLines = 1) },
+                    supportingContent = { Text("${t.artist} · %d:%02d".format(t.durationSec / 60, t.durationSec % 60), maxLines = 1) },
+                    leadingContent = {
+                        AsyncImage(
+                            model = t.thumbnail, contentDescription = null, contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(48.dp).clip(MaterialTheme.shapes.small)
+                        )
+                    },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    modifier = Modifier.clickable { onPlay(t) }
+                )
+            }
         }
     }
 }

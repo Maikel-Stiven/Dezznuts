@@ -140,3 +140,26 @@ una GPU real; la *proporción* entre antes y después sí es comparable.
   software, que en un teléfono real irían a la memoria de gráficos). Limitar las consultas no lo cambió; queda por
   investigar con un teléfono real.
 - Todo medido en emulador; conviene confirmar en un teléfono de gama baja real.
+
+## 10. Unificación de interfaces (2026-10-25)
+
+Medido en el emulador de 4 núcleos (release, `dumpsys meminfo`, PSS total):
+
+| Situación | PSS |
+|---|---|
+| Inicio en reposo | 72–79 MB |
+| Pestaña YT Music con el WebView de inicio de sesión precargado | 140–143 MB |
+
+**Hallazgo:** el WebView de Google (precarga de «Iniciar sesión») cuesta ~65 MB, sobre todo código nativo mapeado que
+**no se libera** aunque se destruya el WebView. Cambio: solo se precarga en equipos con margen (`memoryClass ≥ 256`,
+no «low RAM» y > 2 núcleos); en los demás se crea al pulsar «Iniciar sesión» (unos segundos de carga, con barra de
+progreso) y quien nunca inicia sesión no paga esa memoria. Al salir de la pestaña YT se suelta lo que se pueda.
+
+**Llamadas a APIs (cambios de esta rama):** iTunes pasa por una sola puerta (`Itunes`: caché de 200 resultados,
+peticiones en serie con 1,5 s de hueco, pausa de 60 s ante 403/429); la portada animada (`artwork.boidu.dev`) respeta
+60/min (hueco de 1,1 s, `Retry-After`), espera 0,7 s a que la canción se quede y cancela lo pendiente al saltar; el
+inicio de YT Music se guarda 10 min; los fallos de red no se repiten durante 3 min. Antes, la portada HD, el bucle
+animado y el editor de etiquetas pedían lo mismo a iTunes por separado (2–3 peticiones por canción).
+
+**Visualizador:** apagado de fábrica no añade nada a la cadena de audio. Encendido, el espía hace una FFT de 2048
+puntos cada 25 ms y 24/48 barras a 30/60 fps según el equipo; se detiene cuando hay silencio.

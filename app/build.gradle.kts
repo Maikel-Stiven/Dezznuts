@@ -15,10 +15,21 @@ android {
         applicationId = "io.github.maikelstiven.dezznuts"
         minSdk = 24
         targetSdk = 37
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 5
+        versionName = "1.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // Firma propia solo si el CI aporta la clave (secrets); sin ella se usa la clave debug, como hasta ahora.
+    val releaseKeystore = System.getenv("KEYSTORE_FILE")?.takeIf { it.isNotBlank() }
+    if (releaseKeystore != null) {
+        signingConfigs.create("release") {
+            storeFile = file(releaseKeystore)
+            storePassword = System.getenv("KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("KEY_ALIAS")
+            keyPassword = System.getenv("KEY_PASSWORD")
+        }
     }
 
     buildTypes {
@@ -30,12 +41,14 @@ android {
                 "proguard-rules.pro"
             )
 
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        // NewPipeExtractor usa APIs de Java 8+ (java.time...) que minSdk 24 no trae.
+        isCoreLibraryDesugaringEnabled = true
     }
     buildFeatures {
         compose = true
@@ -57,6 +70,8 @@ dependencies {
     val media3Version = "1.9.1"
     implementation("androidx.media3:media3-exoplayer:$media3Version")
     implementation("androidx.media3:media3-session:$media3Version")
+    implementation("androidx.media3:media3-exoplayer-hls:$media3Version")
+    implementation("androidx.glance:glance-appwidget:1.1.1")
     implementation("androidx.compose.material:material-icons-extended-android:1.7.8")
     implementation("io.coil-kt:coil-compose:2.7.0")
     //
@@ -64,12 +79,18 @@ dependencies {
     //Testeos
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation("org.json:json:20240303")
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    //
+
+    // YouTube Music: búsqueda y URL de audio sin cuenta (GPLv3, igual que este proyecto)
+    implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.26.5")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     //
 
     //implementación de seteo/configuración de etiquetas de las canciones

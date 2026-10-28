@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Box
@@ -40,40 +42,35 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.creproductor.SongListScreen
+import androidx.compose.ui.unit.sp
 import com.example.creproductor.data.Playlist
 import com.example.creproductor.data.Song
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.activity.compose.BackHandler
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.LibraryMusic
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.PlayCircleOutline
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.mutableStateListOf
 
-/** Secciones de la barra inferior. */
-enum class AppSection(val title: String, val icon: ImageVector) {
+/** Pantalla principal (pestañas + menú hamburguesa, como en la maqueta) o la búsqueda que se abre desde la lupa. */
+enum class AppSection { HOME, SEARCH, SETTINGS }
 
-    YT_MUSIC("Yt music", Icons.Default.PlayCircleOutline),
-
-    LIBRARY("Biblioteca", Icons.Default.LibraryMusic),
-
-    HOME("Inicio", Icons.Default.Home),
-    SEARCH("Buscar", Icons.Default.Search),
-    SETTINGS("Ajustes", Icons.Default.Settings)
-}
-
-/** Pestañas de la Biblioteca. */
+/** Pestañas de la pantalla principal, en el orden de la maqueta. */
 enum class AppTab(val title: String){
+    QUICK("Selección rápida"),
     SONGS("Canciones"),
     ALBUMS("Álbumes"),
     ARTISTS("Artistas"),
-    PLAYLISTS("Listas"),
     GENRES("Géneros"),
-    FOLDERS("Carpetas")
+    PLAYLISTS("Listas de reproducción"),
+    FOLDERS("Carpetas"),
+    YT("YT Music")
 }
 
 /** Pantallas de detalle apiladas: "atrás" vuelve a la anterior (Artista → Álbum → atrás = Artista). */
@@ -91,21 +88,25 @@ fun MainScreen(
     viewModel: MusicViewModel,
     section: AppSection,
     onSectionChange: (AppSection) -> Unit,
-    settingsContent: @Composable () -> Unit,
+    versionName: String,
+    onAction: (AppAction) -> Unit,
     onExportPlaylist: (Playlist) -> Unit = {},
-    onEditSong: (Song) -> Unit = {}
+    onEditSong: (Song) -> Unit = {},
+    onDeleteSongs: (List<Song>) -> Unit = {},
+    /** Sube cada vez que se toca la barra inferior: cierra los detalles abiertos (álbum, artista…) para llegar a esa pantalla. */
+    navReset: Int = 0,
+    pagerState: androidx.compose.foundation.pager.PagerState = rememberPagerState(initialPage = 0, pageCount = { AppTab.entries.size })
 ){
-    val pagerState = rememberPagerState(initialPage = 0, pageCount = { AppTab.entries.size})
     val coroutineScope = rememberCoroutineScope ()
+    val navStyle = rememberNavStyle()
 
     val stack = remember { mutableStateListOf<Detail>() }
     fun open(detail: Detail) { stack.add(detail) }
     fun back() { stack.removeLastOrNull() }
     // Cambiar de sección desde la barra inferior cierra los detalles abiertos.
-    LaunchedEffect(section) { stack.clear() }
+    LaunchedEffect(section, navReset) { stack.clear() }
 
     var showCreatedPlaylistDialog by remember { mutableStateOf(false) }
-    var showAddSongsDialog by remember { mutableStateOf(false) }
     var showRestoreDialog by remember { mutableStateOf(false) }
     var playlistForOptions by remember { mutableStateOf<Playlist?>(null) }
 
@@ -151,8 +152,13 @@ fun MainScreen(
         if (list.isNotEmpty()) { val shuffled = list.shuffled(); viewModel.playSong(shuffled.first(), customQueue = shuffled) }
     }
 
-    // Atrás en la raíz de Biblioteca o Ajustes vuelve a Inicio en vez de salir de la app.
+    // Atrás en la búsqueda vuelve a la pantalla principal, y en una pestaña distinta de la primera vuelve a "Selección rápida".
     BackHandler(enabled = stack.isEmpty() && section != AppSection.HOME) { onSectionChange(AppSection.HOME) }
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    BackHandler(enabled = stack.isEmpty() && section == AppSection.HOME && drawerState.isOpen) { coroutineScope.launch { drawerState.close() } }
+    BackHandler(enabled = stack.isEmpty() && section == AppSection.HOME && !drawerState.isOpen && pagerState.currentPage != 0) {
+        coroutineScope.launch { pagerState.animateScrollToPage(0) }
+    }
 
     when (val detail = stack.lastOrNull()) {
         is Detail.Category -> QuickSelectDetailScreen(
@@ -216,7 +222,7 @@ fun MainScreen(
                 onSongClick = {song -> viewModel.playSong(song, customQueue =  playlistSongs)},
                 onPlayAllClick = { playAll(playlistSongs) },
                 onShuffleClick = { shuffleAll(playlistSongs) },
-                onAddSongsClick = {showAddSongsDialog = true},
+                onAddSongsClick = { playlistForAddSongs = activePlaylist },
                 onRestoreClick = { showRestoreDialog = true },
                 recentSongs = recentSongs,
                 onBackClick = ::back,
@@ -242,12 +248,6 @@ fun MainScreen(
             )
         }
         null -> when (section) {
-
-            AppSection.YT_MUSIC -> YtMusicScreen (
-                onOpenSearch = { },
-                onLoginClick = { },
-                onTrackClick = { }
-            )
             AppSection.SEARCH -> SearchOverlayScreen(
                 onEditSong = onEditSong,
                 searchQuery = searchQuery,
@@ -265,59 +265,85 @@ fun MainScreen(
                 },
                 onAlbumClick = { albumName, albumSongs -> open(Detail.Album(albumName, albumSongs)) },
                 onArtistClick = { artistName, artistSongs -> open(Detail.Artist(artistName, artistSongs)) },
+                ytEnabled = com.example.creproductor.data.YtMusic.isEnabled(androidx.compose.ui.platform.LocalContext.current),
+                onYtPlay = { viewModel.playYt(it) },
                 onCloseSearch = {
                     viewModel.setSearchQuery("")
                     onSectionChange(AppSection.HOME)
                 }
             )
-
-            AppSection.HOME -> Scaffold(
-                topBar = {
-                    TopAppBar(
-                        title = { Text("DEZZNUTS", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold) },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
-                    )
-                },
-                // La barra inferior ya reserva el espacio de la barra de gestos.
-                contentWindowInsets = WindowInsets(0)
-            ) { innerPadding ->
-                Box(Modifier.padding(innerPadding)) {
-                    QuickSelectionScreen(
-                        viewModel = viewModel,
-                        onSongClick = { song, queue -> viewModel.playSong(song, customQueue = queue)},
-                        onSeeAllCategoryClick = {type, categorySongs -> open(Detail.Category(type.title, categorySongs)) },
-                        onMoodClick = { mood, moodSongs -> open(Detail.Category(mood.label, moodSongs)) }
-                    )
+            AppSection.SETTINGS -> OptionsScreen(versionName = versionName, onAction = onAction, onClose = { onSectionChange(AppSection.HOME) })
+            AppSection.HOME -> ModalNavigationDrawer(
+                drawerState = drawerState,
+                // El deslizamiento lateral es de las pestañas; el menú se abre con la hamburguesa y se cierra deslizando.
+                gesturesEnabled = drawerState.isOpen,
+                drawerContent = {
+                    AppDrawerContent(versionName, onAction, onCloseDrawer = { coroutineScope.launch { drawerState.close() } })
                 }
-            }
-
-            AppSection.SETTINGS -> settingsContent()
-            AppSection.LIBRARY -> Scaffold(
+            ) {
+            Scaffold(
                 topBar = {
-                    TopAppBar(
-                        title = { Text("Biblioteca", style = MaterialTheme.typography.headlineSmall) },
+                    var showOverflow by remember { mutableStateOf(false) }
+                    // Con la barra inferior todo vive en ella y en Ajustes: sin hamburguesa, lupa ni ⋮ arriba.
+                    val topNav = navStyle == NavStyle.TOP
+                    // YT Music y Biblioteca ya traen su propia cabecera/pestañas: el logotipo solo va en Inicio.
+                    if (topNav || AppTab.entries[pagerState.currentPage] == AppTab.QUICK) TopAppBar(
+                        navigationIcon = {
+                            if (topNav) IconButton(onClick = { coroutineScope.launch { drawerState.open() } }) {
+                                Icon(Icons.Default.Menu, contentDescription = tr("Abrir menú"))
+                            }
+                        },
+                        title = {
+                            // Logotipo en tipografía, no un título más: espaciado amplio y el color de la marca.
+                            Text(
+                                tr("DEZZNUTS"), style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold, letterSpacing = 3.sp, color = MaterialTheme.colorScheme.primary
+                            )
+                        },
+                        actions = { if (topNav) {
+                            IconButton(onClick = { onSectionChange(AppSection.SEARCH) }) {
+                                Icon(Icons.Default.Search, contentDescription = tr("Buscar"))
+                            }
+                            Box {
+                                IconButton(onClick = { showOverflow = true }) {
+                                    Icon(Icons.Default.MoreVert, contentDescription = tr("Más opciones"))
+                                }
+                                DropdownMenu(expanded = showOverflow, onDismissRequest = { showOverflow = false }) {
+                                    listOf(AppAction.ScanFiles, AppAction.SleepTimer, AppAction.Options, AppAction.About).forEach { action ->
+                                        DropdownMenuItem(text = { Text(tr(action.title)) }, onClick = { showOverflow = false; onAction(action) })
+                                    }
+                                }
+                            }
+                        } },
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
                     )
                 },
-                // La barra inferior ya reserva el espacio de la barra de gestos.
                 contentWindowInsets = WindowInsets(0)
             ) { innerPadding ->
+                val topBarShown = navStyle == NavStyle.TOP || AppTab.entries[pagerState.currentPage] == AppTab.QUICK
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
+                        .then(if (topBarShown) Modifier else Modifier.statusBarsPadding())
                 ) {
-                    PrimaryScrollableTabRow(
-                        selectedTabIndex = pagerState.currentPage,
+                    // Con la barra inferior, las pestañas de arriba son solo las de la biblioteca (y solo estando en ella).
+                    val bottomNav = navStyle == NavStyle.BOTTOM
+                    val tabs = if (bottomNav) LIBRARY_TABS else AppTab.entries
+                    val currentTab = AppTab.entries[pagerState.currentPage]
+                    if (!bottomNav || currentTab in LIBRARY_TABS) PrimaryScrollableTabRow(
+                        selectedTabIndex = tabs.indexOf(currentTab).coerceAtLeast(0),
                         edgePadding = 16.dp,
                         containerColor = MaterialTheme.colorScheme.background,
                         contentColor = MaterialTheme.colorScheme.primary
                     ) {
-                        AppTab.entries.forEachIndexed { index, tab ->
+                        tabs.forEach { tab ->
                             Tab(
-                                selected = pagerState.currentPage == index,
-                                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
-                                text = {Text(tab.title)}
+                                selected = currentTab == tab,
+                                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(AppTab.entries.indexOf(tab)) } },
+                                selectedContentColor = MaterialTheme.colorScheme.onSurface,
+                                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                text = { Text(tr(tab.title), style = MaterialTheme.typography.titleSmall) }
                             )
                         }
                     }
@@ -326,6 +352,12 @@ fun MainScreen(
                         modifier = Modifier.weight(1f)
                     ) { page ->
                          when (AppTab.entries[page]){
+                             AppTab.QUICK -> QuickSelectionScreen(
+                                 viewModel = viewModel,
+                                 onSongClick = { song, queue -> viewModel.playSong(song, customQueue = queue)},
+                                 onSeeAllCategoryClick = {type, categorySongs -> open(Detail.Category(type.title, categorySongs)) },
+                                 onMoodClick = { mood, moodSongs -> open(Detail.Category(mood.label, moodSongs)) }
+                             )
                              AppTab.SONGS -> Column(modifier = Modifier.fillMaxSize()) {
                                  Row(verticalAlignment = Alignment.CenterVertically) {
                                      Row(
@@ -339,7 +371,7 @@ fun MainScreen(
                                              FilterChip(
                                                  selected = currentFilter == filter,
                                                  onClick = { viewModel.setFilter(filter) },
-                                                 label = { Text(label) }
+                                                 label = { Text(tr(label)) }
                                              )
                                          }
                                      }
@@ -351,7 +383,7 @@ fun MainScreen(
                                          DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
                                              SongSort.entries.forEach { sort ->
                                                  DropdownMenuItem(
-                                                     text = { Text(sort.label) },
+                                                     text = { Text(tr(sort.label)) },
                                                      trailingIcon = { if (sort == currentSort) Icon(Icons.Default.Check, contentDescription = null) },
                                                      onClick = { showSortMenu = false; viewModel.setSort(sort) }
                                                  )
@@ -363,8 +395,13 @@ fun MainScreen(
                                      songs = filteredSongs,
                                      currentSongId = currentSong?.id,
                                      isPlaying = isPlaying,
+                                     playlists = playlist,
                                      onSongClick = {song -> viewModel.playSong(song, customQueue = filteredSongs) },
-                                     onEditSong = onEditSong
+                                     onEditSong = onEditSong,
+                                     onAddToPlaylist = { id, list -> viewModel.addSongsToPlaylist(id, list.map { it.id }) },
+                                     onAddToQueue = { list -> list.forEach(viewModel::addToQueue) },
+                                     onNewPlaylist = { showCreatedPlaylistDialog = true },
+                                     onDeleteSongs = onDeleteSongs
                                  )
                              }
                              AppTab.ALBUMS -> AlbumsGridScreen(
@@ -390,6 +427,7 @@ fun MainScreen(
                                  onPlaylistOptionsClick = { playlistForOptions = it },
                                  onPlaylistClick = { open(Detail.PlaylistDetail(it)) }
                              )
+                             AppTab.YT -> YtMusicScreen(onPlay = { viewModel.playYt(it) })
                              AppTab.FOLDERS -> FoldersListScreen(
                                  songs = songs,
                                  onFolderClick = {folderName, folderSongs ->
@@ -399,6 +437,7 @@ fun MainScreen(
                          }
                      }
                 }
+            }
             }
         }
     }

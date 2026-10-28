@@ -1,5 +1,7 @@
 package com.example.creproductor.gui
 
+import com.example.creproductor.i18n.tr
+
 import androidx.activity.compose.BackHandler
 import com.example.creproductor.data.coverModel
 import androidx.compose.foundation.background
@@ -48,7 +50,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.creproductor.data.Song
-import com.example.creproductor.formatDuration
 
 @Composable
 fun QuickSelectDetailScreen(
@@ -96,7 +97,7 @@ fun QuickSelectDetailScreen(
             IconButton(onClick = onBackClick) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "volver",
+                    contentDescription = tr("volver"),
                     tint = MaterialTheme.colorScheme.onBackground
                 )
             }
@@ -152,6 +153,7 @@ fun QuickSelectDetailScreen(
                         Button(
                             onClick = onPlayAllClick,
                             modifier = Modifier.weight(1f),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                             shape = MaterialTheme.shapes.small
                         ) {
                             Icon(
@@ -160,12 +162,13 @@ fun QuickSelectDetailScreen(
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("REPRODUCIR")
+                            Text(tr("REPRODUCIR"), maxLines = 1, softWrap = false)
                         }
 
                         OutlinedButton(
                             onClick = onShuffleClick,
                             modifier = Modifier.weight(1f),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                             shape = MaterialTheme.shapes.small,
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = MaterialTheme.colorScheme.primary
@@ -177,7 +180,7 @@ fun QuickSelectDetailScreen(
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("ALEATORIO")
+                            Text(tr("ALEATORIO"), maxLines = 1, softWrap = false)
                         }
                     }
                 }
@@ -387,7 +390,7 @@ private fun QuickSelectTrackItem(
         ) {
             Icon(
                 imageVector = Icons.Default.MoreVert,
-                contentDescription = "Opciones",
+                contentDescription = tr("Opciones"),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
