@@ -56,7 +56,7 @@ import kotlinx.coroutines.withContext
 fun YtAlbumScreen(
     item: YtItem,
     onBackClick: () -> Unit,
-    onPlayTrack: (YtTrack) -> Unit,
+    onPlayQueue: (tracks: List<YtTrack>, startIndex: Int) -> Unit,
     onTrackOptionsClick: (YtTrack) -> Unit
 ) {
     val context = LocalContext.current
@@ -167,7 +167,7 @@ fun YtAlbumScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Button(
-                                onClick = { tracks.firstOrNull()?.let(onPlayTrack) },
+                                onClick = { if (tracks.isNotEmpty()) onPlayQueue(tracks, 0) },
                                 modifier = Modifier.weight(1f),
                                 enabled = tracks.isNotEmpty(),
                                 shape = MaterialTheme.shapes.small
@@ -178,7 +178,7 @@ fun YtAlbumScreen(
                             }
 
                             OutlinedButton(
-                                onClick = { tracks.shuffled().firstOrNull()?.let(onPlayTrack) },
+                                onClick = { if (tracks.isNotEmpty()) onPlayQueue(tracks.shuffled(), 0)},
                                 modifier = Modifier.weight(1f),
                                 enabled = tracks.isNotEmpty(),
                                 shape = MaterialTheme.shapes.small
@@ -228,7 +228,7 @@ fun YtAlbumScreen(
                                 }
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            modifier = Modifier.clickable { onPlayTrack(track) }
+                            modifier = Modifier.clickable { onPlayQueue(tracks, index) }
                         )
                     }
                 }

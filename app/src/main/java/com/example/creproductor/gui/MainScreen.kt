@@ -427,7 +427,10 @@ fun MainScreen(
                                  onPlaylistOptionsClick = { playlistForOptions = it },
                                  onPlaylistClick = { open(Detail.PlaylistDetail(it)) }
                              )
-                             AppTab.YT -> YtMusicScreen(onPlay = { viewModel.playYt(it) })
+                             AppTab.YT -> YtMusicScreen(
+                                 onPlay = { viewModel.playYt(it) },
+                                 onPlayQueue = {tracks, index -> viewModel.playYtQueue(tracks, index)}
+                             )
                              AppTab.FOLDERS -> FoldersListScreen(
                                  songs = songs,
                                  onFolderClick = {folderName, folderSongs ->

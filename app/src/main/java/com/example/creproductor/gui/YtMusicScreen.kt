@@ -52,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.creproductor.data.YtItem
 import com.example.creproductor.data.YtLibrary
@@ -60,14 +61,22 @@ import com.example.creproductor.data.YtTrack
 import com.example.creproductor.i18n.tr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.compose.runtime.collectAsState
 
 /**
  * Pestaña "YT Music": buscador, el inicio de YouTube Music (estantes y estados de ánimo) y, con sesión, tus "Me gusta". Todo es opcional: mientras
  * YouTube Music esté apagado solo explica qué es y ofrece activarlo. La reproducción pasa por el mismo reproductor.
  */
 @Composable
-fun YtMusicScreen(onPlay: (YtTrack) -> Unit) {
+fun YtMusicScreen(
+    viewModel: MusicViewModel = viewModel(),
+    onPlay: (YtTrack) -> Unit,
+    onPlayQueue: (tracks: List<YtTrack>, startIndex: Int) -> Unit = {list, index -> list.getOrNull(index)?.let(onPlay)}
+) {
+    val ytPlaylists by viewModel.ytPlaylists.collectAsState()
     val context = LocalContext.current
+
+    var trackToAddToPlaylist by remember { mutableStateOf<YtTrack?>(null) }
     var enabled by remember { mutableStateOf(YtMusic.isEnabled(context)) }
     var loggedIn by remember { mutableStateOf(YtLibrary.isLoggedIn(context)) }
     var reload by remember { mutableIntStateOf(0) }
@@ -119,7 +128,7 @@ fun YtMusicScreen(onPlay: (YtTrack) -> Unit) {
             YtArtistScreen(
                 item = activeItem,
                 onBackClick = { selectedItemForDetail = null },
-                onPlayTrack = onPlay,
+                onPlayQueue = onPlayQueue,
                 onOpenItem = { newItem -> selectedItemForDetail = newItem },
                 onTrackOptionsClick = { selectedTrackForMenu = it }
             )
@@ -127,7 +136,7 @@ fun YtMusicScreen(onPlay: (YtTrack) -> Unit) {
             YtAlbumScreen(
                 item = activeItem,
                 onBackClick = { selectedItemForDetail = null },
-                onPlayTrack = onPlay,
+                onPlayQueue = onPlayQueue,
                 onTrackOptionsClick = { selectedTrackForMenu = it }
             )
         }
@@ -241,6 +250,23 @@ fun YtMusicScreen(onPlay: (YtTrack) -> Unit) {
                 )
             },
             onAddToPlaylist = {
+               trackToAddToPlaylist = track
+                selectedTrackForMenu = null
+
+            }
+        )
+    }
+
+    trackToAddToPlaylist?.let { track ->
+        YtAddToPlaylistDialog(
+            playlists = ytPlaylists,
+            track = track,
+            onDismiss = {trackToAddToPlaylist = null},
+            onSelectedPlaylist = {targetPlaylist ->
+                viewModel.addTrackToYtPlaylist(targetPlaylist.id, track)
+                trackToAddToPlaylist = null
+            },
+            onCreateNewClick = {
                 showCreatePlaylistDialog = true
             }
         )
@@ -249,7 +275,13 @@ fun YtMusicScreen(onPlay: (YtTrack) -> Unit) {
     if (showCreatePlaylistDialog) {
         YtCreatePlaylistDialog(
             onDismiss = { showCreatePlaylistDialog = false },
-            onCreate = { _ ->
+            onCreate = { name ->
+                viewModel.createYtPlaylist(name)
+                trackToAddToPlaylist?.let { track ->
+                    val newPlaylist = viewModel.ytPlaylists.value.lastOrNull()
+                    newPlaylist?.let { viewModel.addTrackToYtPlaylist(it.id, track) }
+                    trackToAddToPlaylist = null
+                }
                 showCreatePlaylistDialog = false
             }
         )

@@ -54,7 +54,7 @@ import kotlinx.coroutines.withContext
 fun YtArtistScreen(
     item: YtItem,
     onBackClick: () -> Unit,
-    onPlayTrack: (YtTrack) -> Unit,
+    onPlayQueue: (tracks: List<YtTrack>, startIndex: Int) -> Unit,
     onOpenItem: (YtItem) -> Unit,
     onTrackOptionsClick: (YtTrack) -> Unit
 ) {
@@ -158,7 +158,7 @@ fun YtArtistScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Button(
-                            onClick = { topTracks.firstOrNull()?.let(onPlayTrack) },
+                            onClick = { if (topTracks.isNotEmpty()) onPlayQueue(topTracks, 0) },
                             modifier = Modifier.fillMaxWidth(0.6f),
                             enabled = topTracks.isNotEmpty(),
                             shape = MaterialTheme.shapes.small
@@ -180,7 +180,7 @@ fun YtArtistScreen(
                         )
                     }
 
-                    itemsIndexed(topTracks, key = { index, track -> "yt_artist_top_${track.url}_$index" }) { _, track ->
+                    itemsIndexed(topTracks, key = { index, track -> "yt_artist_top_${track.url}_$index" }) { index, track ->
                         ListItem(
                             headlineContent = { Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             supportingContent = { Text(track.artist.ifBlank { item.title }, maxLines = 1, overflow = TextOverflow.Ellipsis) },
@@ -204,7 +204,7 @@ fun YtArtistScreen(
                                 }
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            modifier = Modifier.clickable { onPlayTrack(track) }
+                            modifier = Modifier.clickable { onPlayQueue(topTracks, index) }
                         )
                     }
                 }
