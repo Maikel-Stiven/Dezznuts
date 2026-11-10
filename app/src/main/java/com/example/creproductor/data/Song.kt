@@ -83,3 +83,11 @@ internal fun <T> List<T>.withoutBrokenTwinsBy(key: (T) -> TwinKey): List<T> {
 
 fun List<Song>.withoutBrokenTwins(): List<Song> =
     withoutBrokenTwinsBy { TwinKey(it.path, it.title, it.artist, it.duration, exempt = it.cueStartMs >= 0 || it.isYoutube) }
+
+fun Song.toYtTrack(): YtTrack = YtTrack(
+    url = contentUri.toString(),
+    title = title,
+    artist = artist,
+    durationSec = (duration / 1000),
+    thumbnail = albumArtUri?.toString()
+)

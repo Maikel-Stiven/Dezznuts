@@ -2,7 +2,7 @@ package com.example.creproductor.innertube
 
 
 data class YtOnlineTrack(
-    val videId: String,
+    val videoId: String,
     val title: String,
     val artist: String,
     val thumbnailUrl: String,

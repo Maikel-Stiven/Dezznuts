@@ -106,8 +106,19 @@ fun SongMenuSheet(
             } else {
                 if (!isYt) MenuRow(Icons.Default.SkipNext, "Reproducir a continuación", run(actions.onPlayNext))
                 if (!isYt) MenuRow(Icons.AutoMirrored.Filled.QueueMusic, "Agregar al final de la cola", run(actions.onAddToQueue))
-                if (!isYt) MenuRow(Icons.AutoMirrored.Filled.PlaylistAdd, "Agregar a una playlist", { pickingPlaylist = true })
-                if (!isYt) MenuRow(Icons.Default.Album, "Ir al álbum", run(actions.onGoToAlbum))
+                MenuRow(
+                    icon = Icons.AutoMirrored.Filled.PlaylistAdd,
+                    text = "Agregar a una playlist",
+                    onClick = {
+                        if (isYt) {
+                            onDismiss()
+                            actions.onAddToPlaylist("")
+                        } else {
+                            pickingPlaylist = true
+                        }
+                    }
+                )
+                MenuRow(Icons.Default.Album, "Ir al álbum", run(actions.onGoToAlbum))
                 MenuRow(Icons.Default.Person, "Ir al artista", run(actions.onGoToArtist))
                 if (!isCueTrack && !isYt) MenuRow(Icons.Default.Edit, "Editor de etiquetas", run(actions.onEditTags))
                 MenuRow(Icons.Default.Info, "Acerca de", run(actions.onAbout))

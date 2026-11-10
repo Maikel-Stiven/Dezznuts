@@ -1074,7 +1074,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
      */
 
 
-    fun playYtTrackAtIndex(index: Int){
+    fun playYtTrackAtIndex(index: Int) {
         val queue = _currentQueue.value
         if (index !in queue.indices) return
         val targetSong = queue[index]
@@ -1090,52 +1090,50 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
             ytPlayed += trackUrl
 
             val resolved = runCatching {
-                withContext(Dispatchers.IO) {com.example.creproductor.data.YtMusic.resolve(trackUrl)}
+                withContext(Dispatchers.IO) { com.example.creproductor.data.YtMusic.resolve(trackUrl) }
             }.getOrElse {
                 Toast.makeText(app, com.example.creproductor.i18n.I18n.tr(app, "No se pudo reproducir la canción"), Toast.LENGTH_SHORT).show()
                 return@launch
             }
 
-            val meta = async {
-                ytMeta(com.example.creproductor.data.YtTrack(
-                    trackUrl,
-                    targetSong.title,
-                    targetSong.artist,
-                    targetSong.duration / 1000,
-                    targetSong.albumArtUri?.toString()
-                ))
+            val metaResult = withContext(Dispatchers.IO) {
+                ytMeta(
+                    com.example.creproductor.data.YtTrack(
+                        trackUrl,
+                        targetSong.title,
+                        targetSong.artist,
+                        targetSong.duration / 1000,
+                        targetSong.albumArtUri?.toString()
+                    )
+                )
             }
-            val metaResult = meta.await()
 
             val updatedSong = targetSong.copy(
                 duration = if (targetSong.duration > 0) targetSong.duration else resolved.durationSec * 1000,
-                album  = metaResult?.album?.takeIf { it.isNotBlank() } ?: targetSong.album,
+                album = metaResult?.album?.takeIf { it.isNotBlank() } ?: targetSong.album,
                 albumArtUri = (metaResult?.highResCoverUrl ?: targetSong.albumArtUri?.toString())?.let(Uri::parse) ?: targetSong.albumArtUri
             )
 
-            val updatedQueue = _currentQueue.value.toMutableList()
-            if (index in updatedQueue.indices){
-                updatedQueue[index] = updatedSong
-                _currentQueue.value = updatedQueue
+            val currentQueueList = _currentQueue.value.toMutableList()
+            val actualIndex = currentQueueList.indexOfFirst { it.id == targetSong.id }
+            if (actualIndex != -1) {
+                currentQueueList[actualIndex] = updatedSong
+                _currentQueue.value = currentQueueList
             }
 
             _currentSong.value = updatedSong
 
             val controller = mediaController ?: return@launch
+            controller.stop()
+            controller.clearMediaItems()
             controller.setMediaItem(ytItem(updatedSong, resolved.audioUrl))
             controller.prepare()
+            controller.playWhenReady = true
             controller.play()
 
-            Log.i("DezzYt", "[+${SystemClock.elapsedRealtime() - t0} ms] Sonando pista $index de Yt: ${updatedSong.title}")
+            Log.i("DezzYt", "[+${SystemClock.elapsedRealtime() - t0} ms] Sonando pista en YT: ${updatedSong.title}")
 
-            if (index + 1 in queue.indices){
-                val nextUrl = queue[index + 1].contentUri.toString()
-                withContext(Dispatchers.IO){
-                    runCatching { com.example.creproductor.data.YtMusic.resolve(nextUrl) }
-                }
-            }
-
-            else if (queue.size < MAX_YT_QUEUE_SIZE && com.example.creproductor.data.YtMusic.isAutoNext(app)){
+            if (actualIndex != -1 && actualIndex == _currentQueue.value.size - 1 && _currentQueue.value.size < MAX_YT_QUEUE_SIZE && com.example.creproductor.data.YtMusic.isAutoNext(app)) {
                 ytFetchNextRecommendation(updatedSong, resolved)
             }
         }
@@ -1152,46 +1150,11 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     }
 
     fun playYt(track: com.example.creproductor.data.YtTrack) {
-        val app = getApplication<Application>()
-        viewModelScope.launch {
-            val t0 = SystemClock.elapsedRealtime()
-            ytPlayed.clear(); ytPlayed += track.url
-            val quick = ytSong(track, null)
-            _currentQueue.value = listOf(quick)
-            _currentSong.value = quick
-            _currentPositionMs.value = 0L
-            val meta = async { ytMeta(track) }
-            val resolved = runCatching {
-                withContext(Dispatchers.IO) {
-                    com.example.creproductor.data.YtMusic.resolve(track.url)
-                }
-            }
-                .getOrElse {
-                    Toast.makeText(
-                        app,
-                        com.example.creproductor.i18n.I18n.tr(
-                            app,
-                            "No se pudo abrir la canción de YouTube Music"
-                        ),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    return@launch
-                }
-            // Las tarjetas del inicio no traen duración: se toma la del audio ya abierto.
-            val song = ytSong(track.takeIf { it.durationSec > 0 }
-                ?: track.copy(durationSec = resolved.durationSec), meta.await())
-            val controller = mediaController ?: return@launch
-            _currentQueue.value = listOf(song)
-            _currentSong.value = song
-            controller.setMediaItem(ytItem(song, resolved.audioUrl))
-            controller.prepare()
-            controller.play()
-            Log.i(
-                "DezzYt",
-                "[+${SystemClock.elapsedRealtime() - t0} ms] lista para sonar: ${song.title}"
-            )
-            // La siguiente recomendada la prepara ytContinue al empezar esta (onMediaItemTransition).
-        }
+        ytPlayed.clear()
+        ytPlayed += track.url
+        val quick = ytSong(track, null)
+        _currentQueue.value = listOf(quick)
+        playYtTrackAtIndex(0)
     }
 
     /** Añade al final de la cola la siguiente recomendada por YouTube (si sigues en esta canción cuando esté lista). */
@@ -1228,27 +1191,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
 
     /** Al pasar a una canción de YouTube que es la última de la cola, prepara la siguiente (la dirección ya está en caché). */
     private fun ytContinue(song: Song) {
-        val controller = mediaController ?: return
-        val currentIdx = controller.currentMediaItemIndex
-        val totalInController = controller.mediaItemCount
-        val queueList = _currentQueue.value
-
-        viewModelScope.launch {
-            val nextQueueIdx = currentIdx + 1
-            if (nextQueueIdx < queueList.size && totalInController <= nextQueueIdx){
-               val nextSongInQueue = queueList[nextQueueIdx]
-               val resolved = runCatching { withContext(Dispatchers.IO) {com.example.creproductor.data.YtMusic.resolve(nextSongInQueue.contentUri.toString())} }.getOrNull()
-               if (resolved != null){
-                   controller.addMediaItem(ytItem(nextSongInQueue, resolved.audioUrl))
-                   Log.i("DezzYt", "Cargada siguiente pista del álbum a ExoPlayer: ${nextSongInQueue.title}")
-               }
-                return@launch
-            }
-            if (currentIdx == totalInController - 1 && queueList.size < MAX_YT_QUEUE_SIZE){
-                val resolved = runCatching { withContext(Dispatchers.IO) {com.example.creproductor.data.YtMusic.resolve(song.contentUri.toString())} }.getOrNull() ?: return@launch
-                ytQueueNext(song, resolved)
-            }
-        }
+        //Toco nukearla pq daba tokens caducados así que ta raro eso
     }
 
     fun togglePlayPause() {
@@ -1406,10 +1349,10 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
 
     fun playNext() {
         val current = _currentSong.value
-        if (current?.isYoutube == true){
+        if (current?.isYoutube == true) {
             val queue = _currentQueue.value
             val currentIndex = queue.indexOfFirst { it.id == current.id }
-            if (currentIndex != -1 && currentIndex + 1 < queue.size){
+            if (currentIndex != -1 && currentIndex + 1 < queue.size) {
                 playYtTrackAtIndex(currentIndex + 1)
                 return
             }

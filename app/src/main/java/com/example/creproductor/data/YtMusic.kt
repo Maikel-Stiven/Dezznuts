@@ -46,14 +46,36 @@ object YtMusic {
 
     private val init by lazy { NewPipe.init(Http) }
 
+    private val UGC_FILTER = listOf(
+        "gameplay", "walkthrough", "playthrough", "reaction", "reacción", "vlog",
+        "shitpost", "parody", "parodia", "unboxing", "review",
+        "tiktok", "shorts", "compilation", "funny moments"
+    )
+
     /** Canciones que coinciden con [query] (hasta ~20 de la primera página). Lanza [IOException] si no hay red. */
     fun search(query: String): List<YtTrack> {
         init
         val extractor = ServiceList.YouTube.getSearchExtractor(query, listOf(YoutubeSearchQueryHandlerFactory.MUSIC_SONGS), "")
         extractor.fetchPage()
-        return extractor.initialPage.items.filterIsInstance<StreamInfoItem>().map {
-            YtTrack(it.url, it.name, it.uploaderName.orEmpty(), it.duration, it.thumbnails.maxByOrNull { t -> t.width }?.url)
-        }
+        return extractor.initialPage.items
+            .filterIsInstance<StreamInfoItem>()
+            .filter { item ->
+                val nameLower = item.name.lowercase()
+                val hasDuration = item.duration >= 1L
+                val isNotUgc = UGC_FILTER.none{ nameLower.contains(it)}
+                hasDuration && isNotUgc
+            }
+            .map { item ->
+                val cleanArtistName = cleanArtist(item.uploaderName.orEmpty())
+                val cleanTitleName = cleanTitle(item.name, cleanArtistName)
+                YtTrack(
+                    url = item.url,
+                    title = cleanTitleName,
+                    artist = cleanArtistName.ifEmpty { "Artista desconocido" },
+                    durationSec = item.duration,
+                    thumbnail = item.thumbnails.maxByOrNull { t -> t.width }?.url
+                )
+            }
     }
 
     /** Lo que sale de abrir una canción: el audio y las recomendadas de YouTube ("a continuación"). */
@@ -76,9 +98,22 @@ object YtMusic {
         val info = StreamInfo.getInfo(ServiceList.YouTube, trackUrl)
         // Preferimos el de más bitrate; ExoPlayer reproduce tanto Opus/WebM como AAC/M4A.
         val audio = info.audioStreams.maxByOrNull { it.averageBitrate }?.content ?: throw IOException("Sin audio disponible")
-        val related = info.relatedItems.filterIsInstance<StreamInfoItem>().map {
-            YtTrack(it.url, it.name, it.uploaderName.orEmpty(), it.duration, it.thumbnails.maxByOrNull { t -> t.width }?.url)
-        }
+        val related = info.relatedItems.filterIsInstance<StreamInfoItem>()
+            .filter { item ->
+                val nameLower = item.name.lowercase()
+                item.duration >= 1L && UGC_FILTER.none { nameLower.contains(it) }
+            }
+            .map { item ->
+                val cleanArtistName = cleanArtist(item.uploaderName.orEmpty())
+                val cleanTitleName = cleanTitle(item.name, cleanArtistName)
+                YtTrack(
+                    url = item.url,
+                    title = cleanTitleName,
+                    artist = cleanArtistName.ifEmpty { "Artista desconocido" },
+                    durationSec = item.duration,
+                    thumbnail = item.thumbnails.maxByOrNull { t -> t.width }?.url
+                )
+            }
         Resolved(audio, related, info.duration).also { synchronized(cache) { cache[trackUrl] = it } }.also { locks.remove(trackUrl) }
     }
 

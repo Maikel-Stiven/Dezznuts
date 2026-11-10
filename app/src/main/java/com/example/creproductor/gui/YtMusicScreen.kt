@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudQueue
@@ -62,6 +64,7 @@ import com.example.creproductor.i18n.tr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.text.input.ImeAction
 
 /**
  * Pestaña "YT Music": buscador, el inicio de YouTube Music (estantes y estados de ánimo) y, con sesión, tus "Me gusta". Todo es opcional: mientras
@@ -160,10 +163,27 @@ fun YtMusicScreen(
 
             if (searching) {
                 OutlinedTextField(
-                    value = query, onValueChange = { query = it }, singleLine = true,
+                    value = query,
+                    onValueChange = { query = it },
+                    singleLine = true,
                     placeholder = { Text(tr("Buscar en YouTube Music")) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Default.Close, contentDescription = tr("Limpiar")) } },
+                    trailingIcon = {
+                        if (query.isNotEmpty()){
+                            IconButton(onClick = {query = ""}) {
+                                Icon(Icons.Default.Close, contentDescription = tr("Limpiar"))
+                            }
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(
+                        onSearch = {
+                            if (query.isNotBlank()){
+                                val clean = query.trim()
+                                searchHistory = (listOf(clean) + searchHistory.filter { it != clean }).take(10)
+                            }
+                        }
+                    ),
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
                 )
 
@@ -199,8 +219,23 @@ fun YtMusicScreen(
                             ListItem(
                                 headlineContent = { Text(item) },
                                 leadingContent = { Icon(Icons.Default.History, contentDescription = null) },
+                                trailingContent = {
+                                    IconButton( onClick =  {
+                                        searchHistory = searchHistory.filter { it !=  item}
+                                    }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = tr("Eliminar del historial"),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                },
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                modifier = Modifier.clickable { query = item }
+                                modifier = Modifier.clickable {
+                                    query = item
+                                    val clean = item.trim()
+                                    searchHistory = (listOf(clean) + searchHistory.filter { it != clean }).take(10)
+                                }
                             )
                         }
                     }
@@ -208,7 +243,13 @@ fun YtMusicScreen(
                     YtMusicResults(
                         query = query,
                         filter = selectedFilter,
-                        onPlay = onPlay,
+                        onPlay = { track ->
+                            if (query.isNotBlank()){
+                                val clean = query.trim()
+                                searchHistory = (listOf(clean) + searchHistory.filter{ it != clean}.take(10))
+                            }
+                            onPlay(track)
+                        },
                         onTrackOptionsClick = { selectedTrackForMenu = it }
                     )
                 }
@@ -216,7 +257,17 @@ fun YtMusicScreen(
                 YtHomeContent(
                     loggedIn = loggedIn,
                     reload = reload,
+                    ytPlaylists = ytPlaylists,
                     onPlay = onPlay,
+                    onPlayYtPlaylist = { playlist, index ->
+                        viewModel.playYtPlaylist(playlist, index)
+                    },
+                    onDeleteYtPlaylist = {playlistId ->
+                        viewModel.deleteYtPlaylist(playlistId)
+                    },
+                    onRemoveTrackFromYtPlaylist = {playlistId, trackUrl ->
+                        viewModel.removeTrackFromYtPlaylist(playlistId, trackUrl)
+                    },
                     onLogin = { YtLogin.open = true },
                     onOpenItem = { item -> selectedItemForDetail = item },
                     onTrackOptionsClick = { selectedTrackForMenu = it },

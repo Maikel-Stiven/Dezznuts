@@ -17,9 +17,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CloudQueue
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.Button
@@ -56,6 +59,7 @@ import com.example.creproductor.data.YtHome
 import com.example.creproductor.data.YtHomeFeed
 import com.example.creproductor.data.YtItem
 import com.example.creproductor.data.YtMood
+import com.example.creproductor.data.YtPlaylist
 import com.example.creproductor.data.YtTrack
 import com.example.creproductor.i18n.tr
 import kotlinx.coroutines.Dispatchers
@@ -70,7 +74,11 @@ import kotlinx.coroutines.withContext
 internal fun YtHomeContent(
     loggedIn: Boolean,
     reload: Int,
+    ytPlaylists: List<YtPlaylist> = emptyList(),
     onPlay: (YtTrack) -> Unit,
+    onPlayYtPlaylist: (YtPlaylist, Int) -> Unit = { _, _ -> },
+    onDeleteYtPlaylist: (String) -> Unit = {},
+    onRemoveTrackFromYtPlaylist: (playlistId: String, trackUrl: String) -> Unit = { _ , _ ->},
     onLogin: () -> Unit,
     onOpenItem: (YtItem) -> Unit = {},
     onTrackOptionsClick: (YtTrack) -> Unit = {},
@@ -81,6 +89,7 @@ internal fun YtHomeContent(
     var showLiked by remember { mutableStateOf(false) }
     var retry by remember { mutableIntStateOf(0) }
     var opened by remember { mutableStateOf<YtItem?>(null) }
+    var openedYtPlaylist by remember { mutableStateOf<YtPlaylist?>(null) }
 
     // null = cargando; el estado de ánimo elegido se vuelve a pedir, el resto sale de la caché de 10 min.
     val result by produceState<Result<YtHomeFeed>?>(null, mood, loggedIn, reload, retry) {
@@ -224,6 +233,12 @@ internal fun YtHomeContent(
                                 }
                             }
                         }
+                        items(ytPlaylists, key = {"yt_pl" + it.id}) { pl ->
+                            YtPlaylistCard(
+                                playlist = pl,
+                                onClick = { openedYtPlaylist = pl }
+                            )
+                        }
                     }
                 }
             }
@@ -258,6 +273,115 @@ internal fun YtHomeContent(
                 }
             }
         }
+    }
+
+    openedYtPlaylist?.let { pl ->
+        val currentPl = ytPlaylists.find { it.id == pl.id } ?: pl
+        ModalBottomSheet(onDismissRequest = {openedYtPlaylist = null}) {
+            Column(Modifier.fillMaxWidth(). padding(bottom = 24.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(currentPl.name, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("${currentPl.tracks.size} " + tr("canciones"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (currentPl.tracks.isNotEmpty()){
+                        Button(
+                            onClick = {
+                                openedYtPlaylist = null
+                                onPlayYtPlaylist(currentPl, 0)
+                            },
+                            shape = MaterialTheme.shapes.extraSmall
+                        ) {
+                            Text(tr("Reproducir todo"))
+                        }
+                    }
+                    IconButton(
+                        onClick = {
+                            onDeleteYtPlaylist(currentPl.id)
+                            openedYtPlaylist = null
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = tr("Eliminar playlist"),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                if (currentPl.tracks.isEmpty()){
+                    Text(tr("Esta playlist está vacía"), modifier = Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }else{
+                    LazyColumn{
+                        itemsIndexed(currentPl.tracks, key = {index, track -> "yt_pl_item_${currentPl.id}_${index}_${track.url}"}) {index, t ->
+                            ListItem(
+                                headlineContent = {Text(t.title, maxLines = 1, overflow = TextOverflow.Ellipsis)},
+                                supportingContent = {Text(t.artist, maxLines = 1, overflow = TextOverflow.Ellipsis)},
+                                leadingContent = {
+                                    AsyncImage(t.thumbnail, null, contentScale = ContentScale.Crop, modifier = Modifier.size(44.dp).clip(MaterialTheme.shapes.small))
+                                },
+                                trailingContent = {
+                                    Row {
+                                        IconButton(onClick = {onTrackOptionsClick(t)}) {
+                                            Icon(Icons.Default.MoreVert, contentDescription = null)
+                                        }
+                                        IconButton(
+                                            onClick = {
+                                                onRemoveTrackFromYtPlaylist(currentPl.id, t.url)
+                                            }
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = tr("Eliminar de la playlist"),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                modifier = Modifier.clickable{
+                                    openedYtPlaylist = null
+                                    onPlayYtPlaylist(currentPl, index)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun YtPlaylistCard(playlist: YtPlaylist, onClick: () -> Unit){
+    val firstThumb = playlist.tracks.firstOrNull {!it.thumbnail.isNullOrBlank()}?.thumbnail
+    Column(modifier = Modifier.width(140.dp).clip(MaterialTheme.shapes.medium).clickable(onClick = onClick)) {
+       if (firstThumb != null){
+           AsyncImage(
+               model = firstThumb,
+               contentDescription = null,
+               contentScale = ContentScale.Crop,
+               modifier = Modifier.size(140.dp).clip(MaterialTheme.shapes.medium)
+           )
+       }else{
+           Surface(
+               modifier = Modifier.size(140.dp).clip(MaterialTheme.shapes.medium),
+               color = MaterialTheme.colorScheme.surfaceContainerHigh
+           ) {
+               Box(contentAlignment = Alignment.Center){
+                   Icon(
+                       imageVector = Icons.Default.CloudQueue,
+                       contentDescription = null,
+                       modifier = Modifier.size(48.dp),
+                       tint = MaterialTheme.colorScheme.primary
+                   )
+               }
+           }
+       }
+        Text(playlist.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+        Text("${playlist.tracks.size} " + tr("canciones"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
