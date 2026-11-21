@@ -919,7 +919,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                   )
                }
                val index = customQueue.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
-               playYtQueue(ytTracks, index)
+               playYtQueue(ytTracks, index, isStatic = true)
                return
            }
 
@@ -1016,9 +1016,10 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         saveYtPlaylists(updated)
     }
 
+    private var isStaticQueue = false
     fun playYtPlaylist(playlist: com.example.creproductor.data.YtPlaylist, startIndex: Int = 0){
         if (playlist.tracks.isNotEmpty()){
-            playYtQueue(playlist.tracks, startIndex)
+            playYtQueue(playlist.tracks, startIndex, isStatic = true)
         }
     }
 
@@ -1092,7 +1093,9 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
             val resolved = runCatching {
                 withContext(Dispatchers.IO) { com.example.creproductor.data.YtMusic.resolve(trackUrl) }
             }.getOrElse {
-                Toast.makeText(app, com.example.creproductor.i18n.I18n.tr(app, "No se pudo reproducir la canción"), Toast.LENGTH_SHORT).show()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(app, com.example.creproductor.i18n.I18n.tr(app, "No se pudo reproducir la canción"), Toast.LENGTH_SHORT).show()
+                }
                 return@launch
             }
 
@@ -1133,7 +1136,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
 
             Log.i("DezzYt", "[+${SystemClock.elapsedRealtime() - t0} ms] Sonando pista en YT: ${updatedSong.title}")
 
-            if (actualIndex != -1 && actualIndex == _currentQueue.value.size - 1 && _currentQueue.value.size < MAX_YT_QUEUE_SIZE && com.example.creproductor.data.YtMusic.isAutoNext(app)) {
+            if (!isStaticQueue && actualIndex != -1 && actualIndex == _currentQueue.value.size - 1 && _currentQueue.value.size < MAX_YT_QUEUE_SIZE && com.example.creproductor.data.YtMusic.isAutoNext(app)) {
                 ytFetchNextRecommendation(updatedSong, resolved)
             }
         }
@@ -1150,6 +1153,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     }
 
     fun playYt(track: com.example.creproductor.data.YtTrack) {
+        isStaticQueue = false
         ytPlayed.clear()
         ytPlayed += track.url
         val quick = ytSong(track, null)
@@ -1785,10 +1789,10 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     }
 
     private var ytJob: Job? = null
-    fun playYtQueue(tracks: List<com.example.creproductor.data.YtTrack>, startIndex: Int = 0){
+    fun playYtQueue(tracks: List<com.example.creproductor.data.YtTrack>, startIndex: Int = 0, isStatic: Boolean = true){
         if (tracks.isEmpty() || startIndex !in tracks.indices) return
+        isStaticQueue = isStatic
         val limitedTracks = tracks.take(MAX_YT_QUEUE_SIZE)
-
         ytPlayed.clear()
         ytPlayed.addAll(limitedTracks.map { it.url })
 

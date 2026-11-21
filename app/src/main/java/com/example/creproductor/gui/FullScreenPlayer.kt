@@ -555,7 +555,7 @@ fun FullScreenPlayer(
                 ) {
                     itemsIndexed(
                         items = songs,
-                        key = {_, songItem -> songItem.id}
+                        key = { index, songItem -> Pair(songItem.id, index)}
                     ){index, queueSong ->
                         val isCurrent = queueSong.id == song.id
                         val isBeingDragged = draggedIndex == index
@@ -599,7 +599,7 @@ fun FullScreenPlayer(
                                 modifier = Modifier
                                     .padding(start = 2.dp, end = 6.dp)
                                     .size(32.dp)
-                                    .pointerInput(queueSong.id) {
+                                    .pointerInput(queueSong.id, index) {
                                         detectDragGestures(
                                             onDragStart = {
                                                 draggedIndex = currentIndex

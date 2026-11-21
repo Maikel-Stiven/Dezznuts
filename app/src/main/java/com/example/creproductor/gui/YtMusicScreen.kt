@@ -65,6 +65,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.text.input.ImeAction
+import com.example.creproductor.data.isYoutube
 
 /**
  * Pestaña "YT Music": buscador, el inicio de YouTube Music (estantes y estados de ánimo) y, con sesión, tus "Me gusta". Todo es opcional: mientras
@@ -77,6 +78,9 @@ fun YtMusicScreen(
     onPlayQueue: (tracks: List<YtTrack>, startIndex: Int) -> Unit = {list, index -> list.getOrNull(index)?.let(onPlay)}
 ) {
     val ytPlaylists by viewModel.ytPlaylists.collectAsState()
+    val currentSong by viewModel.currentSong.collectAsState()
+    val isPlaying by viewModel.isPlaying.collectAsState()
+
     val context = LocalContext.current
 
     var trackToAddToPlaylist by remember { mutableStateOf<YtTrack?>(null) }
@@ -87,6 +91,7 @@ fun YtMusicScreen(
     var selectedFilter by remember { mutableStateOf("Todos") }
 
     var selectedItemForDetail by remember { mutableStateOf<YtItem?>(null) }
+    var selectedPlaylistIdForDetail by remember { mutableStateOf<String?>(null) }
     var selectedTrackForMenu by remember { mutableStateOf<YtTrack?>(null) }
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
 
@@ -120,6 +125,8 @@ fun YtMusicScreen(
     var searching by remember { mutableStateOf(false) }
 
     val activeItem = selectedItemForDetail
+    val activePlaylist = ytPlaylists.find { it.id == selectedPlaylistIdForDetail }
+
     if (activeItem != null) {
         BackHandler { selectedItemForDetail = null }
         val isArtist = activeItem.browseId?.startsWith("UC") == true ||
@@ -143,6 +150,44 @@ fun YtMusicScreen(
                 onTrackOptionsClick = { selectedTrackForMenu = it }
             )
         }
+    } else if (activePlaylist != null) {
+        val currentYtUrl = currentSong?.takeIf { it.isYoutube }?.contentUri?.toString()
+        YtPlaylistDetailScreen(
+            playlist = activePlaylist,
+            currentSongUrl = currentYtUrl,
+            isPlaying = isPlaying,
+            onTrackClick = {index ->
+                viewModel.playYtPlaylist(activePlaylist, startIndex = index)
+            },
+            onPlayAllClick = {
+                if (activePlaylist.tracks.isNotEmpty()){
+                    viewModel.playYtPlaylist(activePlaylist, startIndex = 0)
+                }
+            },
+            onShuffleClick = {
+                if (activePlaylist.tracks.isNotEmpty()){
+                    viewModel.playYtQueue(activePlaylist.tracks.shuffled(), startIndex = 0, isStatic = true)
+                }
+            },
+            onAddSongsClick = {
+                selectedPlaylistIdForDetail = null
+                searching = true
+            },
+            onBackClick = {
+                selectedItemForDetail = null
+            },
+            onRemoveTrackFromPlaylist = { track ->
+                viewModel.removeTrackFromYtPlaylist(activePlaylist.id, track.url)
+            },
+            onTrackOptionsClick = {track ->
+                selectedTrackForMenu = track
+            },
+            onDeletePlaylist = {
+                val idToDelete = activePlaylist.id
+                selectedPlaylistIdForDetail = null
+                viewModel.deleteYtPlaylist(idToDelete)
+            }
+        )
     } else {
         Column(Modifier.fillMaxSize()) {
             // Cabecera de la interfaz: título, lupa y sesión.
@@ -259,14 +304,8 @@ fun YtMusicScreen(
                     reload = reload,
                     ytPlaylists = ytPlaylists,
                     onPlay = onPlay,
-                    onPlayYtPlaylist = { playlist, index ->
-                        viewModel.playYtPlaylist(playlist, index)
-                    },
-                    onDeleteYtPlaylist = {playlistId ->
-                        viewModel.deleteYtPlaylist(playlistId)
-                    },
-                    onRemoveTrackFromYtPlaylist = {playlistId, trackUrl ->
-                        viewModel.removeTrackFromYtPlaylist(playlistId, trackUrl)
+                    onOpenYtPlaylist = { playlist ->
+                        selectedPlaylistIdForDetail = playlist.id
                     },
                     onLogin = { YtLogin.open = true },
                     onOpenItem = { item -> selectedItemForDetail = item },

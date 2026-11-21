@@ -76,9 +76,7 @@ internal fun YtHomeContent(
     reload: Int,
     ytPlaylists: List<YtPlaylist> = emptyList(),
     onPlay: (YtTrack) -> Unit,
-    onPlayYtPlaylist: (YtPlaylist, Int) -> Unit = { _, _ -> },
-    onDeleteYtPlaylist: (String) -> Unit = {},
-    onRemoveTrackFromYtPlaylist: (playlistId: String, trackUrl: String) -> Unit = { _ , _ ->},
+    onOpenYtPlaylist: (YtPlaylist) -> Unit = {},
     onLogin: () -> Unit,
     onOpenItem: (YtItem) -> Unit = {},
     onTrackOptionsClick: (YtTrack) -> Unit = {},
@@ -89,7 +87,6 @@ internal fun YtHomeContent(
     var showLiked by remember { mutableStateOf(false) }
     var retry by remember { mutableIntStateOf(0) }
     var opened by remember { mutableStateOf<YtItem?>(null) }
-    var openedYtPlaylist by remember { mutableStateOf<YtPlaylist?>(null) }
 
     // null = cargando; el estado de ánimo elegido se vuelve a pedir, el resto sale de la caché de 10 min.
     val result by produceState<Result<YtHomeFeed>?>(null, mood, loggedIn, reload, retry) {
@@ -236,7 +233,7 @@ internal fun YtHomeContent(
                         items(ytPlaylists, key = {"yt_pl" + it.id}) { pl ->
                             YtPlaylistCard(
                                 playlist = pl,
-                                onClick = { openedYtPlaylist = pl }
+                                onClick = { onOpenYtPlaylist (pl) }
                             )
                         }
                     }
@@ -269,84 +266,6 @@ internal fun YtHomeContent(
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             modifier = Modifier.clickable { opened = null; onPlay(t) }
                         )
-                    }
-                }
-            }
-        }
-    }
-
-    openedYtPlaylist?.let { pl ->
-        val currentPl = ytPlaylists.find { it.id == pl.id } ?: pl
-        ModalBottomSheet(onDismissRequest = {openedYtPlaylist = null}) {
-            Column(Modifier.fillMaxWidth(). padding(bottom = 24.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(currentPl.name, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text("${currentPl.tracks.size} " + tr("canciones"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    if (currentPl.tracks.isNotEmpty()){
-                        Button(
-                            onClick = {
-                                openedYtPlaylist = null
-                                onPlayYtPlaylist(currentPl, 0)
-                            },
-                            shape = MaterialTheme.shapes.extraSmall
-                        ) {
-                            Text(tr("Reproducir todo"))
-                        }
-                    }
-                    IconButton(
-                        onClick = {
-                            onDeleteYtPlaylist(currentPl.id)
-                            openedYtPlaylist = null
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = tr("Eliminar playlist"),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                if (currentPl.tracks.isEmpty()){
-                    Text(tr("Esta playlist está vacía"), modifier = Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }else{
-                    LazyColumn{
-                        itemsIndexed(currentPl.tracks, key = {index, track -> "yt_pl_item_${currentPl.id}_${index}_${track.url}"}) {index, t ->
-                            ListItem(
-                                headlineContent = {Text(t.title, maxLines = 1, overflow = TextOverflow.Ellipsis)},
-                                supportingContent = {Text(t.artist, maxLines = 1, overflow = TextOverflow.Ellipsis)},
-                                leadingContent = {
-                                    AsyncImage(t.thumbnail, null, contentScale = ContentScale.Crop, modifier = Modifier.size(44.dp).clip(MaterialTheme.shapes.small))
-                                },
-                                trailingContent = {
-                                    Row {
-                                        IconButton(onClick = {onTrackOptionsClick(t)}) {
-                                            Icon(Icons.Default.MoreVert, contentDescription = null)
-                                        }
-                                        IconButton(
-                                            onClick = {
-                                                onRemoveTrackFromYtPlaylist(currentPl.id, t.url)
-                                            }
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Delete,
-                                                contentDescription = tr("Eliminar de la playlist"),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    }
-                                },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                modifier = Modifier.clickable{
-                                    openedYtPlaylist = null
-                                    onPlayYtPlaylist(currentPl, index)
-                                }
-                            )
-                        }
                     }
                 }
             }
