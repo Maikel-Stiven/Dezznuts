@@ -2,6 +2,17 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versionado semántico.
 
+## [1.3.1] - 2026-11-26
+
+### Novedades (tu música)
+- **Índice A–Z** al borde de Canciones cuando está ordenada por título, artista o álbum: tocar o arrastrar salta a esa
+  letra (sin tildes: «Élite» va en la E; números y símbolos en «#»). Aparece desde 41 canciones.
+- **Guardar la cola como lista**: botón en la cabecera de la cola del reproductor; propone fecha y hora como nombre.
+  Las canciones de YouTube de la cola no entran (las listas guardan canciones del teléfono).
+- **Ocultar carpetas** (notas de voz, tonos, grabaciones): botón en cada carpeta de la pestaña Carpetas; sus canciones
+  y las de sus subcarpetas dejan de salir en toda la biblioteca sin borrar nada. Se vuelven a mostrar en Opciones →
+  Biblioteca → Carpetas ocultas.
+
 ## [1.3.0] - 2026-11-26
 
 ### Novedades

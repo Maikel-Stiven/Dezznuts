@@ -45,6 +45,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Tune
@@ -143,6 +144,7 @@ fun FullScreenPlayer(
     onToggleFavorite: (Song) -> Unit,
     onMoveQueueItem: (fromIndex: Int, toIndex: Int) -> Unit = { _, _ -> },
     onRemoveQueue: (Song) -> Unit,
+    onSaveQueue: (name: String) -> Unit = {},
     onOpenQueueClick: () -> Unit = {}
 ) {
 
@@ -526,6 +528,26 @@ fun FullScreenPlayer(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
+                        var naming by remember { mutableStateOf<String?>(null) }
+                        IconButton(onClick = {
+                            naming = java.text.SimpleDateFormat("d MMM HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
+                        }) {
+                            Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = tr("Guardar la cola como lista"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        naming?.let { current ->
+                            androidx.compose.material3.AlertDialog(
+                                onDismissRequest = { naming = null },
+                                title = { Text(tr("Guardar la cola como lista")) },
+                                text = {
+                                    androidx.compose.material3.OutlinedTextField(
+                                        value = current, onValueChange = { naming = it }, singleLine = true,
+                                        label = { Text(tr("Nombre de la lista")) }
+                                    )
+                                },
+                                confirmButton = { androidx.compose.material3.TextButton(onClick = { onSaveQueue(current.trim()); naming = null }) { Text(tr("Guardar")) } },
+                                dismissButton = { androidx.compose.material3.TextButton(onClick = { naming = null }) { Text(tr("Cancelar")) } }
+                            )
+                        }
                         IconButton(onClick = onToggleShuffle) {
                             Icon(
                                 imageVector = Icons.Default.Shuffle,

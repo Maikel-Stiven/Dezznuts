@@ -401,7 +401,13 @@ fun MainScreen(
                                      onAddToPlaylist = { id, list -> viewModel.addSongsToPlaylist(id, list.map { it.id }) },
                                      onAddToQueue = { list -> list.forEach(viewModel::addToQueue) },
                                      onNewPlaylist = { showCreatedPlaylistDialog = true },
-                                     onDeleteSongs = onDeleteSongs
+                                     onDeleteSongs = onDeleteSongs,
+                                     indexKey = when (currentSort) {
+                                         SongSort.TITLE -> { s -> s.title }
+                                         SongSort.ARTIST -> { s -> s.artist }
+                                         SongSort.ALBUM -> { s -> s.album }
+                                         else -> null  // duración y recién agregadas no van por letras
+                                     }
                                  )
                              }
                              AppTab.ALBUMS -> AlbumsGridScreen(
@@ -435,7 +441,8 @@ fun MainScreen(
                                  songs = songs,
                                  onFolderClick = {folderName, folderSongs ->
                                      open(Detail.Category(folderName.substringAfterLast('/').ifBlank { folderName }, folderSongs))
-                                 }
+                                 },
+                                 onHideFolder = { viewModel.setFolderHidden(it, true) }
                              )
                          }
                      }

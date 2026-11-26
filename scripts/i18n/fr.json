@@ -495,5 +495,17 @@
 "Hay una versión nueva de DEZZNUTS.": "Une nouvelle version de DEZZNUTS est disponible.",
 "Descargando… al terminar, toca la notificación para instalar": "Téléchargement… une fois terminé, touchez la notification pour installer",
 "Descargar": "Télécharger",
-"Ahora no": "Pas maintenant"
+"Ahora no": "Pas maintenant",
+"La cola no tiene canciones de tu biblioteca": "La file d’attente ne contient aucun titre de votre bibliothèque",
+"Cola guardada": "File enregistrée",
+"Lista «%s» creada con %d canciones": "Liste « %s » créée avec %d titres",
+"Guardar la cola como lista": "Enregistrer la file comme liste",
+"¿Ocultar «%s»?": "Masquer « %s » ?",
+"Sus canciones (y las de sus subcarpetas) dejan de aparecer en la biblioteca. No se borra nada; puedes volver a mostrarla en Opciones → Carpetas ocultas.": "Ses titres (et ceux de ses sous-dossiers) n’apparaissent plus dans la bibliothèque. Rien n’est supprimé ; vous pouvez la réafficher dans Options → Dossiers masqués.",
+"Ocultar": "Masquer",
+"Ocultar carpeta": "Masquer le dossier",
+"Carpetas ocultas": "Dossiers masqués",
+"Volver a mostrar carpetas que quitaste de la biblioteca": "Réafficher les dossiers retirés de la bibliothèque",
+"No hay carpetas ocultas. Puedes ocultar una desde la pestaña Carpetas.": "Aucun dossier masqué. Vous pouvez en masquer un depuis l’onglet Dossiers.",
+"Mostrar": "Afficher"
 }

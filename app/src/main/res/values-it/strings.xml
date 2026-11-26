@@ -129,6 +129,7 @@
     <string name="s_57a0b75940">Brano</string>
     <string name="s_6b416d9c40">Caricamento…</string>
     <string name="s_d3363c39d4">Cartelle</string>
+    <string name="s_c52bc7173f">Cartelle nascoste</string>
     <string name="s_0c6c99b1b4">Copertine e foto degli artisti scaricate</string>
     <string name="s_4b0816bbd5">Chiudi</string>
     <string name="s_1b6b893893">Chiudi coda</string>
@@ -136,6 +137,7 @@
     <string name="s_f394d0254e">Esci</string>
     <string name="s_21f72c3cc4">Chiaro</string>
     <string name="s_ddfb28da05">Coda di riproduzione</string>
+    <string name="s_27dff58664">Coda salvata</string>
     <string name="s_cb33b51b55">Colore personalizzato</string>
     <string name="s_1084457160">Colore adattivo</string>
     <string name="s_1bc627cbcf">Colore di risalto</string>
@@ -250,6 +252,7 @@
     <string name="s_83cb3a3600">Salva +</string>
     <string name="s_f7234667ac">Salva backup</string>
     <string name="s_58c96d0fb2">Salva taglio</string>
+    <string name="s_5f686359a0">Salva la coda come playlist</string>
     <string name="s_68f28963e7">Salva playlist sul dispositivo</string>
     <string name="s_e35e1d5966">Salva preset</string>
     <string name="s_9a7562c630">Generi</string>
@@ -277,6 +280,7 @@
     <string name="s_e87b4364dc">Vai all\'album</string>
     <string name="s_f7c71d363f">FATTO</string>
     <string name="s_e12d9f188d">LRCLIB non ha il testo di questo brano.</string>
+    <string name="s_ce7281c9c6">La coda non contiene brani della tua libreria</string>
     <string name="s_40ebb02b43">La copertina si inclina con il telefono</string>
     <string name="s_86e2a342aa">La prima volta può richiedere qualche secondo se hai molti brani.</string>
     <string name="s_caba50770a">Le tracce di un foglio CUE non possono essere tagliate</string>
@@ -288,6 +292,7 @@
     <string name="s_fa5607cb2e">Lista aggiunta alla coda</string>
     <string name="s_28a0754c7c">Lista scaricata: ora suona offline</string>
     <string name="s_313971b0a5">Lista importata</string>
+    <string name="s_b849995803" formatted="false">Playlist «%s» creata con %d brani</string>
     <string name="s_00ac32ebe9">Playlist</string>
     <string name="s_5267fc6b9b" formatted="false">Playlist (%d)</string>
     <string name="s_91acde292c">Fatto</string>
@@ -301,6 +306,7 @@
     <string name="s_14adb85d35">Controlla se c’è una nuova versione su GitHub e la scarica</string>
     <string name="s_bf51adae89">Mood:</string>
     <string name="s_1634c2c3af">Viola</string>
+    <string name="s_906dc61756">Mostra</string>
     <string name="s_8c9c76a2cf">Muovi la curva per salvare la tua</string>
     <string name="s_e4f75d5280">Altro</string>
     <string name="s_977c75651c">Altre opzioni</string>
@@ -317,6 +323,7 @@
     <string name="s_00cd872c49">Nessun brano con artista sconosciuto che si possa ricavare dal nome del file.</string>
     <string name="s_2cb7a37d4b">Nessun brano corrispondente</string>
     <string name="s_57675f5fa8">Nessun brano duplicato.</string>
+    <string name="s_060f1bbfe4">Nessuna cartella nascosta. Puoi nasconderne una dalla scheda Cartelle.</string>
     <string name="s_e0b8632516">Nessuna immagine nella cache.</string>
     <string name="s_2ed354f936">Nessun testo salvato per questo brano.</string>
     <string name="s_a8b66b8fcf">Nessuna playlist eliminata da ripristinare.</string>
@@ -347,6 +354,8 @@
     <string name="s_2504aa52d2">Nuova playlist di YT Music</string>
     <string name="s_a2fae95f14" formatted="false">Nuova versione %s</string>
     <string name="s_770437cbbd">OLED nero puro</string>
+    <string name="s_4f58415a4d">Nascondi</string>
+    <string name="s_548afc67b6">Nascondi cartella</string>
     <string name="s_9b8e918003" formatted="false">Occupa attualmente: %s</string>
     <string name="s_dbb09449c2">Oceano</string>
     <string name="s_4da5f53f5a">Omarchy</string>
@@ -447,6 +456,7 @@
     <string name="s_1e515e3f44">Alza il volume all\'inizio di una traccia o alla ripresa e lo abbassa alla fine della traccia e in pausa. </string>
     <string name="s_d4f2413c09">Alza il volume all\'inizio di una traccia o alla ripresa e lo abbassa alla fine della traccia e in pausa. Negli album gapless conviene lasciarlo spento.</string>
     <string name="s_dc1f058c8c">In riproduzione dopo</string>
+    <string name="s_4f2b52c7ea">I suoi brani (e quelli delle sottocartelle) non compaiono più nella libreria. Non viene eliminato nulla; puoi mostrarla di nuovo in Opzioni → Cartelle nascoste.</string>
     <string name="s_9afb316176">Synthwave</string>
     <string name="s_873caab4d0">Sì</string>
     <string name="s_18fab8fc38">Anche su YouTube Music</string>
@@ -477,6 +487,7 @@
     <string name="s_7ccabff150">Visualizzatore (barre tipo CAVA)</string>
     <string name="s_44f06a850e">Voci</string>
     <string name="s_84a715a785">Indietro</string>
+    <string name="s_3a907d5be7">Mostra di nuovo le cartelle tolte dalla libreria</string>
     <string name="s_d0edcaa68d">YT Music</string>
     <string name="s_100df342b0">Già scaricato</string>
     <string name="s_5179932578">Hai già l’ultima versione</string>
@@ -493,6 +504,7 @@
     <string name="s_5b7ef745e9">Eliminare dal dispositivo?</string>
     <string name="s_ab875ef573">Eliminare dal dispositivo?</string>
     <string name="s_c3c17530ac">Eliminare il preset?</string>
+    <string name="s_dcbd23fabc" formatted="false">Nascondere «%s»?</string>
     <string name="s_2c64db8938">Album</string>
     <string name="s_c010a7dc0c">Album sconosciuto</string>
     <string name="s_797807e2b1">Album</string>

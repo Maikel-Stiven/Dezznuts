@@ -47,8 +47,13 @@ fun SongListScreen(
     onAddToPlaylist: (playlistId: String, songs: List<Song>) -> Unit = { _, _ -> },
     onAddToQueue: (List<Song>) -> Unit = {},
     onNewPlaylist: () -> Unit = {},
-    onDeleteSongs: (List<Song>) -> Unit = {}
+    onDeleteSongs: (List<Song>) -> Unit = {},
+    /** Texto por el que está ordenada la lista (título, artista…): con él aparece la barra A–Z. null = sin barra. */
+    indexKey: ((Song) -> String)? = null
 ) {
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    // Solo con listas largas: en 20 canciones la barra estorba más de lo que ayuda.
+    val index = remember(songs, indexKey) { if (indexKey != null && songs.size > 40) indexPositions(songs.map(indexKey)) else emptyList() }
     // Por id: si la biblioteca se recarga o el filtro cambia, la selección se conserva sin referirse a objetos viejos.
     val selected = remember { mutableStateListOf<Long>() }
     val inSelection = selected.isNotEmpty()
@@ -94,9 +99,11 @@ fun SongListScreen(
                 }
             }
         }
+        Box(Modifier.fillMaxSize()) {
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(8.dp),
+            contentPadding = PaddingValues(start = 8.dp, top = 8.dp, bottom = 8.dp, end = if (index.size > 1) 28.dp else 8.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             items(items = songs, key = { it.id }) { song ->
@@ -116,6 +123,8 @@ fun SongListScreen(
                     onEditClick = { onEditSong(song) }
                 )
             }
+        }
+        AlphabetIndex(index, listState, Modifier.align(Alignment.CenterEnd))
         }
     }
 

@@ -194,6 +194,11 @@ class MainActivity : ComponentActivity() {
                         runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull() ?: "—"
                     }
                     var checkUpdatesNow by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+                    var showHiddenFolders by remember { mutableStateOf(false) }
+                    if (showHiddenFolders) {
+                        val hidden by viewModel.excludedFolders.collectAsStateWithLifecycle()
+                        com.example.creproductor.gui.HiddenFoldersDialog(hidden, { viewModel.setFolderHidden(it, false) }) { showHiddenFolders = false }
+                    }
                     com.example.creproductor.gui.UpdateChecker(versionName, checkUpdatesNow)
                     // Escribir etiquetas en archivos de audio exige el permiso del sistema (Android 11+): se pide para
                     // las canciones afectadas y, si el usuario acepta, se ejecuta la acción pendiente.
@@ -272,6 +277,7 @@ class MainActivity : ComponentActivity() {
                             AppAction.HiFiAudio -> showHiFiAudioDialog = true
                             AppAction.About -> showAboutDialog = true
                             AppAction.CheckUpdates -> checkUpdatesNow++
+                            AppAction.HiddenFolders -> showHiddenFolders = true
                             AppAction.Options -> if (navStyle == com.example.creproductor.gui.NavStyle.BOTTOM) section = AppSection.SETTINGS else showOptionsScreen = true
                             AppAction.Stats -> showStatsDialog = true
                             AppAction.SendFeedback -> {
@@ -420,7 +426,7 @@ class MainActivity : ComponentActivity() {
                                                 onSeekTo = { pos -> viewModel.seekTo(pos)},
                                                 onSongSelected = {song -> viewModel.playSong(song, customQueue = activeSongsQueue)},
                                                 onToggleRepeatMode = {viewModel.toggleRepeatMode()},
-                                                onRemoveQueue = {song -> viewModel.removeFromQueue(song)},
+                                                onRemoveQueue = {song -> viewModel.removeFromQueue(song)}, onSaveQueue = { viewModel.saveQueueAsPlaylist(it) },
                                                 onMoveQueueItem = { from, to -> viewModel.moveQueueItem(from, to) },
                                                 onDismiss = { isPlayerFullScreenVisible = false },
                                                 onToggleFavorite = { song -> viewModel.toggleFavorite(song) }

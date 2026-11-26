@@ -61,7 +61,7 @@ import com.example.creproductor.ui.theme.ThemeSetting
 /** Grupos de acciones de la pantalla de Opciones (las ejecuta `MainActivity`, que es quien abre los diálogos). */
 private val OPTION_GROUPS = listOf(
     "Audio" to listOf(AppAction.Equalizer, AppAction.HiFiAudio),
-    "Biblioteca" to listOf(AppAction.ScanFiles, AppAction.SearchDuplicates, AppAction.FixUnknownArtists, AppAction.Stats),
+    "Biblioteca" to listOf(AppAction.ScanFiles, AppAction.SearchDuplicates, AppAction.FixUnknownArtists, AppAction.HiddenFolders, AppAction.Stats),
     "Herramientas" to listOf(AppAction.AudioCutter, AppAction.SleepTimer),
     "Copia de seguridad" to listOf(AppAction.ExportBackup, AppAction.ImportBackup, AppAction.ImportM3u),
     "Almacenamiento" to listOf(AppAction.ClearImageCache),

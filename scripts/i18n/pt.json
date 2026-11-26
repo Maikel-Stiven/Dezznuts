@@ -495,5 +495,17 @@
 "Hay una versión nueva de DEZZNUTS.": "Há uma nova versão do DEZZNUTS.",
 "Descargando… al terminar, toca la notificación para instalar": "Baixando… ao terminar, toque na notificação para instalar",
 "Descargar": "Baixar",
-"Ahora no": "Agora não"
+"Ahora no": "Agora não",
+"La cola no tiene canciones de tu biblioteca": "A fila não tem músicas da sua biblioteca",
+"Cola guardada": "Fila salva",
+"Lista «%s» creada con %d canciones": "Lista «%s» criada com %d músicas",
+"Guardar la cola como lista": "Salvar a fila como lista",
+"¿Ocultar «%s»?": "Ocultar «%s»?",
+"Sus canciones (y las de sus subcarpetas) dejan de aparecer en la biblioteca. No se borra nada; puedes volver a mostrarla en Opciones → Carpetas ocultas.": "As músicas dela (e das subpastas) deixam de aparecer na biblioteca. Nada é apagado; você pode mostrá-la de novo em Opções → Pastas ocultas.",
+"Ocultar": "Ocultar",
+"Ocultar carpeta": "Ocultar pasta",
+"Carpetas ocultas": "Pastas ocultas",
+"Volver a mostrar carpetas que quitaste de la biblioteca": "Mostrar de novo pastas que você tirou da biblioteca",
+"No hay carpetas ocultas. Puedes ocultar una desde la pestaña Carpetas.": "Não há pastas ocultas. Você pode ocultar uma na aba Pastas.",
+"Mostrar": "Mostrar"
 }

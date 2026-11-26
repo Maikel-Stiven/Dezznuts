@@ -57,6 +57,7 @@ sealed class AppAction(
     object About: AppAction("Acerca de", "Versión, licencia y créditos", Icons.Default.Info)
     object Stats : AppAction("Estadísticas", "Lo más escuchado y las horas de música", Icons.Default.BarChart)
     object Options : AppAction("Opciones", "Portada con movimiento, color de la carátula, funciones en línea", Icons.Default.Tune)
+    object HiddenFolders : AppAction("Carpetas ocultas", "Volver a mostrar carpetas que quitaste de la biblioteca", Icons.Default.FolderOff)
     object CheckUpdates : AppAction("Buscar actualizaciones", "Mira si hay una versión nueva en GitHub y la descarga", Icons.Default.SystemUpdate)
     object SendFeedback : AppAction("Enviar comentarios", "Reportar un fallo o pedir una función en GitHub", Icons.AutoMirrored.Filled.HelpOutline)
 }
@@ -65,7 +66,7 @@ sealed class AppAction(
 /** Grupos del menú hamburguesa de la maqueta (Ecualizador, Escanear, Duplicados, Cortador, Acerca de, Opiniones, Temporizador…). */
 private val DRAWER_GROUPS = listOf(
     null to listOf(AppAction.Equalizer, AppAction.HiFiAudio),
-    "Biblioteca" to listOf(AppAction.Stats, AppAction.ScanFiles, AppAction.SearchDuplicates, AppAction.FixUnknownArtists),
+    "Biblioteca" to listOf(AppAction.Stats, AppAction.ScanFiles, AppAction.SearchDuplicates, AppAction.FixUnknownArtists, AppAction.HiddenFolders),
     "Herramientas" to listOf(AppAction.AudioCutter, AppAction.SleepTimer),
     "Copia de seguridad" to listOf(AppAction.ExportBackup, AppAction.ImportBackup, AppAction.ImportM3u),
     "Más" to listOf(AppAction.Options, AppAction.ClearImageCache, AppAction.About, AppAction.CheckUpdates, AppAction.SendFeedback)

@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.LibraryMusic
@@ -49,6 +50,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -390,8 +394,20 @@ fun ArtistsListScreen(
 fun FoldersListScreen(
     songs: List<Song>,
     listState: LazyListState = rememberLazyListState(),
-    onFolderClick: (folderName: String, folderSongs: List<Song>) -> Unit = { _, _ -> }
+    onFolderClick: (folderName: String, folderSongs: List<Song>) -> Unit = { _, _ -> },
+    /** Ocultar la carpeta de la biblioteca (notas de voz, tonos…); null = sin el botón. */
+    onHideFolder: ((String) -> Unit)? = null
 ){
+    var hiding by remember { mutableStateOf<String?>(null) }
+    hiding?.let { folder ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { hiding = null },
+            title = { Text(tr("¿Ocultar «%s»?").format(folder.substringAfterLast('/').ifBlank { folder })) },
+            text = { Text(tr("Sus canciones (y las de sus subcarpetas) dejan de aparecer en la biblioteca. No se borra nada; puedes volver a mostrarla en Opciones → Carpetas ocultas.")) },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { onHideFolder?.invoke(folder); hiding = null }) { Text(tr("Ocultar")) } },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { hiding = null }) { Text(tr("Cancelar")) } }
+        )
+    }
     val foldersMap = rememberOffMain(songs) {
         SongOrganizer.groupByFolder(songs) { it.path }
     } ?: return
@@ -459,6 +475,9 @@ fun FoldersListScreen(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
+                    }
+                    if (onHideFolder != null) androidx.compose.material3.IconButton(onClick = { hiding = folderPath }) {
+                        Icon(Icons.Default.VisibilityOff, contentDescription = tr("Ocultar carpeta"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }

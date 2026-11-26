@@ -129,6 +129,7 @@
     <string name="s_57a0b75940">Song</string>
     <string name="s_6b416d9c40">Lädt…</string>
     <string name="s_d3363c39d4">Ordner</string>
+    <string name="s_c52bc7173f">Ausgeblendete Ordner</string>
     <string name="s_0c6c99b1b4">Heruntergeladene Cover und Künstlerfotos</string>
     <string name="s_4b0816bbd5">Schließen</string>
     <string name="s_1b6b893893">Warteschlange schließen</string>
@@ -136,6 +137,7 @@
     <string name="s_f394d0254e">Abmelden</string>
     <string name="s_21f72c3cc4">Hell</string>
     <string name="s_ddfb28da05">Wiedergabewarteschlange</string>
+    <string name="s_27dff58664">Gespeicherte Warteschlange</string>
     <string name="s_cb33b51b55">Eigene Farbe</string>
     <string name="s_1084457160">Adaptive Farbe</string>
     <string name="s_1bc627cbcf">Akzentfarbe</string>
@@ -250,6 +252,7 @@
     <string name="s_83cb3a3600">Speichern +</string>
     <string name="s_f7234667ac">Backup speichern</string>
     <string name="s_58c96d0fb2">Schnitt speichern</string>
+    <string name="s_5f686359a0">Warteschlange als Liste speichern</string>
     <string name="s_68f28963e7">Playlist auf dem Gerät speichern</string>
     <string name="s_e35e1d5966">Preset speichern</string>
     <string name="s_9a7562c630">Genres</string>
@@ -277,6 +280,7 @@
     <string name="s_e87b4364dc">Zum Album</string>
     <string name="s_f7c71d363f">FERTIG</string>
     <string name="s_e12d9f188d">LRCLIB hat keinen Text zu diesem Song.</string>
+    <string name="s_ce7281c9c6">Die Warteschlange enthält keine Songs aus deiner Mediathek</string>
     <string name="s_40ebb02b43">Das Cover neigt sich mit dem Handy</string>
     <string name="s_86e2a342aa">Beim ersten Mal kann es bei vielen Songs ein paar Sekunden dauern.</string>
     <string name="s_caba50770a">Titel einer CUE-Datei lassen sich nicht schneiden</string>
@@ -288,6 +292,7 @@
     <string name="s_fa5607cb2e">Liste zur Warteschlange hinzugefügt</string>
     <string name="s_28a0754c7c">Liste heruntergeladen: spielt jetzt offline</string>
     <string name="s_313971b0a5">Liste importiert</string>
+    <string name="s_b849995803" formatted="false">Liste „%s“ mit %d Songs erstellt</string>
     <string name="s_00ac32ebe9">Playlists</string>
     <string name="s_5267fc6b9b" formatted="false">Playlists (%d)</string>
     <string name="s_91acde292c">Fertig</string>
@@ -301,6 +306,7 @@
     <string name="s_14adb85d35">Prüft auf GitHub, ob es eine neue Version gibt, und lädt sie herunter</string>
     <string name="s_bf51adae89">Moods:</string>
     <string name="s_1634c2c3af">Lila</string>
+    <string name="s_906dc61756">Einblenden</string>
     <string name="s_8c9c76a2cf">Beweg die Kurve, um deine eigene zu speichern</string>
     <string name="s_e4f75d5280">Mehr</string>
     <string name="s_977c75651c">Weitere Optionen</string>
@@ -317,6 +323,7 @@
     <string name="s_00cd872c49">Keine Songs mit unbekanntem Künstler, die sich aus dem Dateinamen ableiten lassen.</string>
     <string name="s_2cb7a37d4b">Keine passenden Songs</string>
     <string name="s_57675f5fa8">Keine doppelten Songs.</string>
+    <string name="s_060f1bbfe4">Keine ausgeblendeten Ordner. Du kannst einen im Tab „Ordner“ ausblenden.</string>
     <string name="s_e0b8632516">Keine Bilder im Cache.</string>
     <string name="s_2ed354f936">Für diesen Song ist kein Text gespeichert.</string>
     <string name="s_a8b66b8fcf">Keine gelöschten Playlists zum Wiederherstellen.</string>
@@ -347,6 +354,8 @@
     <string name="s_2504aa52d2">Neue YT-Music-Playlist</string>
     <string name="s_a2fae95f14" formatted="false">Neue Version %s</string>
     <string name="s_770437cbbd">Reines OLED-Schwarz</string>
+    <string name="s_4f58415a4d">Ausblenden</string>
+    <string name="s_548afc67b6">Ordner ausblenden</string>
     <string name="s_9b8e918003" formatted="false">Aktuell belegt: %s</string>
     <string name="s_dbb09449c2">Ozean</string>
     <string name="s_4da5f53f5a">Omarchy</string>
@@ -447,6 +456,7 @@
     <string name="s_1e515e3f44">Hebt die Lautstärke beim Start oder Fortsetzen eines Titels an und senkt sie am Titelende und beim Pausieren. </string>
     <string name="s_d4f2413c09">Blendet die Lautstärke beim Start oder Fortsetzen eines Titels ein und am Titelende sowie beim Pausieren aus. Bei Gapless-Alben besser ausgeschaltet lassen.</string>
     <string name="s_dc1f058c8c">Kommt als Nächstes</string>
+    <string name="s_4f2b52c7ea">Ihre Songs (und die ihrer Unterordner) erscheinen nicht mehr in der Mediathek. Es wird nichts gelöscht; du kannst ihn unter Optionen → Ausgeblendete Ordner wieder einblenden.</string>
     <string name="s_9afb316176">Synthwave</string>
     <string name="s_873caab4d0">Ja</string>
     <string name="s_18fab8fc38">Auch auf YouTube Music</string>
@@ -477,6 +487,7 @@
     <string name="s_7ccabff150">Visualizer (CAVA-Balken)</string>
     <string name="s_44f06a850e">Stimmen</string>
     <string name="s_84a715a785">Zurück</string>
+    <string name="s_3a907d5be7">Aus der Mediathek entfernte Ordner wieder einblenden</string>
     <string name="s_d0edcaa68d">YT Music</string>
     <string name="s_100df342b0">Bereits heruntergeladen</string>
     <string name="s_5179932578">Du hast bereits die neueste Version</string>
@@ -493,6 +504,7 @@
     <string name="s_5b7ef745e9">Vom Gerät löschen?</string>
     <string name="s_ab875ef573">Vom Gerät löschen?</string>
     <string name="s_c3c17530ac">Preset löschen?</string>
+    <string name="s_dcbd23fabc" formatted="false">„%s“ ausblenden?</string>
     <string name="s_2c64db8938">Album</string>
     <string name="s_c010a7dc0c">Unbekanntes Album</string>
     <string name="s_797807e2b1">Alben</string>

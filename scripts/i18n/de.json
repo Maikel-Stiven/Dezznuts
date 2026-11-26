@@ -495,5 +495,17 @@
 "Hay una versión nueva de DEZZNUTS.": "Es gibt eine neue Version von DEZZNUTS.",
 "Descargando… al terminar, toca la notificación para instalar": "Wird geladen… tippe danach auf die Benachrichtigung, um zu installieren",
 "Descargar": "Herunterladen",
-"Ahora no": "Nicht jetzt"
+"Ahora no": "Nicht jetzt",
+"La cola no tiene canciones de tu biblioteca": "Die Warteschlange enthält keine Songs aus deiner Mediathek",
+"Cola guardada": "Gespeicherte Warteschlange",
+"Lista «%s» creada con %d canciones": "Liste „%s“ mit %d Songs erstellt",
+"Guardar la cola como lista": "Warteschlange als Liste speichern",
+"¿Ocultar «%s»?": "„%s“ ausblenden?",
+"Sus canciones (y las de sus subcarpetas) dejan de aparecer en la biblioteca. No se borra nada; puedes volver a mostrarla en Opciones → Carpetas ocultas.": "Ihre Songs (und die ihrer Unterordner) erscheinen nicht mehr in der Mediathek. Es wird nichts gelöscht; du kannst ihn unter Optionen → Ausgeblendete Ordner wieder einblenden.",
+"Ocultar": "Ausblenden",
+"Ocultar carpeta": "Ordner ausblenden",
+"Carpetas ocultas": "Ausgeblendete Ordner",
+"Volver a mostrar carpetas que quitaste de la biblioteca": "Aus der Mediathek entfernte Ordner wieder einblenden",
+"No hay carpetas ocultas. Puedes ocultar una desde la pestaña Carpetas.": "Keine ausgeblendeten Ordner. Du kannst einen im Tab „Ordner“ ausblenden.",
+"Mostrar": "Einblenden"
 }

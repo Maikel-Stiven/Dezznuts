@@ -875,10 +875,26 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         }
     }
 
+    // --- Carpetas excluidas: sus canciones no aparecen en ninguna pestaña (no se borra nada del teléfono) ---
+    private val _excludedFolders = MutableStateFlow(prefs.getStringSet("excluded_folders", emptySet()).orEmpty().toSet())
+    val excludedFolders: StateFlow<Set<String>> = _excludedFolders.asStateFlow()
+    /** Lo último escaneado sin filtrar: al volver a mostrar una carpeta no hace falta escanear de nuevo. */
+    @Volatile private var lastScanned: List<Song> = emptyList()
+
+    fun setFolderHidden(folder: String, hidden: Boolean) {
+        val set = if (hidden) _excludedFolders.value + folder else _excludedFolders.value - folder
+        _excludedFolders.value = set
+        prefs.edit { putStringSet("excluded_folders", set) }
+        publishSongs(lastScanned)
+    }
+
     private fun publishSongs(songs: List<Song>) {
+        lastScanned = songs
+        val excluded = _excludedFolders.value.map { it.trimEnd('/') + "/" }
         viewModelScope.launch(Dispatchers.Default) {
             val savedFavIds = getSavedFavoritesIds()
-            val updated = songs.withoutBrokenTwins().map { song ->
+            val visible = if (excluded.isEmpty()) songs else songs.filterNot { s -> excluded.any { s.path.startsWith(it) } }
+            val updated = visible.withoutBrokenTwins().map { song ->
                 if (savedFavIds.contains(song.id)) song.copy(isFavorite = true) else song
             }
             // Canciones que ya no están: fuera de la caché (las nuevas se resuelven en el precalentamiento).
@@ -1558,6 +1574,16 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         val updated = _playlists.value.filter { it.id != playlistId }
         _playlists.value = updated
         savePlaylists(updated)
+    }
+
+    /** La cola que suena, como lista nueva. Las de YouTube no entran: las listas locales guardan canciones del teléfono. */
+    fun saveQueueAsPlaylist(name: String) {
+        val ids = _currentQueue.value.filterNot { it.isYoutube }.map { it.id }.distinct()
+        if (ids.isEmpty()) return toast("La cola no tiene canciones de tu biblioteca")
+        val updated = _playlists.value + Playlist(name = name.ifBlank { com.example.creproductor.i18n.I18n.tr(getApplication(), "Cola guardada") }, songIds = ids)
+        _playlists.value = updated
+        savePlaylists(updated)
+        toastf("Lista «%s» creada con %d canciones", updated.last().name, ids.size)
     }
 
     fun addSongsToPlaylist(playlistId: String, newSongsIds: List<Long>) {

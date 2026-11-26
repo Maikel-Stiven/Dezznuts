@@ -307,6 +307,18 @@ EN = {
 'Descargando… al terminar, toca la notificación para instalar': "Downloading… when it's done, tap the notification to install",
 'Descargar': 'Download',
 'Ahora no': 'Not now',
+'La cola no tiene canciones de tu biblioteca': 'The queue has no songs from your library',
+'Cola guardada': 'Saved queue',
+'Lista «%s» creada con %d canciones': 'List “%s” created with %d songs',
+'Guardar la cola como lista': 'Save queue as a list',
+'¿Ocultar «%s»?': 'Hide “%s”?',
+'Sus canciones (y las de sus subcarpetas) dejan de aparecer en la biblioteca. No se borra nada; puedes volver a mostrarla en Opciones → Carpetas ocultas.': 'Its songs (and those in its subfolders) stop showing in the library. Nothing is deleted; you can show it again in Options → Hidden folders.',
+'Ocultar': 'Hide',
+'Ocultar carpeta': 'Hide folder',
+'Carpetas ocultas': 'Hidden folders',
+'Volver a mostrar carpetas que quitaste de la biblioteca': 'Show again folders you removed from the library',
+'No hay carpetas ocultas. Puedes ocultar una desde la pestaña Carpetas.': 'No hidden folders. You can hide one from the Folders tab.',
+'Mostrar': 'Show',
 }
 
 def key(es): return "s_" + hashlib.sha1(es.encode()).hexdigest()[:10]

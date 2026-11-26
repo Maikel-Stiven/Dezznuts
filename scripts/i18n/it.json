@@ -495,5 +495,17 @@
 "Hay una versión nueva de DEZZNUTS.": "C’è una nuova versione di DEZZNUTS.",
 "Descargando… al terminar, toca la notificación para instalar": "Download in corso… al termine, tocca la notifica per installare",
 "Descargar": "Scarica",
-"Ahora no": "Non ora"
+"Ahora no": "Non ora",
+"La cola no tiene canciones de tu biblioteca": "La coda non contiene brani della tua libreria",
+"Cola guardada": "Coda salvata",
+"Lista «%s» creada con %d canciones": "Playlist «%s» creata con %d brani",
+"Guardar la cola como lista": "Salva la coda come playlist",
+"¿Ocultar «%s»?": "Nascondere «%s»?",
+"Sus canciones (y las de sus subcarpetas) dejan de aparecer en la biblioteca. No se borra nada; puedes volver a mostrarla en Opciones → Carpetas ocultas.": "I suoi brani (e quelli delle sottocartelle) non compaiono più nella libreria. Non viene eliminato nulla; puoi mostrarla di nuovo in Opzioni → Cartelle nascoste.",
+"Ocultar": "Nascondi",
+"Ocultar carpeta": "Nascondi cartella",
+"Carpetas ocultas": "Cartelle nascoste",
+"Volver a mostrar carpetas que quitaste de la biblioteca": "Mostra di nuovo le cartelle tolte dalla libreria",
+"No hay carpetas ocultas. Puedes ocultar una desde la pestaña Carpetas.": "Nessuna cartella nascosta. Puoi nasconderne una dalla scheda Cartelle.",
+"Mostrar": "Mostra"
 }
