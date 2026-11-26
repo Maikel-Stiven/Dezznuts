@@ -1,24 +1,11 @@
-### Novedades
-- **Seis idiomas**: español, inglés, portugués, francés, alemán e italiano. Se elige en Opciones → Apariencia → Idioma (en Android 13+ también desde los ajustes del sistema).
-- **YouTube Music sin conexión**: descarga una canción desde su menú ⋮ o una lista entera con el botón de descarga. Quedan en la lista «Descargadas» y suenan sin internet.
-- **La cola de YouTube vive en el reproductor**: siguiente y anterior desde la notificación, los auriculares y Android Auto; sigue sola con la app cerrada; se pueden mezclar canciones locales y de YT. Lo que ya escuchaste se guarda y vuelve a sonar sin internet.
-- **Máxima calidad con datos móviles** (Opciones → En línea): con Wi-Fi siempre suena a la mejor calidad (Opus ~160 kbps); con datos se ahorra la mitad salvo que lo actives.
-- **Aviso de actualizaciones**: la app avisa cuando sale una versión nueva y la descarga. También a mano en Opciones → Información → Buscar actualizaciones.
-- **«Me gusta» completos**: se cargan todas tus canciones, no solo las primeras ~100.
+### Novedades para tu música
+- **Índice A–Z** al borde de Canciones (ordenada por título, artista o álbum): toca o arrastra para saltar a una letra. Sin tildes («Élite» va en la E); números y símbolos en «#».
+- **Guardar la cola como lista**: botón en la cabecera de la cola del reproductor, con la fecha y hora como nombre (lo puedes cambiar).
+- **Ocultar carpetas** (notas de voz, tonos, grabaciones): botón en cada carpeta de la pestaña Carpetas. No se borra nada; se vuelven a mostrar en Opciones → Biblioteca → Carpetas ocultas.
 
-### Mejoras
-- Las canciones de YT empiezan antes y la siguiente se prepara mientras suena la actual.
-- El buscador de YT espera a que termines de escribir y guarda tus búsquedas recientes.
-- Portadas, fotos de artista, letras e inicio de YT piden menos a internet y, sin red, muestran lo último que se cargó.
-- Sin portada se ve una nota morada en lugar de un cuadro gris.
+> Esta versión incluye todo lo de **1.3.0**: seis idiomas, YouTube Music sin conexión, aviso de actualizaciones y más.
 
-### Correcciones
-- Ya se puede salir de una playlist de YT; «Ir al artista» abre su ficha; una playlist con la misma canción dos veces ya no cierra la app.
-- Una canción de YT que no se puede abrir se salta con un aviso en lugar de detener la cola.
-- El cortador de audio y el selector de color ya no congelan la pantalla; «Reproducir todo» pone la lista entera.
-- Textos que salían en español con la app en otro idioma.
-
-> Esta versión incluye la unión con la rama de interfaces de Maikel (playlists, artista y álbum de YT, selector de colores).
+> ⚠️ Si tienes instalada una versión anterior y Android dice que no se puede actualizar, desinstálala primero (haz antes una copia de seguridad desde Opciones → Copia de seguridad).
 
 Gracias a quienes lo hicieron posible:
 - **@Pedroj-64**: diseño, temas, reproductor, letras, YouTube Music, Android Auto, widget, estadísticas, inglés y optimización.
