@@ -44,20 +44,54 @@ object YtMusic {
     fun setAutoNext(context: android.content.Context, on: Boolean) =
         context.getSharedPreferences("dezznuts_prefs", android.content.Context.MODE_PRIVATE).edit().putBoolean("yt_autonext", on).apply()
 
+    /** Máxima calidad también con datos móviles (gasta el doble). Por defecto no: con datos se elige ≤130 kbps. */
+    fun isHqOnMobile(context: android.content.Context) =
+        context.getSharedPreferences("dezznuts_prefs", android.content.Context.MODE_PRIVATE).getBoolean("yt_hq_mobile", false)
+
+    fun setHqOnMobile(context: android.content.Context, on: Boolean) =
+        context.getSharedPreferences("dezznuts_prefs", android.content.Context.MODE_PRIVATE).edit().putBoolean("yt_hq_mobile", on).apply()
+
+    /** ¿Ahorrar datos ahora? Red de pago (datos móviles, punto de acceso) y el usuario no pidió la máxima calidad. */
+    fun saveData(context: android.content.Context): Boolean =
+        !isHqOnMobile(context) &&
+            (context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager).isActiveNetworkMetered
+
     private val init by lazy { NewPipe.init(Http) }
+
+    private val UGC_FILTER = listOf(
+        "gameplay", "walkthrough", "playthrough", "reaction", "reacción", "vlog",
+        "shitpost", "parody", "parodia", "unboxing", "review",
+        "tiktok", "shorts", "compilation", "funny moments"
+    )
 
     /** Canciones que coinciden con [query] (hasta ~20 de la primera página). Lanza [IOException] si no hay red. */
     fun search(query: String): List<YtTrack> {
         init
         val extractor = ServiceList.YouTube.getSearchExtractor(query, listOf(YoutubeSearchQueryHandlerFactory.MUSIC_SONGS), "")
         extractor.fetchPage()
-        return extractor.initialPage.items.filterIsInstance<StreamInfoItem>().map {
-            YtTrack(it.url, it.name, it.uploaderName.orEmpty(), it.duration, it.thumbnails.maxByOrNull { t -> t.width }?.url)
-        }
+        return extractor.initialPage.items
+            .filterIsInstance<StreamInfoItem>()
+            .filter { item ->
+                val nameLower = item.name.lowercase()
+                val hasDuration = item.duration >= 1L
+                val isNotUgc = UGC_FILTER.none{ nameLower.contains(it)}
+                hasDuration && isNotUgc
+            }
+            .map { item ->
+                val cleanArtistName = cleanArtist(item.uploaderName.orEmpty())
+                val cleanTitleName = cleanTitle(item.name, cleanArtistName)
+                YtTrack(
+                    url = item.url,
+                    title = cleanTitleName,
+                    artist = cleanArtistName.ifEmpty { "Artista desconocido" },
+                    durationSec = item.duration,
+                    thumbnail = item.thumbnails.maxByOrNull { t -> t.width }?.url
+                )
+            }
     }
 
     /** Lo que sale de abrir una canción: el audio y las recomendadas de YouTube ("a continuación"). */
-    class Resolved(val audioUrl: String, val related: List<YtTrack>, val durationSec: Long = 0, val at: Long = System.currentTimeMillis())
+    class Resolved(val audioUrl: String, val related: List<YtTrack>, val durationSec: Long = 0, val bitrate: Int = 0, val at: Long = System.currentTimeMillis())
 
     // Las direcciones de audio duran horas: volver a una canción ya abierta (o la siguiente, que se prepara antes de
     // que acabe la actual) no repite la ida y vuelta a YouTube, que es lo que más tarda.
@@ -68,21 +102,44 @@ object YtMusic {
     private const val TTL_MS = 3L * 3600 * 1000
 
     /** Audio + recomendadas en una sola petición. Caduca en unas horas. Bloquea: llamar fuera del hilo principal. */
-    fun resolve(trackUrl: String): Resolved = synchronized(locks.getOrPut(trackUrl) { Any() }) {
+    fun resolve(trackUrl: String, metered: Boolean = false, preferLength: Long? = null): Resolved = synchronized(locks.getOrPut(trackUrl) { Any() }) {
         // Un cerrojo por canción: si la precarga de la búsqueda aún está en curso cuando la tocas, esperas a que termine
         // en vez de pedirla dos veces; otras canciones no se bloquean entre sí.
         synchronized(cache) { cache[trackUrl]?.takeIf { System.currentTimeMillis() - it.at < TTL_MS }?.let { return@synchronized it } }
         init
         val info = StreamInfo.getInfo(ServiceList.YouTube, trackUrl)
-        // Preferimos el de más bitrate; ExoPlayer reproduce tanto Opus/WebM como AAC/M4A.
-        val audio = info.audioStreams.maxByOrNull { it.averageBitrate }?.content ?: throw IOException("Sin audio disponible")
-        val related = info.relatedItems.filterIsInstance<StreamInfoItem>().map {
-            YtTrack(it.url, it.name, it.uploaderName.orEmpty(), it.duration, it.thumbnails.maxByOrNull { t -> t.width }?.url)
-        }
-        Resolved(audio, related, info.duration).also { synchronized(cache) { cache[trackUrl] = it } }.also { locks.remove(trackUrl) }
+        // Wi-Fi: el de más bitrate. Datos móviles: el mejor hasta ~130 kbps (Opus 128/AAC 128 suenan casi igual y
+        // pesan la mitad que Opus 160). ExoPlayer reproduce tanto Opus/WebM como AAC/M4A.
+        val streams = info.audioStreams.filter { !it.content.isNullOrBlank() }
+        // Si ya hay un trozo en disco, la misma versión (mismo tamaño): mezclar dos codificaciones lo corrompería.
+        val best = (preferLength?.let { len -> streams.firstOrNull { clen(it.content) == len } })
+            ?: (if (metered) streams.filter { it.averageBitrate in 1..130 }.maxByOrNull { it.averageBitrate } else null)
+            ?: streams.maxByOrNull { it.averageBitrate } ?: throw IOException("Sin audio disponible")
+        val audio = best.content
+        val related = info.relatedItems.filterIsInstance<StreamInfoItem>()
+            .filter { item ->
+                val nameLower = item.name.lowercase()
+                item.duration >= 1L && UGC_FILTER.none { nameLower.contains(it) }
+            }
+            .map { item ->
+                val cleanArtistName = cleanArtist(item.uploaderName.orEmpty())
+                val cleanTitleName = cleanTitle(item.name, cleanArtistName)
+                YtTrack(
+                    url = item.url,
+                    title = cleanTitleName,
+                    artist = cleanArtistName.ifEmpty { "Artista desconocido" },
+                    durationSec = item.duration,
+                    thumbnail = item.thumbnails.maxByOrNull { t -> t.width }?.url
+                )
+            }
+        // ponytail: el cerrojo por canción no se borra (quitarlo mientras otro hilo espera abría la puerta a pedirla dos
+        // veces); son unos bytes por canción abierta en la sesión.
+        Resolved(audio, related, info.duration, best.averageBitrate).also { synchronized(cache) { cache[trackUrl] = it } }
     }
 
     fun audioUrl(trackUrl: String): String = resolve(trackUrl).audioUrl
+
+    internal fun clen(url: String) = Regex("[?&]clen=(\\d+)").find(url)?.groupValues?.get(1)?.toLongOrNull()
 
     /** "Artista - Canción (Official Video)" → "Canción" para buscar portadas; si el prefijo no es el artista, no se toca. */
     fun cleanTitle(raw: String, artist: String): String {

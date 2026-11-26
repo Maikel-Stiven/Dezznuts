@@ -43,11 +43,11 @@ fun SleepTimerDialog(endState: Long, onSelect: (minutes: Int) -> Unit, onDismiss
         text = {
             Column {
                 if (active) {
-                    val label = if (endState == -1L) "Se detendrá al terminar la canción" else {
+                    val label = if (endState == -1L) tr("Se detendrá al terminar la canción") else {
                         val s = remainingMs / 1000
-                        "Se detendrá en %d:%02d".format(s / 60, s % 60)
+                        tr("Se detendrá en %d:%02d").format(s / 60, s % 60)
                     }
-                    Text(tr(label), color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 8.dp))
+                    Text(label, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 8.dp))
                 }
                 SLEEP_OPTIONS.forEach { (minutes, text) ->
                     Row(

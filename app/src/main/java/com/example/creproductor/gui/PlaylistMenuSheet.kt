@@ -83,7 +83,7 @@ fun PlaylistMenuSheet(
         playlistSongs.sumOf { it.duration }
     }
 
-    val countLabel = if (playlist.songIds.size == 1) "1 canción" else "${playlist.songIds.size} canciones"
+    val countLabel = if (playlist.songIds.size == 1) tr("1 canción") else tr("%d canciones").format(playlist.songIds.size)
     val durationLabel = formatDuration(totalDurationMs)
 
     ModalBottomSheet(
@@ -207,7 +207,7 @@ fun PlaylistMenuSheet(
     if (confirmDeletePlaylist){
         AlertDialog(
             onDismissRequest = {confirmDeletePlaylist = false},
-            title = {Text("Se eliminará la playlist \"${playlist.name}\". ¿Desea eliminar la playlist?")},
+            title = {Text(tr("Se eliminará la playlist \"%s\". ¿Desea eliminar la playlist?").format(playlist.name))},
             confirmButton = {
                 TextButton(onClick =  {confirmDeletePlaylist = false; onDismiss();  actions.onDeletePlaylist() }) {
                     Text(tr("Eliminar"))
@@ -226,7 +226,7 @@ fun PlaylistMenuSheet(
         AlertDialog(
             onDismissRequest = {confirmDeleteFromDevice = false},
             title = {Text(tr("¿Eliminar del dispositivo?"))},
-            text = {Text("Se eliminaran las canciones de \"${playlist.name}\" del dispositivo. Esta acción no se puede deshacer")},
+            text = {Text(tr("Se eliminaran las canciones de \"%s\" del dispositivo. Esta acción no se puede deshacer").format(playlist.name))},
             confirmButton =  {
                 TextButton(onClick = {confirmDeleteFromDevice = false; onDismiss(); actions.onDeleteFromDevice()}) {
                     Text(tr("Elimnar canciones"), color = MaterialTheme.colorScheme.error)

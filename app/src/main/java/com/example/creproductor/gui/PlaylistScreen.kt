@@ -133,7 +133,7 @@ fun PlaylistScreen(
 
             Column(modifier = Modifier.fillMaxSize()) {
                 Text(
-                    text = "Listas de reproducción (${playlist.size})",
+                    text = tr("Listas de reproducción (%d)").format(playlist.size),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
@@ -154,11 +154,11 @@ fun PlaylistScreen(
                         val displayCover = playlist.coverUri ?: firstCover
 
                         val countLabel = if (playlist.songIds.isEmpty()){
-                            "0 canciones"
+                            tr("0 canciones")
                         }else if (playlist.songIds.size == 1){
-                            "1 canción"
+                            tr("1 canción")
                         }else{
-                            "${playlist.songIds.size} canciones"
+                            tr("%d canciones").format(playlist.songIds.size)
                         }
 
                         Row(

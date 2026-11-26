@@ -45,4 +45,10 @@ class YtLibraryTest {
         assertEquals("XYZ", YtLibrary.sapisid("a=1; SAPISID=XYZ; b=2"))
         assertNull(YtLibrary.sapisid("a=1; b=2"))
     }
+
+    @Test fun continuacionNuevaYAntigua() {
+        assertEquals("T1", YtLibrary.continuation("""{"a":[{"continuationItemRenderer":{"continuationEndpoint":{"continuationCommand":{"token":"T1"}}}}]}"""))
+        assertEquals("T2", YtLibrary.continuation("""{"continuations":[{"nextContinuationData":{"continuation":"T2"}}]}"""))
+        assertNull(YtLibrary.continuation("""{"a":1}"""))
+    }
 }

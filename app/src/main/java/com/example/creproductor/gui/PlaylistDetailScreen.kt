@@ -133,13 +133,15 @@ fun PlaylistScreenDetail(
         playlist.coverUri ?: playlistSongs.firstOrNull {it.albumArtUri != null }?.coverModel
     }
 
+    val oneSongLabel = tr("1 canción")
+    val nSongsLabel = tr("%d canciones")
     val formattedTotalDuration = remember (playlistSongs) {
         val totalMs = playlistSongs.sumOf { it.duration }
         val totalMins = totalMs / 1000 / 60
         val hours = totalMins / 60
         val mins = totalMins % 60
 
-        val songCountText = if (playlistSongs.size == 1) "1 canción" else "${playlistSongs.size} canciones"
+        val songCountText = if (playlistSongs.size == 1) oneSongLabel else nSongsLabel.format(playlistSongs.size)
         val timeText = if (hours > 0) "$hours h $mins min" else "$mins min"
         "$songCountText • $timeText"
     }
@@ -528,7 +530,7 @@ private fun  PlaylistTrackItem(
             )
 
             val artistText = if (song.artist.isBlank() || song.artist.equals("<unknown>", ignoreCase = true)){
-                "Artista desconocido"
+                tr("Artista desconocido")
             }else{
                 song.artist
             }

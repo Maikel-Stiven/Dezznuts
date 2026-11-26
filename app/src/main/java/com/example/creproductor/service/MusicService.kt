@@ -248,6 +248,7 @@ class MusicService : MediaLibraryService(){
         )
 
         val player = ExoPlayer.Builder(this, renderersFactory)
+            .setMediaSourceFactory(androidx.media3.exoplayer.source.DefaultMediaSourceFactory(com.example.creproductor.data.YtAudioCache.dataSourceFactory(this)))
             .setAudioAttributes(audioAttributes, true)
             .setHandleAudioBecomingNoisy(true)
             .setLoadControl(buildLoadControl())
@@ -659,7 +660,7 @@ class MusicService : MediaLibraryService(){
         isFavorite = currentId != null && prefs.getStringSet("fav_ids", emptySet())?.contains(currentId) == true
 
         val favoriteButton = CommandButton.Builder()
-            .setDisplayName("Favorito")
+            .setDisplayName(com.example.creproductor.i18n.I18n.tr(this, "Favorito"))
             .setIconResId(
                 if (isFavorite) R.drawable.ic_corazon_filled
                 else R.drawable.ic_corazon_outline
@@ -668,7 +669,7 @@ class MusicService : MediaLibraryService(){
             .build()
 
         val closeButton = CommandButton.Builder()
-            .setDisplayName("Cerrar")
+            .setDisplayName(com.example.creproductor.i18n.I18n.tr(this, "Cerrar"))
             .setCustomIconResId(R.drawable.ic_cerrar)
             .setSessionCommand(SessionCommand(ACTION_CLOSE, Bundle.EMPTY))
             .build()

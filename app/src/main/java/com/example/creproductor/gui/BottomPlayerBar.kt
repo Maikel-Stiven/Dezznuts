@@ -74,18 +74,18 @@ fun BottomPlayerBar(
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
+                Icon(
+                    imageVector = Icons.Default.MusicNote,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                // La nota queda debajo: si la portada no carga, se ve ella y no un cuadro vacío.
                 if (song.albumArtUri != null) {
                     AsyncImage(
                         model = song.coverModel,
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.MusicNote,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -117,7 +117,7 @@ fun BottomPlayerBar(
             ) {
                 Icon(
                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = if (isPlaying) "Pausar" else "Reproducir"
+                    contentDescription = tr(if (isPlaying) "Pausar" else "Reproducir")
                 )
             }
             IconButton(onClick = onNext) {

@@ -272,7 +272,7 @@ fun FullScreenPlayer(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                     )
                     Text(
-                        text = song.album.takeUnless { it.isBlank() || it.equals("<unknown>", true) } ?: "Álbum desconocido",
+                        text = song.album.takeUnless { it.isBlank() || it.equals("<unknown>", true) } ?: tr("Álbum desconocido"),
                         style = MaterialTheme.typography.titleSmall,
                         maxLines = 1,
                         modifier = Modifier.basicMarquee()
@@ -371,7 +371,7 @@ fun FullScreenPlayer(
                         modifier = Modifier.basicMarquee()
                     )
                     Text(
-                        text = song.artist.takeUnless { it.isBlank() || it.equals("<unknown>", true) } ?: "Artista desconocido",
+                        text = song.artist.takeUnless { it.isBlank() || it.equals("<unknown>", true) } ?: tr("Artista desconocido"),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         maxLines = 1,
@@ -434,7 +434,7 @@ fun FullScreenPlayer(
                     Icon(Icons.Default.SkipNext, contentDescription = tr("Siguiente"), modifier = Modifier.size(40.dp))
                 }
                 IconButton(onClick = onToggleRepeatMode) {
-                    Icon(imageVector = repeatIcon, contentDescription = modelLabel, tint = repeatTint)
+                    Icon(imageVector = repeatIcon, contentDescription = tr(modelLabel), tint = repeatTint)
                 }
             }
 
@@ -537,7 +537,7 @@ fun FullScreenPlayer(
                         IconButton(onClick = onToggleRepeatMode) {
                             Icon(
                                 imageVector = repeatIcon,
-                                contentDescription = modelLabel,
+                                contentDescription = tr(modelLabel),
                                 tint = repeatTint
                             )
                         }
@@ -555,7 +555,7 @@ fun FullScreenPlayer(
                 ) {
                     itemsIndexed(
                         items = songs,
-                        key = {_, songItem -> songItem.id}
+                        key = { index, songItem -> Pair(songItem.id, index)}
                     ){index, queueSong ->
                         val isCurrent = queueSong.id == song.id
                         val isBeingDragged = draggedIndex == index
@@ -599,7 +599,7 @@ fun FullScreenPlayer(
                                 modifier = Modifier
                                     .padding(start = 2.dp, end = 6.dp)
                                     .size(32.dp)
-                                    .pointerInput(queueSong.id) {
+                                    .pointerInput(queueSong.id, index) {
                                         detectDragGestures(
                                             onDragStart = {
                                                 draggedIndex = currentIndex
@@ -656,6 +656,13 @@ fun FullScreenPlayer(
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
+                                Icon(
+                                    imageVector = Icons.Default.MusicNote,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                // La nota queda debajo: si la portada no carga, se ve ella y no un cuadro vacío.
                                 if (queueSong.albumArtUri != null) {
                                     AsyncImage(
                                         model = ImageRequest.Builder(LocalContext.current)
@@ -667,13 +674,6 @@ fun FullScreenPlayer(
                                         contentDescription = null,
                                         modifier = Modifier.fillMaxSize(),
                                         contentScale = ContentScale.Crop
-                                    )
-                                } else {
-                                    Icon(
-                                        imageVector = Icons.Default.MusicNote,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(22.dp)
                                     )
                                 }
                             }
@@ -695,7 +695,7 @@ fun FullScreenPlayer(
                                 )
 
                                 val artistText = if (queueSong.artist.isBlank() || queueSong.artist.equals("<unknown>", ignoreCase = true)){
-                                    "Artista desconocido"
+                                    tr("Artista desconocido")
                                 }else{
                                     queueSong.artist
                                 }
@@ -915,7 +915,7 @@ private fun PlayerTabs(showLyrics: Boolean, onSelect: (Boolean) -> Unit) {
         listOf(false to "Canción", true to "Letra").forEach { (lyrics, label) ->
             val selected = showLyrics == lyrics
             Text(
-                text = label,
+                text = tr(label),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                 color = if (selected) Color.White else Color.White.copy(alpha = 0.6f),

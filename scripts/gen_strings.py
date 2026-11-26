@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Genera res/values/strings.xml (español) y res/values-en/strings.xml (inglés) y res/raw/keep.xml.
+"""Genera res/values/strings.xml (español), res/values-en (inglés), uno por cada scripts/i18n/<idioma>.json y res/raw/keep.xml.
 
 El código usa tr("texto en español"); el nombre del recurso es s_<sha1[:10]> (ver i18n/I18n.kt). Para añadir un idioma:
 copia EN a otro diccionario y pasa su carpeta (p. ej. values-pt). Los textos sin entrada en el diccionario se
@@ -171,7 +171,142 @@ EN = {
 "Color a medida": "Custom color", "Tono": "Hue", "Intensidad": "Saturation", "Brillo": "Brightness", "Aplicar": "Apply",
 "Seleccionar todo": "Select all", "Añadir a una lista": "Add to a list", "Añadir a la cola": "Add to queue",
 "Eliminar": "Delete", "Inicio": "Home", "Me gusta": "Likes", "Reintentar": "Retry", "No se pudo cargar.": "Couldn't load.",
+"Sin conexión con YouTube Music. Revisa tu internet": "No connection to YouTube Music. Check your internet", "No se pudieron cargar": "Couldn't load", "Búsquedas recientes": "Recent searches", "Eliminar del historial": "Remove from history",
+"Todos": "All",
+"Agregar a la playlist": "Add to the playlist", "Agregar a playlist": "Add to playlist", "Agregar a playlist de YT": "Add to YT playlist",
+"Crear": "Create", "Crear nueva playlist": "Create new playlist", "Crear playlist": "Create playlist",
+"DEZZNUTS ya decodifica FLAC, ALAC y WAV sin pérdida. ": "DEZZNUTS already decodes FLAC, ALAC and WAV losslessly. ",
+"El sistema remuestrea a esa frecuencia todo lo que no coincida con ella ": "The system resamples anything that doesn't match that rate ",
+"Eliminar de la playlist": "Remove from playlist",
+"Función no oficial (NewPipeExtractor): puede dejar de funcionar sin aviso y va contra los términos de YouTube. Usa internet y no necesita cuenta":
+  "Unofficial feature (NewPipeExtractor): it may stop working without notice and goes against YouTube's terms. Uses the internet and needs no account",
+"No se pudieron cargar las canciones.": "Couldn't load the songs.", "No se pudo reproducir la canción": "Couldn't play the song",
+"Nombre de la lista": "List name", "Nueva playlist de YT Music": "New YT Music playlist", "Reordenar": "Reorder",
+"Reproducir mix": "Play mix", "Salida nativa del dispositivo: ": "Device native output: ", "Salidas conectadas: ": "Connected outputs: ",
+"Sube el volumen al empezar una pista o reanudar y lo baja al final de la pista y al pausar. ": "Raises the volume when a track starts or resumes and lowers it at the end of the track and when pausing. ",
+"Tus playlists": "Your playlists", "canciones": "songs", "¿Desea eliminar del dispositivo?": "Delete from device?",
 "Origen": "Source", "Otras": "Other", "Visualizador (barras tipo CAVA)": "Visualizer (CAVA-style bars)", "Barras de frecuencia en el reproductor; no usa internet ni permisos (no con audio offload)": "Frequency bars in the player; no internet or permissions needed (not with audio offload)", "Nueva lista": "New list", "Navegación": "Navigation", "Pestañas arriba": "Top tabs", "Barra abajo": "Bottom bar", "Ajustes": "Settings", "YT Music": "YT Music", "Accesos directos": "Shortcuts", "Reproducir todo": "Play all", "Música que te gustó": "Music you liked",
+    # --- textos pendientes de traducir ---
+    "Cable": "Wired",
+    "Altavoz": "Speaker",
+    "Versión %s": "Version %s",
+    "Ocupa actualmente: %s": "Currently using: %s",
+    "Editar lista de reproducción": "Edit playlist",
+    "portada editable playlist": "editable playlist cover",
+    "Usar «%s» — «%s»": "Use «%s» — «%s»",
+    "Eliminar %s": "Delete %s",
+    "Ancho de banda Q de la banda %d": "Q bandwidth of band %d",
+    "\"%s\" se borrará y quedará libre su espacio (máximo %d).": "\"%s\" will be deleted and its slot freed (maximum %d).",
+    "%d más no se pueden deducir; edítalas una a una desde su menú (⋮).": "%d more can't be inferred; edit them one by one from their menu (⋮).",
+    "Corregir %d": "Fix %d",
+    "DEZZNUTS ya decodifica FLAC, ALAC y WAV sin pérdida. Estos ajustes deciden cómo se entrega esa señal al DAC del dispositivo. Ninguno viene activado: pruébalos tú y quédate con el que mejor suene en tu equipo.": "DEZZNUTS already decodes FLAC, ALAC and WAV losslessly. These settings decide how that signal is delivered to the device's DAC. None is enabled by default: try them and keep what sounds best on your gear.",
+    "Salida en 32 bits (float)": "32-bit (float) output",
+    "Evita que el audio de 24 y 32 bits se trunque a 16 bits antes de mezclar, conservando el detalle fino. En archivos de 16 bits no cambia nada: solo actúa en alta resolución.": "Keeps 24- and 32-bit audio from being truncated to 16 bits before mixing, preserving fine detail. It changes nothing for 16-bit files: it only acts on high resolution.",
+    "Si tu dispositivo no soporta la salida float, los archivos de 24/32 bits podrían no sonar. Desactívalo si notas silencio.": "If your device doesn't support float output, 24/32-bit files may not play. Turn it off if you hear silence.",
+    "Audio offload (bit-perfect)": "Audio offload (bit-perfect)",
+    "Envía el archivo comprimido directamente al DSP, sin remuestreo ni mezcla: conserva la frecuencia y la profundidad originales. Requiere Android 10+.": "Sends the compressed file straight to the DSP, with no resampling or mixing: it keeps the original frequency and depth. Requires Android 10+.",
+    "Depende del chip: algunos lo soportan mal y producen cortes o silencios. Mientras esté activo no se aplican efectos y la salida float no interviene.": "Depends on the chip: some handle it poorly and produce dropouts or silence. While active, no effects are applied and float output is not used.",
+    "Iguala el volumen entre pistas leyendo la etiqueta del archivo (FLAC, OGG, MP3). Solo atenúa: nunca amplifica, así que no recorta ni comprime la dinámica.": "Evens out volume between tracks by reading the file's tag (FLAC, OGG, MP3). It only attenuates: it never amplifies, so it doesn't clip or compress dynamics.",
+    "Si el archivo no trae la etiqueta, suena igual que antes.": "If the file has no tag, it sounds the same as before.",
+    "Permitir subir el volumen": "Allow raising the volume",
+    "Si la pista es más baja que la referencia, la sube solo hasta lo que su pico permite sin recortar (necesita la etiqueta de pico). Sin efecto con offload.": "If the track is quieter than the reference, it raises it only as far as its peak allows without clipping (needs the peak tag). No effect with offload.",
+    "Activa el procesador de audio en 32 bits float; con offload no se aplica.": "Enables the 32-bit float audio processor; not applied with offload.",
+    "Preferir DAC USB": "Prefer USB DAC",
+    "Dirige la salida al DAC USB cuando está conectado, evitando que el mezclador del sistema lo ignore o remuestree.": "Routes output to the USB DAC when connected, keeping the system mixer from ignoring or resampling it.",
+    "Si tu DAC no negocia bien, desactívalo para volver a la salida automática.": "If your DAC doesn't negotiate well, turn it off to go back to automatic output.",
+    "Sube el volumen al empezar una pista o reanudar y lo baja al final de la pista y al pausar. En discos sin cortes (gapless) conviene dejarlo apagado.": "Fades the volume in when a track starts or resumes and out at the end of the track and when pausing. For gapless albums it's best left off.",
+    "Duración: %s": "Duration: %s",
+    "Apagado": "Off",
+    "Perfiles por salida": "Per-output profiles",
+    "Recuerda ReplayGain y ecualizador por separado para altavoz, cable, Bluetooth y DAC USB, y los cambia solos al conectar o desconectar.": "Remembers ReplayGain and equalizer separately for speaker, wired, Bluetooth and USB DAC, and switches them automatically on connect or disconnect.",
+    "Al cambiar de salida se sustituyen tus ajustes actuales por los guardados de esa salida.": "When the output changes, your current settings are replaced by the ones saved for that output.",
+    "Bit-perfect con DAC USB": "Bit-perfect with USB DAC",
+    "Pide al DAC USB el formato exacto de cada pista para que el sistema no remuestree ni mezcle (Android 14+). Solo entra si el DAC ofrece ese formato; si no, todo suena como siempre.": "Asks the USB DAC for each track's exact format so the system doesn't resample or mix (Android 14+). It only kicks in if the DAC offers that format; otherwise everything sounds as usual.",
+    " Requiere Android 14.": " Requires Android 14.",
+    "Se desactiva solo con ecualizador, subida de ReplayGain u offload (modifican la señal). Si tu DAC se porta mal, apágalo.": "It turns itself off with the equalizer, ReplayGain boost or offload (they alter the signal). If your DAC misbehaves, turn it off.",
+    "Salidas conectadas: ninguna": "Connected outputs: none",
+    "Salida nativa del dispositivo: %s": "Device native output: %s",
+    "Salida nativa del dispositivo: desconocida": "Device native output: unknown",
+    "El sistema remuestrea a esa frecuencia todo lo que no coincida con ella (por ejemplo, un FLAC de CD a 44100 Hz). El offload evita ese remuestreo en los dispositivos que lo soportan.": "The system resamples to that frequency anything that doesn't match it (for example, a CD FLAC at 44100 Hz). Offload avoids that resampling on devices that support it.",
+    "Riesgo: %s": "Risk: %s",
+    "Listas de reproducción (%d)": "Playlists (%d)",
+    "%d canciones": "%d songs",
+    "%d álbumes": "%d albums",
+    "%d archivos de audio revisados": "%d audio files checked",
+    "Se detendrá en %d:%02d": "It will stop at %d:%02d",
+    "Añadir (%d)": "Add (%d)",
+    "%d reproducciones · %.1f h de música": "%d plays · %.1f h of music",
+    "Inicio %s": "Start %s",
+    "Fin %s": "End %s",
+    "Duración del corte: %s": "Cut duration: %s",
+    "Se eliminará la playlist \"%s\". ¿Desea eliminar la playlist?": "The playlist \"%s\" will be deleted. Delete the playlist?",
+    "Se eliminaran las canciones de \"%s\" del dispositivo. Esta acción no se puede deshacer": "The songs in \"%s\" will be deleted from the device. This action cannot be undone",
+    "\"%s\" se borrará del dispositivo. No se puede deshacer esta acción": "\"%s\" will be deleted from the device. This action cannot be undone",
+    "Canciones (%d)": "Songs (%d)",
+    "Álbumes (%d)": "Albums (%d)",
+    "Artistas (%d)": "Artists (%d)",
+    "%d álbumes •  %d canciones": "%d albums •  %d songs",
+    "\"%s\" se borrará del almacenamiento. No se puede deshacer.": "\"%s\" will be deleted from storage. This cannot be undone.",
+    "Cambiar aspectos": "Change looks",
+    "Color adaptativo": "Adaptive color",
+    "Colores estáticos": "Static colors",
+    "Seleccionar color": "Select color",
+    "¿Desea eliminar \"%s\"?": "Delete \"%s\"?",
+    "Todas las canciones": "All songs",
+    "Toca para abrir": "Tap to open",
+    "Plano": "Flat",
+    "Graves": "Bass",
+    "Voces": "Vocals",
+    "Loudness": "Loudness",
+    "Rock": "Rock",
+    "Dance": "Dance",
+    "Instrumental": "Instrumental",
+    "Material 3": "Material 3",
+    "Colores del sistema y bordes redondeados (por defecto)": "System colors and rounded corners (default)",
+    "Omarge": "Omarge",
+    "Estética retro terminal": "Retro terminal look",
+    "OLED negro Puro": "Pure black OLED",
+    "Fondo totalmente negro (#000000) para pantallas AMOLED": "Fully black background (#000000) for AMOLED screens",
+    "Predeterminado": "Default",
+    "Ordenar: %s": "Sort: %s",
+'Idioma': 'Language',
+'Del sistema': 'System default',
+'Descargadas': 'Downloaded',
+'Ya está descargada': 'Already downloaded',
+'Descargando para escuchar sin conexión…': 'Downloading to listen offline…',
+'Descargando la lista para escuchar sin conexión…': 'Downloading the list to listen offline…',
+'Descargada: ya suena sin conexión': 'Downloaded: it now plays offline',
+'Lista descargada: ya suena sin conexión': 'List downloaded: it now plays offline',
+'Algunas canciones no se pudieron descargar. Revisa tu conexión': "Some songs couldn't be downloaded. Check your connection",
+'Máxima calidad con datos móviles': 'Highest quality on mobile data',
+'Con Wi-Fi siempre suena a la mejor calidad (Opus ~160 kbps); con datos se ahorra la mitad salvo que lo actives': 'On Wi-Fi it always plays at the best quality (Opus ~160 kbps); on mobile data it uses half unless you turn this on',
+'Descargar para escuchar sin conexión': 'Download to listen offline',
+'Quitar descarga': 'Remove download',
+'Descargando…': 'Downloading…',
+'Descargar lista': 'Download list',
+'"%s" exportada (%d canciones)': '"%s" exported (%d songs)',
+'"%s": %d de %d canciones encontradas': '"%s": %d of %d songs found',
+'Copia guardada: %d listas y %d favoritas': 'Backup saved: %d lists and %d favorites',
+'Copia restaurada: %d listas y %d favoritas': 'Backup restored: %d lists and %d favorites',
+'Corrigiendo %d canciones…': 'Fixing %d songs…',
+'Favorito': 'Favorite',
+'No se pudo exportar la lista': "Couldn't export the list",
+'Se corrigieron %d de %d': 'Fixed %d of %d',
+'Se eliminaron %d archivos del dispositivo': '%d files deleted from the device',
+'Guardado: %s (Música/DEZZNUTS)': 'Saved: %s (Music/DEZZNUTS)',
+'Auto-web': 'Auto-web',
+'No se encontraron resultados para "%s"': 'No results for "%s"',
+'Buscar actualizaciones': 'Check for updates',
+'Mira si hay una versión nueva en GitHub y la descarga': 'Checks GitHub for a new version and downloads it',
+'Avisar de nuevas versiones': 'Notify about new versions',
+'Una vez al día pregunta a GitHub si salió una versión nueva (no envía nada tuyo)': 'Once a day it asks GitHub whether a new version is out (sends nothing about you)',
+'No se pudo comprobar. Revisa tu conexión': "Couldn't check. Check your connection",
+'Ya tienes la última versión': 'You already have the latest version',
+'Nueva versión %s': 'New version %s',
+'Hay una versión nueva de DEZZNUTS.': "There's a new version of DEZZNUTS.",
+'Descargando… al terminar, toca la notificación para instalar': "Downloading… when it's done, tap the notification to install",
+'Descargar': 'Download',
+'Ahora no': 'Not now',
 }
 
 def key(es): return "s_" + hashlib.sha1(es.encode()).hexdigest()[:10]
@@ -184,13 +319,22 @@ def write(folder, mapping):
     d = os.path.join(ROOT, folder); os.makedirs(d, exist_ok=True)
     lines = ['<?xml version="1.0" encoding="utf-8"?>', '<!-- Generado por scripts/gen_strings.py: no editar a mano. -->', "<resources>"]
     if folder == "values": lines.append('    <string name="app_name">DEZZNUTS</string>')
-    for es, tr in sorted(mapping.items()): lines.append(f'    <string name="{key(es)}">{esc(tr)}</string>')
+    for es, tr in sorted(mapping.items()):
+        fmt = ' formatted="false"' if "%" in tr else ""  # los %d/%s se rellenan con String.format en el código
+        lines.append(f'    <string name="{key(es)}"{fmt}>{esc(tr)}</string>')
     lines.append("</resources>")
     open(os.path.join(d, "strings.xml"), "w").write("\n".join(lines) + "\n")
 
 if __name__ == "__main__":
     write("values", {es: es for es in EN})
     write("values-en", EN)
+    # Otros idiomas: scripts/i18n/<código>.json = {"texto en español": "traducción"}; lo que falte queda en inglés.
+    import json, glob
+    for f in sorted(glob.glob(os.path.join(os.path.dirname(__file__), "i18n", "*.json"))):
+        lang = os.path.splitext(os.path.basename(f))[0]
+        tl = json.load(open(f, encoding="utf-8"))
+        write("values-" + lang, {es: tl.get(es) or EN[es] for es in EN})
+        print(lang, sum(1 for es in EN if tl.get(es)), "/", len(EN))
     os.makedirs(os.path.join(ROOT, "raw"), exist_ok=True)
     open(os.path.join(ROOT, "raw", "keep.xml"), "w").write(
         '<?xml version="1.0" encoding="utf-8"?>\n<!-- Los textos se buscan por nombre (I18n.kt): el recorte de recursos no debe quitarlos. -->\n'

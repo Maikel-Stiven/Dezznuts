@@ -68,7 +68,7 @@ fun EditPlaylistDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Editar lista de reproducción",
+                text = tr("Editar lista de reproducción"),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -97,7 +97,7 @@ fun EditPlaylistDialog(
                     if (selectedCoverUri != null){
                         AsyncImage(
                             model = selectedCoverUri,
-                            contentDescription = "portada editable playlist",
+                            contentDescription = tr("portada editable playlist"),
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )

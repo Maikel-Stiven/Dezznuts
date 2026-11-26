@@ -114,12 +114,12 @@ fun AlbumsGridScreen(
                 val firstSong = albumSongs.firstOrNull()
 
                 val artistName = when {
-                    firstSong == null || firstSong.artist.isBlank() || firstSong.artist.equals("<unknown>", ignoreCase = true) -> "Artista desconcido"
+                    firstSong == null || firstSong.artist.isBlank() || firstSong.artist.equals("<unknown>", ignoreCase = true) -> tr("Artista desconocido")
                     else -> firstSong.artist
                 }
 
                 val  covertUri = albumSongs.firstOrNull{ it.albumArtUri != null}?.coverModel
-                val countText = if (albumSongs.size == 1) "1 canción" else "${albumSongs.size} canciones"
+                val countText = if (albumSongs.size == 1) tr("1 canción") else tr("%d canciones").format(albumSongs.size)
 
                 Column(
                     modifier = Modifier
@@ -222,7 +222,7 @@ fun GenresGridScreen(
         ) {
             items(genresKeys, key = {it}) { genreName ->
                 val genreSongs = genresMap[genreName] ?: emptyList()
-                val countText = if (genreSongs.size == 1) "1 canción" else "${genreSongs.size} canciones"
+                val countText = if (genreSongs.size == 1) tr("1 canción") else tr("%d canciones").format(genreSongs.size)
                 val genreIcon = getGenreIcon(genreName)
 
                 Card(
@@ -322,8 +322,8 @@ fun ArtistsListScreen(
                         .coerceAtLeast(if (artistSongs.isNotEmpty()) 1 else 0)
                 }
 
-                val albumText = if (albumsCount == 1) "1 álbum" else "$albumsCount álbumes"
-                val songText = if (artistSongs.size == 1) "1 canción" else "${artistSongs.size} canciones"
+                val albumText = if (albumsCount == 1) tr("1 álbum") else tr("%d álbumes").format(albumsCount)
+                val songText = if (artistSongs.size == 1) tr("1 canción") else tr("%d canciones").format(artistSongs.size)
 
                 Row(
                     modifier = Modifier
@@ -417,7 +417,7 @@ fun FoldersListScreen(
             items(foldersKeys, key = { it }) { folderPath ->
                 val folderSongs = foldersMap[folderPath] ?: emptyList()
                 val displayName = folderPath.substringAfterLast('/').ifBlank { folderPath }
-                val countText = if (folderSongs.size == 1) "1 canción" else "${folderSongs.size} canciones"
+                val countText = if (folderSongs.size == 1) tr("1 canción") else tr("%d canciones").format(folderSongs.size)
 
                 Row(
                     modifier = Modifier

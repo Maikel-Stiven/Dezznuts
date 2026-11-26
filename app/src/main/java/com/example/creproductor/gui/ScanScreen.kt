@@ -188,13 +188,13 @@ private fun androidx.compose.foundation.layout.ColumnScope.ScanProgressContent(p
         Spacer(Modifier.height(24.dp))
         if (progress.finished) {
             Text(tr("Escaneo terminado"), style = MaterialTheme.typography.titleLarge)
-            Text("${progress.total} archivos de audio revisados", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(tr("%d archivos de audio revisados").format(progress.total), color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(16.dp))
             Button(onClick = onDone) { Text(tr("LISTO")) }
         } else {
             Text("${progress.percent} %", style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.primary)
             Text(
-                progress.current,
+                if (progress.total == 0) tr(progress.current) else progress.current,
                 maxLines = 2, overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

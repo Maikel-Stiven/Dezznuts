@@ -92,7 +92,7 @@ fun DuplicatesDialog(songs: List<Song>, onDelete: (List<Song>) -> Unit, onDismis
             val toDelete = if (tab == 0) groups?.flatMap { it.copies }.orEmpty() else whatsApp.orEmpty()
             if (canDelete && toDelete.isNotEmpty()) {
                 Button(onClick = { onDelete(toDelete) }) {
-                    Text(if (tab == 0) "Eliminar ${toDelete.size} ${if (toDelete.size == 1) "copia" else "copias"}" else "Eliminar ${toDelete.size} ${if (toDelete.size == 1) "audio" else "audios"}")
+                    Text(tr(if (tab == 0) (if (toDelete.size == 1) "Eliminar 1 copia" else "Eliminar %d copias") else (if (toDelete.size == 1) "Eliminar 1 audio" else "Eliminar %d audios")).format(toDelete.size))
                 }
             }
         },

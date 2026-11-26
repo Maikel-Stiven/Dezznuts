@@ -84,7 +84,7 @@ fun SongMenuSheet(
             ListItem(
                 headlineContent = { Text(song.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 supportingContent = {
-                    val artist = if (song.artist.isBlank() || song.artist == "<unknown>") "Artista desconocido" else song.artist
+                    val artist = if (song.artist.isBlank() || song.artist == "<unknown>") tr("Artista desconocido") else song.artist
                     Text("$artist • ${formatDuration(song.duration)}", maxLines = 1, overflow = TextOverflow.Ellipsis)
                 },
                 colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent)
@@ -106,8 +106,19 @@ fun SongMenuSheet(
             } else {
                 if (!isYt) MenuRow(Icons.Default.SkipNext, "Reproducir a continuación", run(actions.onPlayNext))
                 if (!isYt) MenuRow(Icons.AutoMirrored.Filled.QueueMusic, "Agregar al final de la cola", run(actions.onAddToQueue))
-                if (!isYt) MenuRow(Icons.AutoMirrored.Filled.PlaylistAdd, "Agregar a una playlist", { pickingPlaylist = true })
-                if (!isYt) MenuRow(Icons.Default.Album, "Ir al álbum", run(actions.onGoToAlbum))
+                MenuRow(
+                    icon = Icons.AutoMirrored.Filled.PlaylistAdd,
+                    text = "Agregar a una playlist",
+                    onClick = {
+                        if (isYt) {
+                            onDismiss()
+                            actions.onAddToPlaylist("")
+                        } else {
+                            pickingPlaylist = true
+                        }
+                    }
+                )
+                MenuRow(Icons.Default.Album, "Ir al álbum", run(actions.onGoToAlbum))
                 MenuRow(Icons.Default.Person, "Ir al artista", run(actions.onGoToArtist))
                 if (!isCueTrack && !isYt) MenuRow(Icons.Default.Edit, "Editor de etiquetas", run(actions.onEditTags))
                 MenuRow(Icons.Default.Info, "Acerca de", run(actions.onAbout))
@@ -121,7 +132,7 @@ fun SongMenuSheet(
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text(tr("¿Eliminar del dispositivo?")) },
-            text = { Text("\"${song.title}\" se borrará del almacenamiento. No se puede deshacer.") },
+            text = { Text(tr("\"%s\" se borrará del almacenamiento. No se puede deshacer.").format(song.title)) },
             confirmButton = { TextButton(onClick = { confirmDelete = false; onDismiss(); actions.onDelete() }) { Text(tr("Eliminar")) } },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(tr("Cancelar")) } }
         )

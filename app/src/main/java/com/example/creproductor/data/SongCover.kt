@@ -63,10 +63,13 @@ class SongCoverFetcher(
     override suspend fun fetch(): FetchResult? = withContext(Dispatchers.IO) {
         if (missingMarker().exists()) return@withContext null
 
-        val bytes = readFromCache() ?: readFromWeb() ?: readFromMediaStore() ?: extractAndCache()
+        // Una canción remota (YouTube) no tiene archivo que abrir: el retriever iría a la red sin control.
+        val remote = model.contentUri.scheme.let { it == "http" || it == "https" } || model.albumArtUri?.scheme == "https"
+        val bytes = readFromCache() ?: readFromWeb() ?: readFromMediaStore() ?: if (remote) null else extractAndCache()
         if (bytes == null) {
-            // Sin arte: se recuerda para no volver a abrir el archivo en cada aparición.
-            runCatching { missingMarker().apply { parentFile?.mkdirs() }.writeText("") }
+            // Sin arte: se recuerda para no volver a abrir el archivo en cada aparición. Lo remoto no: sin red falla
+            // ahora y con red funcionará.
+            if (!remote) runCatching { missingMarker().apply { parentFile?.mkdirs() }.writeText("") }
             return@withContext null
         }
         SourceResult(

@@ -58,7 +58,7 @@ fun GenreDetail (
         if (hours > 0) "$hours h $mins min" else "$mins min"
     }
 
-    val songCountText = if (genreSongs.size == 1) "1 canción" else "${genreSongs.size} canciones"
+    val songCountText = if (genreSongs.size == 1) tr("1 canción") else tr("%d canciones").format(genreSongs.size)
 
     Column(
         modifier = Modifier
@@ -259,7 +259,7 @@ private fun GenreTrackItem(
             )
 
             val artistName = if (song.artist.isBlank() || song.artist.equals("<unknown>", ignoreCase = true)){
-                "Artista desconocido"
+                tr("Artista desconocido")
             }else{
                 song.artist
             }

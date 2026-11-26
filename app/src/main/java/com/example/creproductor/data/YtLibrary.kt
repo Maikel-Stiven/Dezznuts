@@ -38,17 +38,39 @@ object YtLibrary {
     /** Canciones que te gustan (lista "LM"). Lanza [IOException] si no hay red o la sesión caducó (401/403). */
     fun liked(context: Context): List<YtTrack> {
         val cookie = cookie(context)?.takeIf { sapisid(it) != null } ?: throw IOException("Sin sesión")
-        return parse(browse("VLLM", cookie))
+        var page = browse("VLLM", cookie)
+        val out = ArrayList(parse(page))
+        // La web entrega ~100 por página; el resto llega con "continuaciones". ponytail: tope de 30 páginas (~3000).
+        repeat(30) {
+            val token = continuation(page) ?: return out.distinctBy { it.url }
+            page = runCatching { browse(null, cookie, continuation = token) }.getOrNull() ?: return out.distinctBy { it.url }
+            out += parse(page)
+        }
+        return out.distinctBy { it.url }
+    }
+
+    /** Ficha para pedir la página siguiente de una lista (formato nuevo y antiguo de InnerTube), o null si no hay más. */
+    internal fun continuation(json: String): String? {
+        fun walk(o: Any?): String? = when (o) {
+            is JSONObject -> o.optJSONObject("continuationCommand")?.optString("token")?.takeIf { it.isNotEmpty() }
+                ?: o.optJSONObject("nextContinuationData")?.optString("continuation")?.takeIf { it.isNotEmpty() }
+                ?: o.keys().asSequence().firstNotNullOfOrNull { walk(o.opt(it)) }
+            is JSONArray -> (0 until o.length()).firstNotNullOfOrNull { walk(o.opt(it)) }
+            else -> null
+        }
+        return runCatching { walk(JSONObject(json)) }.getOrNull()
     }
 
     /** Pide una página de InnerTube; [params] filtra el inicio (por ejemplo por estado de ánimo). Con [cookie] es personalizada. */
-    internal fun browse(browseId: String, cookie: String?, params: String? = null): String {
+    internal fun browse(browseId: String?, cookie: String?, params: String? = null, continuation: String? = null): String {
         val lang = java.util.Locale.getDefault()
         val body = JSONObject()
             .put("context", JSONObject().put("client", JSONObject().put("clientName", "WEB_REMIX").put("clientVersion", "1.20241023.01.00")
                 .put("hl", lang.language.ifBlank { "es" }).apply { if (lang.country.isNotBlank()) put("gl", lang.country) }))
-            .put("browseId", browseId).apply { if (params != null) put("params", params) }.toString()
-        val c = URL("$ORIGIN/youtubei/v1/browse?prettyPrint=false").openConnection() as HttpURLConnection
+            .apply { if (browseId != null) put("browseId", browseId); if (params != null) put("params", params); if (continuation != null) put("continuation", continuation) }
+            .toString()
+        val extra = continuation?.let { java.net.URLEncoder.encode(it, "UTF-8") }?.let { "&ctoken=$it&continuation=$it&type=next" }.orEmpty()
+        val c = URL("$ORIGIN/youtubei/v1/browse?prettyPrint=false$extra").openConnection() as HttpURLConnection
         try {
             c.connectTimeout = 10000; c.readTimeout = 15000
             c.requestMethod = "POST"; c.doOutput = true

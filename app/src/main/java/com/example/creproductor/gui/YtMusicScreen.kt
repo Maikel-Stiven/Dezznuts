@@ -1,56 +1,116 @@
 package com.example.creproductor.gui
 
+import android.webkit.CookieManager
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudQueue
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import android.webkit.CookieManager
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import com.example.creproductor.data.YtItem
 import com.example.creproductor.data.YtLibrary
 import com.example.creproductor.data.YtMusic
 import com.example.creproductor.data.YtTrack
 import com.example.creproductor.i18n.tr
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.text.input.ImeAction
+import com.example.creproductor.data.isYoutube
 
 /**
  * Pestaña "YT Music": buscador, el inicio de YouTube Music (estantes y estados de ánimo) y, con sesión, tus "Me gusta". Todo es opcional: mientras
  * YouTube Music esté apagado solo explica qué es y ofrece activarlo. La reproducción pasa por el mismo reproductor.
  */
 @Composable
-fun YtMusicScreen(onPlay: (YtTrack) -> Unit) {
+fun YtMusicScreen(
+    viewModel: MusicViewModel = viewModel(),
+    onPlay: (YtTrack) -> Unit,
+    onPlayQueue: (tracks: List<YtTrack>, startIndex: Int) -> Unit = {list, index -> list.getOrNull(index)?.let(onPlay)}
+) {
+    val ytPlaylists by viewModel.ytPlaylists.collectAsState()
+    val currentSong by viewModel.currentSong.collectAsState()
+    val isPlaying by viewModel.isPlaying.collectAsState()
+    val ytDownloading by viewModel.ytDownloading.collectAsState()
+
     val context = LocalContext.current
+
+    var trackToAddToPlaylist by remember { mutableStateOf<YtTrack?>(null) }
     var enabled by remember { mutableStateOf(YtMusic.isEnabled(context)) }
     var loggedIn by remember { mutableStateOf(YtLibrary.isLoggedIn(context)) }
-    var reload by remember { mutableStateOf(0) }
+    var reload by remember { mutableIntStateOf(0) }
     var query by remember { mutableStateOf("") }
-    val focusManager = LocalFocusManager.current
-    val keyboardController = LocalSoftwareKeyboardController.current
+    var selectedFilter by remember { mutableStateOf("Todos") }
 
-    // Al reproducir se suelta el buscador. Si el campo conserva el foco, Android vuelve a mostrar el
-    // teclado al regresar a la app, incluso encima del reproductor o del menú de la canción.
+    var selectedItemForDetail by remember { mutableStateOf<YtItem?>(null) }
+    var selectedPlaylistIdForDetail by remember { mutableStateOf<String?>(null) }
+    var selectedTrackForMenu by remember { mutableStateOf<YtTrack?>(null) }
+    var showCreatePlaylistDialog by remember { mutableStateOf(false) }
+
+    // Búsquedas recientes reales y guardadas (una por línea).
+    val historyPrefs = remember { context.getSharedPreferences("dezznuts_prefs", android.content.Context.MODE_PRIVATE) }
+    var searchHistory by remember {
+        mutableStateOf(historyPrefs.getString("yt_search_history", "").orEmpty().lines().filter { it.isNotBlank() })
+    }
+    LaunchedEffect(searchHistory) { historyPrefs.edit().putString("yt_search_history", searchHistory.joinToString("\n")).apply() }
+    fun addToHistory(q: String) {
+        val clean = q.trim()
+        if (clean.isNotEmpty()) searchHistory = (listOf(clean) + searchHistory.filter { it != clean }).take(10)
+    }
+
+    // Al reproducir se suelta el buscador: si el campo conserva el foco, Android vuelve a sacar el teclado al
+    // regresar a la app, incluso encima del reproductor o del menú de la canción.
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val playTrack: (YtTrack) -> Unit = { track ->
         focusManager.clearFocus(force = true)
         keyboardController?.hide()
@@ -71,47 +131,328 @@ fun YtMusicScreen(onPlay: (YtTrack) -> Unit) {
         return
     }
     // Refresca al volver de iniciar sesión; y mientras no haya sesión, va cargando la página de Google por adelantado.
-    androidx.compose.runtime.LaunchedEffect(YtLogin.authVersion) {
+    LaunchedEffect(YtLogin.authVersion) {
         if (YtLogin.authVersion > 0) { loggedIn = YtLibrary.isLoggedIn(context); reload++ }
     }
     // La página de Google se precarga (inicio de sesión al instante) solo en equipos con margen: un WebView cuesta
     // ~65 MB de RAM, y en uno de 2 GB eso es lo que más pesa de toda la app. Al salir de la pestaña se suelta.
-    val preload = remember { com.example.creproductor.gui.canPreloadWebView(context) }
-    androidx.compose.runtime.LaunchedEffect(loggedIn) { YtLogin.warm = !loggedIn && preload }
-    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { YtLogin.warm = false } }
+    val preload = remember { canPreloadWebView(context) }
+    LaunchedEffect(loggedIn) { YtLogin.warm = !loggedIn && preload }
+    DisposableEffect(Unit) { onDispose { YtLogin.warm = false } }
 
     var searching by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize()) {
-        // Cabecera de la interfaz de Maikel: título, lupa y sesión.
-        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(tr("YT Music"), style = MaterialTheme.typography.headlineSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, modifier = Modifier.weight(1f))
-            IconButton(onClick = {
-                searching = !searching
-                if (!searching) {
-                    query = ""
-                    focusManager.clearFocus(force = true)
-                    keyboardController?.hide()
-                }
-            }) {
-                Icon(if (searching) Icons.Default.Close else Icons.Default.Search, contentDescription = tr("Buscar en YouTube Music"))
-            }
-            androidx.compose.material3.OutlinedButton(
-                onClick = {
-                    if (loggedIn) { YtLibrary.logout(context); CookieManager.getInstance().removeAllCookies(null); loggedIn = false }
-                    else YtLogin.open = true
-                },
-                shape = MaterialTheme.shapes.small,
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-            ) { Text(tr(if (loggedIn) "Cerrar sesión" else "Iniciar sesión"), style = MaterialTheme.typography.labelMedium) }
+
+    val activeItem = selectedItemForDetail
+    val activePlaylist = ytPlaylists.find { it.id == selectedPlaylistIdForDetail }
+
+    if (activeItem != null) {
+        BackHandler { selectedItemForDetail = null }
+        val isArtist = activeItem.browseId?.startsWith("UC") == true ||
+                activeItem.browseId?.startsWith("FEmusic_artist") == true ||
+                activeItem.subtitle.contains("Artista", ignoreCase = true) ||
+                activeItem.subtitle.contains("Artist", ignoreCase = true)
+
+        if (isArtist) {
+            YtArtistScreen(
+                item = activeItem,
+                onBackClick = { selectedItemForDetail = null },
+                onPlayQueue = onPlayQueue,
+                onOpenItem = { newItem -> selectedItemForDetail = newItem },
+                onTrackOptionsClick = { selectedTrackForMenu = it }
+            )
+        } else {
+            YtAlbumScreen(
+                item = activeItem,
+                onBackClick = { selectedItemForDetail = null },
+                onPlayQueue = onPlayQueue,
+                onTrackOptionsClick = { selectedTrackForMenu = it }
+            )
         }
-        if (searching) OutlinedTextField(
-            value = query, onValueChange = { query = it }, singleLine = true,
-            placeholder = { Text(tr("Buscar en YouTube Music")) },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-            trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Default.Close, contentDescription = tr("Limpiar")) } },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+    } else if (activePlaylist != null) {
+        BackHandler { selectedPlaylistIdForDetail = null }
+        val currentYtUrl = currentSong?.takeIf { it.isYoutube }?.contentUri?.toString()
+        YtPlaylistDetailScreen(
+            playlist = activePlaylist,
+            currentSongUrl = currentYtUrl,
+            isPlaying = isPlaying,
+            onTrackClick = {index ->
+                viewModel.playYtPlaylist(activePlaylist, startIndex = index)
+            },
+            onPlayAllClick = {
+                if (activePlaylist.tracks.isNotEmpty()){
+                    viewModel.playYtPlaylist(activePlaylist, startIndex = 0)
+                }
+            },
+            onShuffleClick = {
+                if (activePlaylist.tracks.isNotEmpty()){
+                    viewModel.playYtQueue(activePlaylist.tracks.shuffled(), startIndex = 0, isStatic = true)
+                }
+            },
+            onAddSongsClick = {
+                selectedPlaylistIdForDetail = null
+                searching = true
+            },
+            onBackClick = { selectedPlaylistIdForDetail = null },
+            onRemoveTrackFromPlaylist = { track ->
+                viewModel.removeTrackFromYtPlaylist(activePlaylist.id, track.url)
+            },
+            onTrackOptionsClick = {track ->
+                selectedTrackForMenu = track
+            },
+            onDownloadAll = { viewModel.downloadYt(activePlaylist.tracks) },
+            downloading = ytDownloading,
+            onDeletePlaylist = {
+                val idToDelete = activePlaylist.id
+                selectedPlaylistIdForDetail = null
+                viewModel.deleteYtPlaylist(idToDelete)
+            }
         )
-        if (searching && query.isNotBlank()) YtMusicResults(query, playTrack)
-        else YtHomeContent(loggedIn = loggedIn, reload = reload, onPlay = playTrack, onLogin = { YtLogin.open = true })
+    } else {
+        Column(Modifier.fillMaxSize()) {
+            // Cabecera de la interfaz: título, lupa y sesión.
+            Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("YT Music"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                IconButton(onClick = {
+                    searching = !searching
+                    if (!searching) { query = ""; focusManager.clearFocus(force = true); keyboardController?.hide() }
+                }) {
+                    Icon(if (searching) Icons.Default.Close else Icons.Default.Search, contentDescription = tr("Buscar en YouTube Music"))
+                }
+                OutlinedButton(
+                    onClick = {
+                        if (loggedIn) { YtLibrary.logout(context); CookieManager.getInstance().removeAllCookies(null); loggedIn = false }
+                        else YtLogin.open = true
+                    },
+                    shape = MaterialTheme.shapes.small,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) { Text(tr(if (loggedIn) "Cerrar sesión" else "Iniciar sesión"), style = MaterialTheme.typography.labelMedium) }
+            }
+
+            if (searching) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    singleLine = true,
+                    placeholder = { Text(tr("Buscar en YouTube Music")) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    trailingIcon = {
+                        if (query.isNotEmpty()){
+                            IconButton(onClick = {query = ""}) {
+                                Icon(Icons.Default.Close, contentDescription = tr("Limpiar"))
+                            }
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(
+                        onSearch = { addToHistory(query); keyboardController?.hide() }
+                    ),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+
+                if (query.isNotBlank()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("Todos", "Canciones", "Artistas").forEach { filter ->
+                            FilterChip(
+                                selected = selectedFilter == filter,
+                                onClick = { selectedFilter = filter },
+                                label = { Text(tr(filter)) }
+                            )
+                        }
+                    }
+                }
+
+                if (query.isBlank()) {
+                    LazyColumn(Modifier.fillMaxSize()) {
+                        item {
+                            Text(
+                                tr("Búsquedas recientes"),
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
+                        items(searchHistory, key = { "hist_$it" }) { item ->
+                            ListItem(
+                                headlineContent = { Text(item) },
+                                leadingContent = { Icon(Icons.Default.History, contentDescription = null) },
+                                trailingContent = {
+                                    IconButton( onClick =  {
+                                        searchHistory = searchHistory.filter { it !=  item}
+                                    }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = tr("Eliminar del historial"),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                modifier = Modifier.clickable { query = item; addToHistory(item) }
+                            )
+                        }
+                    }
+                } else {
+                    YtMusicResults(
+                        query = query,
+                        filter = selectedFilter,
+                        onPlay = { track -> addToHistory(query); playTrack(track) },
+                        onTrackOptionsClick = { selectedTrackForMenu = it }
+                    )
+                }
+            } else {
+                YtHomeContent(
+                    loggedIn = loggedIn,
+                    reload = reload,
+                    ytPlaylists = ytPlaylists,
+                    onPlay = playTrack,
+                    onOpenYtPlaylist = { playlist ->
+                        selectedPlaylistIdForDetail = playlist.id
+                    },
+                    onLogin = { YtLogin.open = true },
+                    onOpenItem = { item -> selectedItemForDetail = item },
+                    onTrackOptionsClick = { selectedTrackForMenu = it },
+                    onCreatePlaylistClick = { showCreatePlaylistDialog = true },
+                    onPlayQueue = onPlayQueue
+                )
+            }
+        }
+    }
+
+    selectedTrackForMenu?.let { track ->
+        YtTrackMenuSheet(
+            track = track,
+            onDismiss = { selectedTrackForMenu = null },
+            onPlay = playTrack,
+            onGoToArtist = { artistName ->
+                selectedItemForDetail = YtItem(
+                    title = artistName,
+                    subtitle = com.example.creproductor.i18n.I18n.tr(context, "Artista"),
+                    thumbnail = track.thumbnail,
+                    track = null,
+                    browseId = "FEmusic_artist"
+                )
+            },
+            onAddToPlaylist = {
+               trackToAddToPlaylist = track
+                selectedTrackForMenu = null
+
+            },
+            downloaded = viewModel.isYtDownloaded(track.url),
+            onDownload = { viewModel.downloadYt(listOf(it)) },
+            onRemoveDownload = { viewModel.deleteYtDownload(it.url) }
+        )
+    }
+
+    trackToAddToPlaylist?.let { track ->
+        YtAddToPlaylistDialog(
+            playlists = ytPlaylists,
+            track = track,
+            onDismiss = {trackToAddToPlaylist = null},
+            onSelectedPlaylist = {targetPlaylist ->
+                viewModel.addTrackToYtPlaylist(targetPlaylist.id, track)
+                trackToAddToPlaylist = null
+            },
+            onCreateNewClick = {
+                showCreatePlaylistDialog = true
+            }
+        )
+    }
+
+    if (showCreatePlaylistDialog) {
+        YtCreatePlaylistDialog(
+            onDismiss = { showCreatePlaylistDialog = false },
+            onCreate = { name ->
+                viewModel.createYtPlaylist(name)
+                trackToAddToPlaylist?.let { track ->
+                    val newPlaylist = viewModel.ytPlaylists.value.lastOrNull()
+                    newPlaylist?.let { viewModel.addTrackToYtPlaylist(it.id, track) }
+                    trackToAddToPlaylist = null
+                }
+                showCreatePlaylistDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun YtMusicResults(
+    query: String,
+    filter: String = "Todos",
+    onPlay: (YtTrack) -> Unit,
+    onTrackOptionsClick: (YtTrack) -> Unit = {}
+) {
+    val results by produceState<Result<List<YtTrack>>?>(null, query) {
+        value = null
+        if (query.isNotBlank()) {
+            kotlinx.coroutines.delay(450) // al teclear se cancela y vuelve a empezar: una sola búsqueda al parar
+            value = withContext(Dispatchers.IO) {
+                runCatching { YtMusic.search(query) }
+            }
+        }
+    }
+
+    val rawList = results?.getOrNull().orEmpty()
+    val list = remember(rawList, filter) {
+        when (filter) {
+            "Canciones" -> rawList.filter { it.title.isNotBlank() }
+            "Artistas" -> rawList.filter { it.artist.contains(query, ignoreCase = true) }
+            else -> rawList
+        }
+    }
+
+    when {
+        results == null -> {
+            Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+        list.isEmpty() -> {
+            Text(
+                text = if (results?.isFailure == true) tr("Sin conexión con YouTube Music. Revisa tu internet")
+                       else tr("No se encontraron resultados para \"%s\"").format(query),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(24.dp)
+            )
+        }
+        else -> {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 24.dp)
+            ) {
+                items(list, key = { "yt_res_" + it.url }) { track ->
+                    ListItem(
+                        headlineContent = { Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        supportingContent = { Text(track.artist, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        leadingContent = {
+                            AsyncImage(
+                                model = track.thumbnail,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(MaterialTheme.shapes.small)
+                            )
+                        },
+                        trailingContent = {
+                            IconButton(onClick = { onTrackOptionsClick(track) }) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable { onPlay(track) }
+                    )
+                }
+            }
+        }
     }
 }

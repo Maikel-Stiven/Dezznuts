@@ -71,13 +71,15 @@ fun QuickSelectDetailScreen(
         categorySongs.mapNotNull { it.coverModel }.distinct().take(3)
     }
 
+    val oneSongLabel = tr("1 canción")
+    val nSongsLabel = tr("%d canciones")
     val formattedInfo = remember (categorySongs) {
         val totalMs = categorySongs.sumOf { it.duration }
         val totalMins = totalMs / 1000 / 60
         val hours = totalMins / 60
         val minutes = totalMins % 60
 
-        val countText = if (categorySongs.size == 1) "1 canción" else "${categorySongs.size} canciones"
+        val countText = if (categorySongs.size == 1) oneSongLabel else nSongsLabel.format(categorySongs.size)
         val timeText = if (hours > 0) "$hours h $minutes min" else "$minutes min"
         "$countText • $timeText"
     }
@@ -363,7 +365,7 @@ private fun QuickSelectTrackItem(
         )
 
         val artistText = if (song.artist.isBlank() || song.artist.equals("<unknown>", ignoreCase = true) || song.artist.equals("unknown", ignoreCase = true)){
-            "Artista desconocido"
+            tr("Artista desconocido")
             }else{
                 song.artist
             }

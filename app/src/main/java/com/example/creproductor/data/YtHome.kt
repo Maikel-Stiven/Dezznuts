@@ -19,31 +19,51 @@ data class YtHomeFeed(val moods: List<YtMood>, val shelves: List<YtShelf>)
  */
 object YtHome {
     private const val TTL_MS = 10 * 60_000L
+    /** browseId de mentira para abrir un artista por su nombre (ver [tracksOf]). */
+    const val ARTIST_BY_NAME = "FEmusic_artist"
     private val cache = object : LinkedHashMap<String, Pair<Long, YtHomeFeed>>(8, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Pair<Long, YtHomeFeed>>) = size > 8
     }
 
-    /** Lanza [IOException] si no hay red o YouTube no responde. Bloquea: llamar fuera del hilo principal. */
+    /**
+     * Lanza [IOException] si no hay red y no hay nada guardado. Sin red se muestra el último inicio que se cargó
+     * (de memoria o del disco): mejor algo viejo que una pantalla vacía. Bloquea: llamar fuera del hilo principal.
+     */
     fun load(context: Context, params: String? = null, force: Boolean = false): YtHomeFeed {
         val cookie = YtLibrary.cookie(context)?.takeIf { YtLibrary.sapisid(it) != null }
         val key = "${cookie != null}|${java.util.Locale.getDefault().language}|${params.orEmpty()}"
-        if (!force) synchronized(cache) { cache[key] }?.let { (at, feed) ->
-            if (System.currentTimeMillis() - at < TTL_MS) return feed
+        val stale = synchronized(cache) { cache[key] }
+        if (!force) stale?.let { (at, feed) -> if (System.currentTimeMillis() - at < TTL_MS) return feed }
+        val disk = java.io.File(context.cacheDir, "yt_home/${key.hashCode()}.json")
+        val feed = try {
+            val json = YtLibrary.browse("FEmusic_home", cookie, params)
+            parse(json).also { if (it.shelves.isNotEmpty()) runCatching { disk.parentFile?.mkdirs(); disk.writeText(json) } }
+        } catch (e: IOException) {
+            return stale?.second ?: runCatching { parse(disk.readText()) }.getOrNull()?.takeIf { it.shelves.isNotEmpty() } ?: throw e
         }
-        val feed = parse(YtLibrary.browse("FEmusic_home", cookie, params))
-        if (feed.shelves.isEmpty()) throw IOException("Inicio vacío")
+        if (feed.shelves.isEmpty()) return stale?.second ?: throw IOException("Inicio vacío")
         synchronized(cache) { cache[key] = System.currentTimeMillis() to feed }
         return feed
     }
 
-    /** Canciones de un álbum o lista del inicio. El artista que falte en cada fila se toma del subtítulo de la tarjeta. */
+    private val tracksCache = object : LinkedHashMap<String, Pair<Long, List<YtTrack>>>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Pair<Long, List<YtTrack>>>) = size > 30
+    }
+
+    /** Canciones de un álbum o lista del inicio. El artista que falte en cada fila se toma del subtítulo de la tarjeta.
+     *  Se guardan 10 min: la hoja y la pantalla del álbum piden lo mismo y volver a abrirlo no repite la petición. */
     fun tracksOf(context: Context, item: YtItem): List<YtTrack> {
         val id = item.browseId ?: return emptyList()
+        // "Ir al artista" desde una canción suelta no trae el id del canal: sus canciones salen de la búsqueda.
+        if (id == ARTIST_BY_NAME) return YtMusic.search(item.title).filter { YtMusic.cleanArtist(it.artist).contains(item.title, true) }
+        synchronized(tracksCache) { tracksCache[id] }?.let { (at, list) ->
+            if (System.currentTimeMillis() - at < TTL_MS) return list
+        }
         val cookie = YtLibrary.cookie(context)?.takeIf { YtLibrary.sapisid(it) != null }
         val artist = artistOf(item.subtitle)
         return YtLibrary.parse(YtLibrary.browse(id, cookie)).map {
             it.copy(artist = it.artist.ifBlank { artist }, thumbnail = it.thumbnail ?: item.thumbnail)
-        }
+        }.also { if (it.isNotEmpty()) synchronized(tracksCache) { tracksCache[id] = System.currentTimeMillis() to it } }
     }
 
     internal fun parse(json: String): YtHomeFeed {

@@ -57,6 +57,7 @@ sealed class AppAction(
     object About: AppAction("Acerca de", "Versión, licencia y créditos", Icons.Default.Info)
     object Stats : AppAction("Estadísticas", "Lo más escuchado y las horas de música", Icons.Default.BarChart)
     object Options : AppAction("Opciones", "Portada con movimiento, color de la carátula, funciones en línea", Icons.Default.Tune)
+    object CheckUpdates : AppAction("Buscar actualizaciones", "Mira si hay una versión nueva en GitHub y la descarga", Icons.Default.SystemUpdate)
     object SendFeedback : AppAction("Enviar comentarios", "Reportar un fallo o pedir una función en GitHub", Icons.AutoMirrored.Filled.HelpOutline)
 }
 
@@ -67,7 +68,7 @@ private val DRAWER_GROUPS = listOf(
     "Biblioteca" to listOf(AppAction.Stats, AppAction.ScanFiles, AppAction.SearchDuplicates, AppAction.FixUnknownArtists),
     "Herramientas" to listOf(AppAction.AudioCutter, AppAction.SleepTimer),
     "Copia de seguridad" to listOf(AppAction.ExportBackup, AppAction.ImportBackup, AppAction.ImportM3u),
-    "Más" to listOf(AppAction.Options, AppAction.ClearImageCache, AppAction.About, AppAction.SendFeedback)
+    "Más" to listOf(AppAction.Options, AppAction.ClearImageCache, AppAction.About, AppAction.CheckUpdates, AppAction.SendFeedback)
 )
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
@@ -125,7 +126,7 @@ fun StatsDialog(songs: List<com.example.creproductor.data.Song>, counts: Map<Lon
             if (stats.plays == 0) Text(tr("Aún no hay reproducciones. Escucha algo de tu biblioteca y vuelve."))
             else Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 val hours = stats.listenedMs / 3_600_000.0
-                Text("${stats.plays} reproducciones · ${"%.1f".format(hours)} h de música", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                Text(tr("%d reproducciones · %.1f h de música").format(stats.plays, hours), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                 Text(tr("Canciones más escuchadas"), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 12.dp))
                 val byId = songs.associateBy { it.id }
                 stats.topSongs.forEachIndexed { i, (id, n) ->

@@ -23,6 +23,11 @@ object LyricsRepository {
     private const val USER_AGENT = "DEZZNUTS (https://github.com/Maikel-Stiven/Dezznuts)"
 
     private fun cacheFile(context: Context, song: Song) = File(File(context.filesDir, "lyrics"), "${song.id}.lrc")
+    private fun missingFile(context: Context, song: Song) = File(File(context.cacheDir, "lyrics_none"), "${song.id}")
+
+    /** LRCLIB ya dijo que no la tiene (hace menos de una semana): no se vuelve a buscar sola cada vez que se abre. */
+    fun knownMissing(context: Context, song: Song) =
+        missingFile(context, song).let { it.isFile && System.currentTimeMillis() - it.lastModified() < 7L * 24 * 3600 * 1000 }
 
     /** Letra disponible sin red (guardada, incrustada o `.lrc` vecino). Bloquea: llamar fuera del hilo principal. */
     fun local(context: Context, song: Song): Lyrics? {
@@ -63,7 +68,10 @@ object LyricsRepository {
         val found = exact ?: get("$BASE/search?track_name=$title" + (artist?.let { "&artist_name=${enc(it)}" } ?: ""))
             ?.let { runCatching { JSONArray(it) }.getOrNull() }
             ?.let { arr -> bestMatch((0 until arr.length()).mapNotNull { runCatching { arr.getJSONObject(it) }.getOrNull() }, seconds) }
-            ?: return null
+            ?: run {
+                runCatching { missingFile(context, song).apply { parentFile?.mkdirs() }.writeText("") }
+                return null
+            }
         runCatching {
             cacheFile(context, song).apply { parentFile?.mkdirs() }.writeText(
                 if (found.synced) found.lines.joinToString("\n") { "[%02d:%02d.%02d]%s".format(it.timeMs / 60000, it.timeMs / 1000 % 60, it.timeMs % 1000 / 10, it.text) }

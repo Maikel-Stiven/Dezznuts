@@ -179,19 +179,19 @@ fun SongItem(
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
+                Icon(
+                    imageVector = Icons.Default.MusicNote,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(26.dp)
+                )
+                // La nota queda debajo: si la portada no carga, se ve ella y no un cuadro vacío.
                 if (song.albumArtUri != null) {
                     AsyncImage(
                         model = song.coverModel,
                         contentDescription = tr("Portada"),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.MusicNote,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(26.dp)
                     )
                 }
                 // Calidad (Lossless / Hi-Res) en la base de la portada: el título conserva todo el ancho de la fila.

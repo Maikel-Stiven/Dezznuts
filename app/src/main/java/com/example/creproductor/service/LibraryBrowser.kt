@@ -38,7 +38,7 @@ object LibraryBrowser {
         val prefs = context.getSharedPreferences("dezznuts_prefs", Context.MODE_PRIVATE)
         return when {
             parentId == ROOT -> listOf(
-                folder(RECENT, "Recientes"), folder(FAVS, "Favoritas"), folder(PLAYLISTS, "Listas de reproducción"), folder(ALL, "Todas las canciones")
+                folder(RECENT, com.example.creproductor.i18n.I18n.tr(context, "Recientes")), folder(FAVS, com.example.creproductor.i18n.I18n.tr(context, "Favoritas")), folder(PLAYLISTS, com.example.creproductor.i18n.I18n.tr(context, "Listas de reproducción")), folder(ALL, com.example.creproductor.i18n.I18n.tr(context, "Todas las canciones"))
             )
             parentId == RECENT -> songsByIds(context, ids(prefs.getString("recent_ids", "")))
             parentId == FAVS -> songsByIds(context, (prefs.getStringSet("fav_ids", emptySet()) ?: emptySet()).mapNotNull { it.toLongOrNull() })

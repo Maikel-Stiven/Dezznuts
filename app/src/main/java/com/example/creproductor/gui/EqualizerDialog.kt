@@ -138,7 +138,7 @@ private fun EqualizerContent(onDismiss: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text(tr("Ecualizador"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 Text(
-                    if (enabled) "Activo" else "Apagado · señal sin tocar",
+                    tr(if (enabled) "Activo" else "Apagado · señal sin tocar"),
                     style = MaterialTheme.typography.labelMedium,
                     color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -155,7 +155,7 @@ private fun EqualizerContent(onDismiss: () -> Unit) {
                 FilterChip(
                     selected = preset == name,
                     onClick = { bands.clear(); bands.addAll(p); save() },
-                    label = { Text(name) }
+                    label = { Text(tr(name)) }
                 )
             }
             FilterChip(selected = preset == null, onClick = {}, enabled = false, label = { Text(tr("Personalizado")) })
@@ -169,7 +169,7 @@ private fun EqualizerContent(onDismiss: () -> Unit) {
                     selected = preset == name,
                     onClick = { bands.clear(); bands.addAll(p); save() },
                     label = { Text(name) },
-                    trailingIcon = { Icon(Icons.Default.Close, contentDescription = "Eliminar $name", Modifier.size(16.dp).clickable { deleting = name }) }
+                    trailingIcon = { Icon(Icons.Default.Close, contentDescription = tr("Eliminar %s").format(name), Modifier.size(16.dp).clickable { deleting = name }) }
                 )
             }
             if (preset == null && saved.size < SavedEqPresets.MAX) TextButton(onClick = { naming = true }) { Text(tr("Guardar +")) }
@@ -195,10 +195,11 @@ private fun EqualizerContent(onDismiss: () -> Unit) {
                 Readout("Ganancia", "%+.1f dB".format(band.gainDb), Modifier.weight(1.2f))
                 Readout("Q", "%.1f".format(band.q), Modifier.weight(0.7f))
             }
+            val qDescription = tr("Ancho de banda Q de la banda %d").format(selected + 1)
             Column {
                 Text(tr("Ancho de banda (Q)"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Slider(
-                    modifier = Modifier.semantics { contentDescription = "Ancho de banda Q de la banda ${selected + 1}" },
+                    modifier = Modifier.semantics { contentDescription = qDescription },
                     value = band.q,
                     onValueChange = { bands[selected] = band.copy(q = it) },
                     onValueChangeFinished = { save() },
@@ -233,7 +234,7 @@ private fun EqualizerContent(onDismiss: () -> Unit) {
         AlertDialog(
             onDismissRequest = { deleting = null },
             title = { Text(tr("¿Eliminar el preset?")) },
-            text = { Text("\"$name\" se borrará y quedará libre su espacio (máximo ${SavedEqPresets.MAX}).") },
+            text = { Text(tr("\"%s\" se borrará y quedará libre su espacio (máximo %d).").format(name, SavedEqPresets.MAX)) },
             confirmButton = { TextButton(onClick = { persistSaved(SavedEqPresets.remove(saved, name)); deleting = null }) { Text(tr("Sí")) } },
             dismissButton = { TextButton(onClick = { deleting = null }) { Text(tr("No")) } }
         )

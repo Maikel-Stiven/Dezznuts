@@ -15,8 +15,8 @@ android {
         applicationId = "io.github.maikelstiven.dezznuts"
         minSdk = 24
         targetSdk = 37
-        versionCode = 6
-        versionName = "1.2.1"
+        versionCode = 7
+        versionName = "1.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -96,5 +96,7 @@ dependencies {
     //implementación de seteo/configuración de etiquetas de las canciones
     implementation("net.jthink:jaudiotagger:3.0.1")
     //
+
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
 
 }

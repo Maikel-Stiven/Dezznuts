@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,16 +17,23 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CloudQueue
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -50,6 +58,7 @@ import com.example.creproductor.data.YtHome
 import com.example.creproductor.data.YtHomeFeed
 import com.example.creproductor.data.YtItem
 import com.example.creproductor.data.YtMood
+import com.example.creproductor.data.YtPlaylist
 import com.example.creproductor.data.YtTrack
 import com.example.creproductor.i18n.tr
 import kotlinx.coroutines.Dispatchers
@@ -62,24 +71,33 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun YtHomeContent(
-    loggedIn: Boolean, reload: Int, onPlay: (YtTrack) -> Unit, onLogin: () -> Unit
+    loggedIn: Boolean,
+    reload: Int,
+    ytPlaylists: List<YtPlaylist> = emptyList(),
+    onPlay: (YtTrack) -> Unit,
+    onOpenYtPlaylist: (YtPlaylist) -> Unit = {},
+    onLogin: () -> Unit,
+    onOpenItem: (YtItem) -> Unit = {},
+    onTrackOptionsClick: (YtTrack) -> Unit = {},
+    onCreatePlaylistClick: () -> Unit = {},
+    onPlayQueue: (List<YtTrack>, Int) -> Unit = { l, i -> l.getOrNull(i)?.let(onPlay) }
 ) {
     val context = LocalContext.current
     var mood by remember { mutableStateOf<YtMood?>(null) }
     var showLiked by remember { mutableStateOf(false) }
     var retry by remember { mutableIntStateOf(0) }
-    var opened by remember { mutableStateOf<YtItem?>(null) }
 
     // null = cargando; el estado de ánimo elegido se vuelve a pedir, el resto sale de la caché de 10 min.
     val result by produceState<Result<YtHomeFeed>?>(null, mood, loggedIn, reload, retry) {
         value = null
-        value = withContext(Dispatchers.IO) { runCatching { YtHome.load(context, mood?.params, force = retry > 0 && mood == null) } }
+        value = withContext(Dispatchers.IO) { runCatching { YtHome.load(context, mood?.params) } }
     }
     // Los estados de ánimo cambian al elegir uno; se conservan los del inicio general para poder volver.
     var allMoods by remember { mutableStateOf<List<YtMood>>(emptyList()) }
     result?.getOrNull()?.moods?.takeIf { mood == null && it.isNotEmpty() }?.let { allMoods = it }
 
     if (showLiked) {
+        androidx.activity.compose.BackHandler { showLiked = false }
         Column(Modifier.fillMaxSize()) {
             TextButton(onClick = { showLiked = false }, modifier = Modifier.padding(start = 8.dp)) { Text("← " + tr("Inicio")) }
             YtLikedList(reload, onPlay)
@@ -87,7 +105,7 @@ internal fun YtHomeContent(
         return
     }
 
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
         item {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (loggedIn) FilterChip(selected = false, onClick = { showLiked = true }, label = { Text(tr("Me gusta")) })
@@ -106,7 +124,7 @@ internal fun YtHomeContent(
                 }
             }
             else -> {
-                // Orden de la pantalla de Maikel: Selección rápida (con «Reproducir todo»), Accesos directos y los estantes.
+                // Orden de la pantalla: Selección rápida (con «Reproducir todo»), Accesos directos y los estantes.
                 val quick = feed.shelves.firstOrNull()?.items?.mapNotNull { it.track }.orEmpty()
                 val rest = feed.shelves.drop(1)
                 if (quick.isNotEmpty()) {
@@ -114,16 +132,25 @@ internal fun YtHomeContent(
                         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text(feed.shelves.first().title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                             Button(
-                                onClick = { onPlay(quick.first()) }, shape = MaterialTheme.shapes.extraSmall,
+                                onClick = { onPlayQueue(quick, 0) }, shape = MaterialTheme.shapes.extraSmall,
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                             ) { Text(tr("Reproducir todo"), style = MaterialTheme.typography.labelMedium) }
                         }
                     }
-                    items(quick.take(5), key = { "q" + it.url }) { t ->
+                    itemsIndexed(quick.take(5), key = { i, t -> "q$i|${t.url}" }) { _, t ->
                         ListItem(
                             headlineContent = { Text(t.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             supportingContent = { Text(t.artist, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             leadingContent = { AsyncImage(t.thumbnail, null, contentScale = ContentScale.Crop, modifier = Modifier.size(48.dp).clip(MaterialTheme.shapes.small)) },
+                            trailingContent = {
+                                IconButton(onClick = { onTrackOptionsClick(t) }) {
+                                    Icon(
+                                        imageVector = Icons.Default.MoreVert,
+                                        contentDescription = tr("Opciones"),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             modifier = Modifier.clickable { onPlay(t) }
                         )
@@ -135,7 +162,7 @@ internal fun YtHomeContent(
                     Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         val likedLabel = tr("Música que te gustó")
                         val cells = listOf(Triple(likedLabel, null as String?, { if (loggedIn) showLiked = true else onLogin() })) +
-                            shortcuts.map { it -> Triple(it.title, it.thumbnail, { it.track?.let(onPlay) ?: run { opened = it } }) }
+                                shortcuts.map { it -> Triple(it.title, it.thumbnail, { it.track?.let(onPlay) ?: onOpenItem(it) }) }
                         cells.chunked(3).forEach { row ->
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 row.forEach { (title, thumb, act) -> ShortcutTile(Modifier.weight(1f), title, thumb, act) }
@@ -144,41 +171,106 @@ internal fun YtHomeContent(
                         }
                     }
                 }
-                items(rest, key = { it.title }) { shelf ->
+                itemsIndexed(rest, key = { i, sh -> "s$i|${sh.title}" }) { _, shelf ->
                     Text(shelf.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp))
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(shelf.items, key = { it.track?.url ?: it.browseId ?: it.title }) { item ->
-                            YtItemCard(item) { item.track?.let(onPlay) ?: run { opened = item } }
+                        itemsIndexed(shelf.items, key = { i, it -> "$i|${it.track?.url ?: it.browseId ?: it.title}" }) { _, item ->
+                            YtItemCard(item) { item.track?.let(onPlay) ?: onOpenItem(item) }
                         }
                     }
                 }
+
             }
         }
-    }
-
-    opened?.let { item ->
-        ModalBottomSheet(onDismissRequest = { opened = null }) {
-            val tracks by produceState<Result<List<YtTrack>>?>(null, item) {
-                value = withContext(Dispatchers.IO) { runCatching { YtHome.tracksOf(context, item) } }
-            }
-            Text(item.title, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
-            val list = tracks?.getOrNull()
-            when {
-                tracks == null -> Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-                list.isNullOrEmpty() -> Text(tr("No se pudo cargar."), modifier = Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                else -> LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
-                    items(list, key = { it.url }) { t ->
-                        ListItem(
-                            headlineContent = { Text(t.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                            supportingContent = { Text(t.artist, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                            leadingContent = { AsyncImage(t.thumbnail, null, contentScale = ContentScale.Crop, modifier = Modifier.size(44.dp).clip(MaterialTheme.shapes.small)) },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            modifier = Modifier.clickable { opened = null; onPlay(t) }
+                // Sección "Tus playlists"
+                item {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            tr("Tus playlists"),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f)
                         )
+                        IconButton(onClick = onCreatePlaylistClick) {
+                            Icon(Icons.Default.Add, contentDescription = tr("Crear playlist"))
+                        }
+                    }
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        item(key = "yt_create_playlist_tile") {
+                            Surface(
+                                modifier = Modifier
+                                    .size(140.dp)
+                                    .clip(MaterialTheme.shapes.medium)
+                                    .clickable(onClick = onCreatePlaylistClick),
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh
+                            ) {
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.Add,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(36.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(
+                                        tr("Crear playlist"),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+                        }
+                        items(ytPlaylists, key = {"yt_pl" + it.id}) { pl ->
+                            YtPlaylistCard(
+                                playlist = pl,
+                                onClick = { onOpenYtPlaylist (pl) }
+                            )
+                        }
                     }
                 }
-            }
-        }
+    }
+}
+
+@Composable
+private fun YtPlaylistCard(playlist: YtPlaylist, onClick: () -> Unit){
+    val firstThumb = playlist.tracks.firstOrNull {!it.thumbnail.isNullOrBlank()}?.thumbnail
+    Column(modifier = Modifier.width(140.dp).clip(MaterialTheme.shapes.medium).clickable(onClick = onClick)) {
+       if (firstThumb != null){
+           AsyncImage(
+               model = firstThumb,
+               contentDescription = null,
+               contentScale = ContentScale.Crop,
+               modifier = Modifier.size(140.dp).clip(MaterialTheme.shapes.medium)
+           )
+       }else{
+           Surface(
+               modifier = Modifier.size(140.dp).clip(MaterialTheme.shapes.medium),
+               color = MaterialTheme.colorScheme.surfaceContainerHigh
+           ) {
+               Box(contentAlignment = Alignment.Center){
+                   Icon(
+                       imageVector = Icons.Default.CloudQueue,
+                       contentDescription = null,
+                       modifier = Modifier.size(48.dp),
+                       tint = MaterialTheme.colorScheme.primary
+                   )
+               }
+           }
+       }
+        Text(playlist.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+        Text("${playlist.tracks.size} " + tr("canciones"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -200,7 +292,7 @@ private fun ShortcutTile(modifier: Modifier, title: String, thumbnail: String?, 
     Surface(modifier.height(124.dp).clip(MaterialTheme.shapes.medium).clickable(onClick = onClick), color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.medium) {
         Column(Modifier.padding(8.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             if (thumbnail != null) AsyncImage(thumbnail, null, contentScale = ContentScale.Crop, modifier = Modifier.size(56.dp).clip(MaterialTheme.shapes.small))
-            else androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.ThumbUp, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(56.dp).padding(12.dp))
+            else Icon(Icons.Default.ThumbUp, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(56.dp).padding(12.dp))
             Text(title, style = MaterialTheme.typography.labelMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
         }
     }

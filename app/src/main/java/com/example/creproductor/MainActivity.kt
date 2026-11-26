@@ -121,6 +121,9 @@ class MainActivity : ComponentActivity() {
         if (intent.getBooleanExtra(EXTRA_OPEN_PLAYER, false)) openPlayerRequest.value = true
     }
 
+    override fun attachBaseContext(newBase: android.content.Context) =
+        super.attachBaseContext(com.example.creproductor.i18n.AppLanguage.wrap(newBase))
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (intent?.getBooleanExtra(EXTRA_OPEN_PLAYER, false) == true) openPlayerRequest.value = true
@@ -190,6 +193,8 @@ class MainActivity : ComponentActivity() {
                     val versionName = remember {
                         runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull() ?: "—"
                     }
+                    var checkUpdatesNow by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+                    com.example.creproductor.gui.UpdateChecker(versionName, checkUpdatesNow)
                     // Escribir etiquetas en archivos de audio exige el permiso del sistema (Android 11+): se pide para
                     // las canciones afectadas y, si el usuario acepta, se ejecuta la acción pendiente.
                     var pendingWrite by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -239,7 +244,7 @@ class MainActivity : ComponentActivity() {
                         uri?.let(viewModel::importBackup)
                     }
                     val openM3u = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-                        uri?.let { viewModel.importM3u(it, displayName(it)?.substringBeforeLast('.') ?: "Lista importada") }
+                        uri?.let { viewModel.importM3u(it, displayName(it)?.substringBeforeLast('.') ?: com.example.creproductor.i18n.I18n.tr(this@MainActivity, "Lista importada")) }
                     }
                     var playlistToExport by remember { mutableStateOf<com.example.creproductor.data.Playlist?>(null) }
                     val saveM3u = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("audio/x-mpegurl")) { uri ->
@@ -266,6 +271,7 @@ class MainActivity : ComponentActivity() {
                             AppAction.ClearImageCache -> showClearImageCacheDialog = true
                             AppAction.HiFiAudio -> showHiFiAudioDialog = true
                             AppAction.About -> showAboutDialog = true
+                            AppAction.CheckUpdates -> checkUpdatesNow++
                             AppAction.Options -> if (navStyle == com.example.creproductor.gui.NavStyle.BOTTOM) section = AppSection.SETTINGS else showOptionsScreen = true
                             AppAction.Stats -> showStatsDialog = true
                             AppAction.SendFeedback -> {

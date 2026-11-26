@@ -50,7 +50,7 @@ class DezzWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val prefs = context.getSharedPreferences("dezznuts_prefs", Context.MODE_PRIVATE)
         val title = prefs.getString(KEY_TITLE, null) ?: "DEZZNUTS"
-        val artist = prefs.getString(KEY_ARTIST, null) ?: "Toca para abrir"
+        val artist = prefs.getString(KEY_ARTIST, null) ?: com.example.creproductor.i18n.I18n.tr(context, "Toca para abrir")
         val playing = prefs.getBoolean(KEY_PLAYING, false)
         provideContent {
             Row(
@@ -63,9 +63,9 @@ class DezzWidget : GlanceAppWidget() {
                     Text(artist, maxLines = 1, style = TextStyle(color = ColorProvider(Color(0xFFB0B0B0)), fontSize = 12.sp))
                 }
                 Spacer(GlanceModifier.width(8.dp))
-                Control(R.drawable.ic_w_prev, "Anterior", KeyEvent.KEYCODE_MEDIA_PREVIOUS, Color.White)
-                Control(if (playing) R.drawable.ic_w_pause else R.drawable.ic_w_play, if (playing) "Pausar" else "Reproducir", KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, Purple)
-                Control(R.drawable.ic_w_next, "Siguiente", KeyEvent.KEYCODE_MEDIA_NEXT, Color.White)
+                Control(R.drawable.ic_w_prev, com.example.creproductor.i18n.I18n.tr(context, "Anterior"), KeyEvent.KEYCODE_MEDIA_PREVIOUS, Color.White)
+                Control(if (playing) R.drawable.ic_w_pause else R.drawable.ic_w_play, com.example.creproductor.i18n.I18n.tr(context, if (playing) "Pausar" else "Reproducir"), KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, Purple)
+                Control(R.drawable.ic_w_next, com.example.creproductor.i18n.I18n.tr(context, "Siguiente"), KeyEvent.KEYCODE_MEDIA_NEXT, Color.White)
             }
         }
     }

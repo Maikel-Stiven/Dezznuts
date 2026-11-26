@@ -320,7 +320,7 @@ fun SearchOverlayScreen(
 
                     item {
                         Text(
-                            text = "Canciones (${matchingSongs.size})",
+                            text = tr("Canciones (%d)").format(matchingSongs.size),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
@@ -367,7 +367,7 @@ fun SearchOverlayScreen(
                 if ((currentSubTab == SearchSubTab.ALL || currentSubTab == SearchSubTab.ALBUMS) && matchingAlbums.isNotEmpty()){
                     item {
                         Text(
-                            text = "Álbumes (${matchingAlbums.size})",
+                            text = tr("Álbumes (%d)").format(matchingAlbums.size),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
@@ -408,7 +408,7 @@ fun SearchOverlayScreen(
                 if ((currentSubTab == SearchSubTab.ALL || currentSubTab == SearchSubTab.ARTISTS) && matchingArtists.isNotEmpty()){
                     item {
                         Text(
-                            text = "Artistas (${matchingArtists.size})",
+                            text = tr("Artistas (%d)").format(matchingArtists.size),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
@@ -425,7 +425,7 @@ fun SearchOverlayScreen(
 
                         SearchCategoryItem(
                             title = song.artist,
-                            subtitle = "$artistAlbumsCount álbumes •  $artistSongsCounts canciones",
+                            subtitle = tr("%d álbumes •  %d canciones").format(artistAlbumsCount, artistSongsCounts),
                             // Foto real del artista (Deezer) cacheada desde aquí; si no se
                             // consigue, se cae a la portada de una de sus canciones.
                             imageModel = rememberArtistPhoto(song.artist, song.coverModel),

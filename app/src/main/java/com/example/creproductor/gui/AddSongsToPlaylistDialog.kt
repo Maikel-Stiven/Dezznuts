@@ -134,7 +134,7 @@ fun AddSongsToPlaylistDialog(
                             onDismiss()
                         }
                     ) {
-                        Text("Añadir (${selectedSongIds.size})")
+                        Text(tr("Añadir (%d)").format(selectedSongIds.size))
                     }
                 }
             }

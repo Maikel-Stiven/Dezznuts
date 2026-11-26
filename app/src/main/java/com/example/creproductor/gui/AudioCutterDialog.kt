@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.creproductor.data.Song
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.LaunchedEffect
 
 private const val MIN_CUT_MS = 1000L
@@ -46,10 +47,11 @@ fun AudioCutterDialog(song: Song, cutting: Boolean, onCut: (startMs: Long, endMs
     // Previsualización: se oye solo el tramo elegido y se detiene sola al llegar al final.
     LaunchedEffect(previewing) {
         if (!previewing) { runCatching { if (player.isPlaying) player.pause() }; return@LaunchedEffect }
+        // prepare() lee el archivo: fuera del hilo principal para no congelar la pantalla en equipos lentos.
         runCatching {
-            player.reset(); player.setDataSource(context, song.contentUri); player.prepare()
+            withContext(kotlinx.coroutines.Dispatchers.IO) { player.reset(); player.setDataSource(context, song.contentUri); player.prepare() }
             player.seekTo(range.start.toInt()); player.start()
-        }.onFailure { previewing = false; return@LaunchedEffect }
+        }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it; previewing = false; return@LaunchedEffect }
         while (previewing && player.isPlaying && player.currentPosition < range.endInclusive) delay(100)
         previewing = false
     }
@@ -73,16 +75,16 @@ fun AudioCutterDialog(song: Song, cutting: Boolean, onCut: (startMs: Long, endMs
                     enabled = !cutting
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Inicio ${formatDuration(range.start.toLong())}")
-                    Text("Fin ${formatDuration(range.endInclusive.toLong())}")
+                    Text(tr("Inicio %s").format(formatDuration(range.start.toLong())))
+                    Text(tr("Fin %s").format(formatDuration(range.endInclusive.toLong())))
                 }
                 Text(
-                    "Duración del corte: ${formatDuration((range.endInclusive - range.start).toLong())}",
+                    tr("Duración del corte: %s").format(formatDuration((range.endInclusive - range.start).toLong())),
                     color = MaterialTheme.colorScheme.primary
                 )
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
                     OutlinedButton(onClick = { previewing = !previewing }, enabled = !cutting) {
-                        Text(if (previewing) "Detener" else "Escuchar tramo")
+                        Text(tr(if (previewing) "Detener" else "Escuchar tramo"))
                     }
                     if (cutting) {
                         CircularProgressIndicator(Modifier.padding(start = 16.dp).padding(2.dp), strokeWidth = 2.dp)

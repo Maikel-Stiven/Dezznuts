@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ListItem
@@ -177,7 +178,7 @@ internal fun YtLikedList(reload: Int, onPlay: (YtTrack) -> Unit, modifier: Modif
         list == null -> Text(tr("No se pudo cargar. Revisa la conexión o inicia sesión de nuevo."), modifier = modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
         list.isEmpty() -> Text(tr("Aún no tienes canciones con Me gusta."), modifier = modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
         else -> LazyColumn(modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 16.dp)) {
-            items(list, key = { it.url }) { t ->
+            itemsIndexed(list, key = { i, t -> "$i|${t.url}" }) { _, t ->
                 ListItem(
                     headlineContent = { Text(t.title, maxLines = 1) },
                     supportingContent = { Text(t.artist, maxLines = 1) },

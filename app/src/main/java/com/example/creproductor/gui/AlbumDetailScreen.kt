@@ -95,13 +95,15 @@ fun AlbumDetailScreen(
         albumSongs.firstOrNull{it.albumArtUri != null}?.coverModel
     }
 
+    val oneSongLabel = tr("1 canción")
+    val nSongsLabel = tr("%d canciones")
     val formattedTotalDuration = remember (albumSongs) {
         val totalMs = albumSongs.sumOf { it.duration }
         val totalMinutes = totalMs / 1000 / 60
         val hours = totalMinutes / 60
         val minutes = totalMinutes % 60
 
-        val songCountText = if (albumSongs.size == 1) "1 canción" else "${albumSongs.size} canciones"
+        val songCountText = if (albumSongs.size == 1) oneSongLabel else nSongsLabel.format(albumSongs.size)
         val timeText = if (hours > 0) "$hours h $minutes min" else "$minutes min"
          "$songCountText • $timeText"
     }
@@ -343,7 +345,7 @@ private fun AlbumTrackItem(
         ) {
             Text(
                 text = song.title,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
@@ -351,7 +353,7 @@ private fun AlbumTrackItem(
             )
 
             val artistText = if (song.artist.isBlank() || song.artist.equals("<unknown>", ignoreCase = true)){
-                "Artista desconocido"
+                tr("Artista desconocido")
             }else{
                 song.artist
             }

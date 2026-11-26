@@ -21,7 +21,7 @@ fun AboutDialog(versionName: String, onDismiss: () -> Unit) {
         title = { Text(tr("DEZZNUTS"), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) },
         text = {
             Column {
-                Text("Versión $versionName", style = MaterialTheme.typography.titleSmall)
+                Text(tr("Versión %s").format(versionName), style = MaterialTheme.typography.titleSmall)
                 Text(
                     tr("Reproductor de música local pensado para sonar bien y gastar poco, también en teléfonos modestos."),
                     style = MaterialTheme.typography.bodyMedium,

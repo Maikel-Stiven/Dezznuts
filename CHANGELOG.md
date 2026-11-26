@@ -2,6 +2,42 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versionado semántico.
 
+## [1.3.0] - 2026-11-26
+
+### Novedades
+- **Seis idiomas**: español, inglés, portugués, francés, alemán e italiano, con selector propio en Opciones → Apariencia
+  → Idioma (en Android 13+ también en los ajustes del sistema). Unos 130 textos que salían siempre en español ahora se
+  traducen, también los avisos con números.
+- **Descargas de YouTube Music para escuchar sin conexión**: desde el menú de una canción o con el botón de una lista
+  entera (con avance por canción). Quedan en la lista «Descargadas» y no se borran solas; si la canción ya sonó, se copia
+  de la caché sin gastar datos.
+- **La cola de YouTube vive en el reproductor**: siguiente/anterior desde la notificación, auriculares y Android Auto;
+  sigue sola con la app cerrada; colas mixtas local + YT; lo escuchado se guarda en disco (hasta ~384 MB) y vuelve a
+  sonar sin internet.
+- **Máxima calidad con datos móviles** (Opciones, apagado): con Wi-Fi siempre suena a la mejor calidad (Opus ~160 kbps);
+  con datos se usa la mitad salvo que lo actives.
+- **Aviso de actualizaciones**: una vez al día la app pregunta a GitHub por la última release (sin enviar nada del
+  usuario; se apaga en Opciones → En línea). Si hay una más nueva muestra sus notas y «Descargar» la baja con el gestor de
+  descargas de Android; al terminar, tocar la notificación abre el instalador. También a mano: Opciones → Información →
+  Buscar actualizaciones.
+- **«Me gusta» completos**: se cargan todas las páginas, no solo las primeras ~100 canciones.
+- Unión de la 1.2.1 con la rama `temas/interfaces` de Maikel (playlists, artista y álbum de YT, selector de colores).
+
+### Mejoras
+- La canción de YT empieza sin esperar la portada de iTunes y la siguiente se prepara mientras suena la actual.
+- El buscador de YT espera a que dejes de escribir; búsquedas recientes reales y guardadas.
+- iTunes, fotos de artista, letras, portada animada e inicio de YT no guardan un fallo de red como «no existe» y
+  respetan los límites de cada servicio. Sin red, el inicio de YT muestra lo último cargado.
+- Sin portada se ve una nota morada en vez de un cuadro gris vacío.
+
+### Correcciones
+- No se podía salir de una playlist de YT; «Ir al artista» abría una pantalla vacía; una playlist con la misma canción
+  dos veces cerraba la app; una entrada dañada podía borrar todas las playlists de YT.
+- Una canción de YT que no se puede abrir muestra un aviso y se salta (antes la cola se quedaba parada).
+- El cortador de audio congelaba la pantalla al abrir el archivo; el selector de color reconstruía la app con cada
+  movimiento; «Reproducir todo» solo ponía una canción; «Me gusta» no se cerraba con Atrás.
+- Erratas: «Artista desconcido», «Aún no haz creado».
+
 ## [1.2.1] - 2026-10-26
 
 ### Correcciones

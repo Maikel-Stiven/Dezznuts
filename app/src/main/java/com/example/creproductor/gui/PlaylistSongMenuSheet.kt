@@ -81,7 +81,7 @@ fun PlaylistSongMenuSheet(
             ListItem(
                 headlineContent = {Text(song.title, maxLines = 1, overflow = TextOverflow.Ellipsis)},
                 supportingContent = {
-                    val artist = if (song.artist.isBlank() || song.artist == "<unknown>") "Artista desconocido" else song.artist
+                    val artist = if (song.artist.isBlank() || song.artist == "<unknown>") tr("Artista desconocido") else song.artist
                     Text("$artist • ${formatDuration(song.duration)}", maxLines = 1, overflow = TextOverflow.Ellipsis)
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
@@ -91,7 +91,7 @@ fun PlaylistSongMenuSheet(
             if (pickingPlaylist){
                 if (playlist.isEmpty()){
                     Text(
-                        "Aún no haz creado una lista de reproducción",
+                        tr("Aún no has creado una lista de reproducción"),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(16.dp)
@@ -119,7 +119,7 @@ fun PlaylistSongMenuSheet(
         AlertDialog(
             onDismissRequest = {confirmDelete = false},
             title = {Text(tr("¿Desea eliminar del dispositivo?"))},
-            text = {Text("\"${song.title}\" se borrará del dispositivo. No se puede deshacer esta acción ")},
+            text = {Text(tr("\"%s\" se borrará del dispositivo. No se puede deshacer esta acción").format(song.title))},
             confirmButton = {TextButton(onClick = {confirmDelete = false; onDismiss(); actions.onDeleteFromDevice()}) { Text(tr("Eliminar"))}},
             dismissButton = {TextButton(onClick = {confirmDelete = false}) {Text(tr("Cancelar")) }}
         )

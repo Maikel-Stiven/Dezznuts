@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
@@ -119,7 +118,7 @@ fun QuickSelectionScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 moods.forEach { (mood, songs) ->
-                    AssistChip(onClick = { onMoodClick(mood, songs) }, label = { Text("${mood.label} · ${songs.size}") })
+                    AssistChip(onClick = { onMoodClick(mood, songs) }, label = { Text("${tr(mood.label)} · ${songs.size}") })
                 }
             }
         }
@@ -186,6 +185,13 @@ fun MediaCard(
               .background(MaterialTheme.colorScheme.surfaceVariant),
           contentAlignment = Alignment.Center
       ) {
+          Icon(
+              imageVector = Icons.Default.MusicNote,
+              contentDescription = null,
+              tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.55f),
+              modifier = Modifier.size(36.dp)
+          )
+          // La nota queda debajo: si la portada no carga, se ve ella y no un cuadro vacío.
           if (song.albumArtUri != null) {
               AsyncImage(
                   model = song.coverModel,
@@ -193,20 +199,13 @@ fun MediaCard(
                   modifier = Modifier.fillMaxSize(),
                   contentScale = ContentScale.Crop
               )
-          } else {
-              Icon(
-                  imageVector = Icons.Default.MusicNote,
-                  contentDescription = null,
-                  tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                  modifier = Modifier.size(36.dp)
-              )
           }
       }
 
       Spacer(modifier = Modifier.height(6.dp))
       Text(
           text = song.title,
-          style = MaterialTheme.typography.bodySmall,
+          style = MaterialTheme.typography.titleSmall,
           maxLines = 1,
           overflow = TextOverflow.Ellipsis,
           modifier = Modifier.basicMarquee()

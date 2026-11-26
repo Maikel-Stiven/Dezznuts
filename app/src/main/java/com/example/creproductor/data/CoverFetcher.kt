@@ -44,10 +44,11 @@ object CoverFetcher {
      * Álbumes (sin repetir) en los que iTunes tiene esta canción: el álbum de tus etiquetas casi nunca coincide con el
      * de Apple (ediciones, "Remastered", "Deluxe"), y el bucle animado cuelga de un álbum concreto.
      */
-    suspend fun albumCandidates(title: String, artist: String): List<String> =
-        Itunes.search(title, artist)
-            .filter { isSameSong(title, artist, it.track, it.artist) }
-            .map { it.album }.filter { it.isNotBlank() }.distinct()
+    /** `null` = no se pudo preguntar a iTunes (sin red o límite): un "no hay" así no es fiable. */
+    suspend fun albumCandidates(title: String, artist: String): List<String>? =
+        Itunes.searchOrNull(title, artist)
+            ?.filter { isSameSong(title, artist, it.track, it.artist) }
+            ?.map { it.album }?.filter { it.isNotBlank() }?.distinct()
 
     suspend fun fetchOfficialCover(title: String, artist: String): RemoteMetaDataResult? =
         Itunes.search(title, artist).firstOrNull { isSameSong(title, artist, it.track, it.artist) }?.let {
@@ -67,7 +68,7 @@ data class ItunesHit(val track: String, val artist: String, val album: String, v
  * mínimo y pausa cuando el servicio responde 403/429. Un fallo de red no se guarda para poder reintentar.
  */
 object Itunes {
-    private const val GAP_MS = 1500L
+    private const val GAP_MS = 3000L // ≈20/min, el límite de iTunes por IP
     private const val BLOCK_MS = 60_000L
     private val gate = Mutex()
     private var last = 0L
@@ -79,18 +80,21 @@ object Itunes {
     private fun key(title: String, artist: String) =
         "${title.lowercase().filter { it.isLetterOrDigit() }}|${artist.lowercase().filter { it.isLetterOrDigit() }}"
 
-    suspend fun search(title: String, artist: String): List<ItunesHit> {
+    suspend fun search(title: String, artist: String): List<ItunesHit> = searchOrNull(title, artist).orEmpty()
+
+    /** Como [search], pero `null` si no se pudo preguntar (red, límite). */
+    suspend fun searchOrNull(title: String, artist: String): List<ItunesHit>? {
         val k = key(title, artist)
         synchronized(cache) { cache[k] }?.let { return it }
         return gate.withLock {
             synchronized(cache) { cache[k] }?.let { return@withLock it }
             val now = SystemClock.elapsedRealtime()
-            if (now < blockedUntil) return@withLock emptyList()
+            if (now < blockedUntil) return@withLock null
             (last + GAP_MS - now).takeIf { it > 0 }?.let { delay(it) }
             last = SystemClock.elapsedRealtime()
             val hits = withContext(Dispatchers.IO) { request(title, artist) }
             if (hits != null) synchronized(cache) { cache[k] = hits }
-            hits ?: emptyList()
+            hits
         }
     }
 

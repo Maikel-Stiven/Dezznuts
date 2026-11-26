@@ -138,9 +138,9 @@ object HiFiAudio {
         return manager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).mapNotNull { d ->
             val type = when (d.type) {
                 android.media.AudioDeviceInfo.TYPE_USB_DEVICE, android.media.AudioDeviceInfo.TYPE_USB_HEADSET -> "USB"
-                android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES, android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET -> "Cable"
+                android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES, android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET -> com.example.creproductor.i18n.I18n.tr(context, "Cable")
                 android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP -> "Bluetooth"
-                android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> "Altavoz"
+                android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> com.example.creproductor.i18n.I18n.tr(context, "Altavoz")
                 else -> return@mapNotNull null
             }
             val rates = d.sampleRates.takeIf { it.isNotEmpty() }?.joinToString("/") { "${it / 1000.0}".removeSuffix(".0") } ?: "—"

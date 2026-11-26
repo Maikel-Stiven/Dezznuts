@@ -40,10 +40,13 @@ object AnimatedCover {
         if (o.has("error") || !sameSong) null else o.optString("animated").takeIf { it.startsWith("https://") }
     }.getOrNull()
 
-    private fun key(song: Song) = "${song.artist.trim().lowercase()}|${song.album.trim().lowercase()}"
+    // El bucle es del álbum; sin álbum real (YouTube) va por canción, o todas las del artista compartirían uno.
+    private fun key(song: Song) = "${song.artist.trim().lowercase()}|${song.album.trim().lowercase()}" +
+        if (realAlbum(song).isBlank()) "|${song.title.trim().lowercase()}" else ""
 
     private fun cacheFile(context: Context, song: Song) =
-        File(File(context.cacheDir, "animated_cover_v2"), "${key(song).hashCode().toUInt().toString(16)}.txt")
+        File(File(context.cacheDir, "animated_cover_v3"), java.security.MessageDigest.getInstance("MD5")
+            .digest(key(song).toByteArray()).joinToString("") { "%02x".format(it) } + ".txt")
 
     /** Álbum de verdad: la etiqueta provisional "YouTube Music" no es un álbum (iTunes lo averigua por título y artista). */
     private fun realAlbum(song: Song) =
@@ -97,7 +100,9 @@ object AnimatedCover {
      * [IOException] si no hay conexión o el servicio está saturado (429/5xx) y no se pudo comprobar ninguno: eso no se
      * guarda, para reintentar luego. Solo se guarda el "no hay" si todo se pudo consultar.
      */
-    suspend fun find(context: Context, song: Song): String? {
+    suspend fun find(context: Context, song: Song): String? = withContext(Dispatchers.IO) { findBlocking(context, song) }
+
+    private suspend fun findBlocking(context: Context, song: Song): String? {
         if (!eligible(song)) return null
         val f = cacheFile(context, song)
         val k = key(song)
@@ -106,7 +111,8 @@ object AnimatedCover {
             return f.readText().takeIf { it != NONE }
         }
         val album = realAlbum(song)
-        val candidates = (listOf(album, baseAlbum(album)) + CoverFetcher.albumCandidates(song.title, song.artist))
+        val fromItunes = CoverFetcher.albumCandidates(song.title, song.artist)
+        val candidates = (listOf(album, baseAlbum(album)) + fromItunes.orEmpty())
             .filter { it.isNotBlank() && !it.startsWith("<") }.distinct().take(4)
         var failed: IOException? = null
         var answered = 0
@@ -120,7 +126,8 @@ object AnimatedCover {
                 }
             } catch (e: IOException) { answered--; failed = e }
         }
-        // Si alguna consulta falló, el "no hay" no es fiable: no se guarda.
+        // Si alguna consulta falló (o iTunes no contestó), el "no hay" no es fiable: no se guarda.
+        if (fromItunes == null && failed == null) return null
         if (failed != null) {
             if (answered == 0) { failedAt[k] = SystemClock.elapsedRealtime(); throw failed } else return null
         }

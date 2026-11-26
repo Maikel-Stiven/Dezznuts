@@ -87,7 +87,7 @@ fun FixUnknownArtistsDialog(
                 }
                 if (result != null && withoutSuggestion > 0) {
                     Text(
-                        "$withoutSuggestion más no se pueden deducir; edítalas una a una desde su menú (⋮).",
+                        tr("%d más no se pueden deducir; edítalas una a una desde su menú (⋮).").format(withoutSuggestion),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp)
@@ -96,7 +96,7 @@ fun FixUnknownArtistsDialog(
             }
         },
         confirmButton = {
-            if (selected.isNotEmpty()) Button(onClick = { onApply(selected) }) { Text("Corregir ${selected.size}") }
+            if (selected.isNotEmpty()) Button(onClick = { onApply(selected) }) { Text(tr("Corregir %d").format(selected.size)) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Cerrar")) } }
     )

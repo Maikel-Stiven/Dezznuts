@@ -22,6 +22,8 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.CloudQueue
@@ -63,7 +65,7 @@ private val OPTION_GROUPS = listOf(
     "Herramientas" to listOf(AppAction.AudioCutter, AppAction.SleepTimer),
     "Copia de seguridad" to listOf(AppAction.ExportBackup, AppAction.ImportBackup, AppAction.ImportM3u),
     "Almacenamiento" to listOf(AppAction.ClearImageCache),
-    "Información" to listOf(AppAction.About, AppAction.SendFeedback)
+    "Información" to listOf(AppAction.About, AppAction.CheckUpdates, AppAction.SendFeedback)
 )
 
 /**
@@ -105,6 +107,7 @@ fun OptionsScreen(versionName: String, onAction: (AppAction) -> Unit, onClose: (
                     NavStylePicker()
                 }
             }
+            item { LanguageRow() }
             item {
                 PrefSwitch(
                     "Color de la carátula en el reproductor", "Botones y progreso toman el tono de la portada",
@@ -134,6 +137,12 @@ fun OptionsScreen(versionName: String, onAction: (AppAction) -> Unit, onClose: (
             item { SectionTitle("En línea (opcional)") }
             item {
                 PrefSwitch(
+                    "Avisar de nuevas versiones", "Una vez al día pregunta a GitHub si salió una versión nueva (no envía nada tuyo)",
+                    Icons.Default.SystemUpdate, com.example.creproductor.data.AppUpdater::isAutoCheck, com.example.creproductor.data.AppUpdater::setAutoCheck
+                )
+            }
+            item {
+                PrefSwitch(
                     "Portada animada (en línea)", "Bucle de video del álbum, solo con Wi-Fi (servicio comunitario artwork.boidu.dev)",
                     Icons.Default.Movie, ::isAnimatedCoverOn, ::setAnimatedCover
                 )
@@ -148,6 +157,12 @@ fun OptionsScreen(versionName: String, onAction: (AppAction) -> Unit, onClose: (
                 PrefSwitch(
                     "Seguir con las recomendadas de YouTube", "Al terminar una canción pasa a la siguiente recomendada",
                     Icons.Default.Radio, YtMusic::isAutoNext, YtMusic::setAutoNext
+                )
+            }
+            if (ytEnabled) item {
+                PrefSwitch(
+                    "Máxima calidad con datos móviles", "Con Wi-Fi siempre suena a la mejor calidad (Opus ~160 kbps); con datos se ahorra la mitad salvo que lo actives",
+                    Icons.Default.GraphicEq, YtMusic::isHqOnMobile, YtMusic::setHqOnMobile
                 )
             }
             if (ytEnabled) item {
@@ -212,5 +227,38 @@ internal fun PrefSwitch(
         trailingContent = { androidx.compose.material3.Switch(checked = on, onCheckedChange = { on = it; write(context, it) }) },
         colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
         modifier = Modifier.clickable { on = !on; write(context, on) }.padding(horizontal = 8.dp)
+    )
+}
+
+@Composable
+private fun LanguageRow() {
+    val context = LocalContext.current
+    val current = remember { com.example.creproductor.i18n.AppLanguage.current(context) }
+    var open by remember { mutableStateOf(false) }
+    val names = com.example.creproductor.i18n.AppLanguage.OPTIONS
+    ListItem(
+        leadingContent = { Icon(Icons.Default.Language, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+        headlineContent = { Text(tr("Idioma"), style = MaterialTheme.typography.titleSmall) },
+        supportingContent = { Text(names.firstOrNull { it.first == current }?.let { if (it.first.isEmpty()) tr(it.second) else it.second } ?: current) },
+        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
+        modifier = Modifier.clickable { open = true }.padding(horizontal = 8.dp)
+    )
+    if (open) androidx.compose.material3.AlertDialog(
+        onDismissRequest = { open = false },
+        title = { Text(tr("Idioma")) },
+        text = {
+            Column {
+                names.forEach { (tag, name) ->
+                    Row(Modifier.fillMaxWidth().clickable {
+                        open = false
+                        (context as? android.app.Activity)?.let { com.example.creproductor.i18n.AppLanguage.set(it, tag) }
+                    }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material3.RadioButton(selected = tag == current, onClick = null)
+                        Text(if (tag.isEmpty()) tr(name) else name, Modifier.padding(start = 12.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { open = false }) { Text(tr("Cerrar")) } }
     )
 }

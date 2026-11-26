@@ -89,10 +89,14 @@ fun ArtistDetailScreen (
         )
     }
 
+    val oneSongLabel = tr("1 canción")
+    val nSongsLabel = tr("%d canciones")
+    val oneAlbumLabel = tr("1 álbum")
+    val nAlbumsLabel = tr("%d álbumes")
     val statsText = remember (artistSongs) {
         val albumsCount = albumsMap.keys.size.coerceAtLeast(if (artistSongs.isNotEmpty()) 1 else 0 )
-        val albumsLabel = if (albumsCount ==  1) "1 álbum" else "$albumsCount álbumes"
-        val songLabel = if (artistSongs.size == 1) "1 canción" else "${artistSongs.size} canciones"
+        val albumsLabel = if (albumsCount ==  1) oneAlbumLabel else nAlbumsLabel.format(albumsCount)
+        val songLabel = if (artistSongs.size == 1) oneSongLabel else nSongsLabel.format(artistSongs.size)
         "$albumsLabel • $songLabel"
     }
 
@@ -298,7 +302,7 @@ fun ArtistDetailScreen (
                                         modifier = Modifier.basicMarquee()
                                     )
 
-                                    val countLabel = if (albumSongs.size ==  1) "1 canción" else "${albumSongs.size} canciones"
+                                    val countLabel = if (albumSongs.size ==  1) tr("1 canción") else tr("%d canciones").format(albumSongs.size)
                                     Text(
                                         text = countLabel,
                                         style = MaterialTheme.typography.labelSmall,
@@ -399,7 +403,7 @@ private fun ArtistTrackItem(
             )
 
             val albumName = if (song.album.isBlank() || song.album.equals("unknown", ignoreCase = true)){
-                "Álbum desconocido"
+                tr("Álbum desconocido")
             }else{
                 song.album
             }

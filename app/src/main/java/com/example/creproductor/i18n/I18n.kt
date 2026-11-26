@@ -30,3 +30,37 @@ object I18n {
 
 @Composable
 fun tr(es: String): String = I18n.tr(LocalContext.current, es)
+
+/**
+ * Idioma propio de la app, independiente del del teléfono. En Android 13+ lo gestiona el sistema (también aparece en
+ * Ajustes → Apps → Idioma); antes se guarda aquí y [wrap] lo aplica al crear la actividad.
+ */
+object AppLanguage {
+    /** Código → nombre en su propio idioma (así lo reconoce quien no entiende el actual). "" = el del sistema. */
+    val OPTIONS = listOf("" to "Del sistema", "es" to "Español", "en" to "English", "pt" to "Português",
+        "fr" to "Français", "de" to "Deutsch", "it" to "Italiano")
+
+    private fun prefs(c: Context) = c.getSharedPreferences("dezznuts_prefs", Context.MODE_PRIVATE)
+
+    fun current(c: Context): String =
+        if (android.os.Build.VERSION.SDK_INT >= 33)
+            c.getSystemService(android.app.LocaleManager::class.java).applicationLocales.let { if (it.isEmpty) "" else it[0].language }
+        else prefs(c).getString("app_lang", "") ?: ""
+
+    fun set(activity: android.app.Activity, tag: String) {
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            activity.getSystemService(android.app.LocaleManager::class.java).applicationLocales =
+                if (tag.isEmpty()) android.os.LocaleList.getEmptyLocaleList() else android.os.LocaleList.forLanguageTags(tag)
+        } else {
+            prefs(activity).edit().putString("app_lang", tag).apply()
+            activity.recreate()
+        }
+    }
+
+    fun wrap(base: Context): Context {
+        if (android.os.Build.VERSION.SDK_INT >= 33) return base
+        val tag = prefs(base).getString("app_lang", "").orEmpty().ifEmpty { return base }
+        val cfg = android.content.res.Configuration(base.resources.configuration).apply { setLocale(java.util.Locale.forLanguageTag(tag)) }
+        return base.createConfigurationContext(cfg)
+    }
+}

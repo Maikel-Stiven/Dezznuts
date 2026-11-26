@@ -65,9 +65,9 @@ fun ClearImageCacheDialog(onDismiss: () -> Unit) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = when {
-                        currentSize == null -> "Calculando…"
-                        currentSize <= 0L -> "No hay imágenes en caché."
-                        else -> "Ocupa actualmente: ${formatCacheSize(currentSize)}"
+                        currentSize == null -> tr("Calculando…")
+                        currentSize <= 0L -> tr("No hay imágenes en caché.")
+                        else -> tr("Ocupa actualmente: %s").format(formatCacheSize(currentSize))
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
@@ -90,7 +90,7 @@ fun ClearImageCacheDialog(onDismiss: () -> Unit) {
                     }
                 }
             ) {
-                Text(if (isClearing) "Borrando…" else "Borrar")
+                Text(tr(if (isClearing) "Borrando…" else "Borrar"))
             }
         },
         dismissButton = {

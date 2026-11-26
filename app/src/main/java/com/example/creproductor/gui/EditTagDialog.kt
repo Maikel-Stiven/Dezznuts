@@ -132,7 +132,7 @@ fun EditTagDialog(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(if (isSearchingWeb) "Buscando..." else "Auto-web")
+                        Text(tr(if (isSearchingWeb) "Buscando..." else "Auto-web"))
                     }
 
                     OutlinedButton(
@@ -166,7 +166,7 @@ fun EditTagDialog(
                 if (suggestion != null && (artist != suggestion.artist || title != suggestion.title)) {
                     AssistChip(
                         onClick = { artist = suggestion.artist; title = suggestion.title },
-                        label = { Text("Usar «${suggestion.artist}» — «${suggestion.title}»", maxLines = 1) },
+                        label = { Text(tr("Usar «%s» — «%s»").format(suggestion.artist, suggestion.title), maxLines = 1) },
                         leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp)) }
                     )
                 }

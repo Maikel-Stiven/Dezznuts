@@ -76,8 +76,10 @@ fun LyricsPane(song: Song, currentPositionMs: () -> Long, onSeekTo: (Long) -> Un
     var searchNonce by remember(song.id) { mutableStateOf(0) }
 
     LaunchedEffect(song.id) {
-        state = withContext(Dispatchers.IO) { LyricsRepository.local(context, song) }
-            ?.let { LyricsState.Found(it) } ?: LyricsState.Missing
+        val (local, missing) = withContext(Dispatchers.IO) {
+            LyricsRepository.local(context, song) to LyricsRepository.knownMissing(context, song)
+        }
+        state = local?.let { LyricsState.Found(it) } ?: if (missing) LyricsState.NotOnline else LyricsState.Missing
         // Una canción de YouTube Music ya usa internet: la letra se busca sola, sin botón.
         if (state == LyricsState.Missing && song.isYoutube) searchNonce++
     }

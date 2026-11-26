@@ -79,19 +79,14 @@ fun HiFiAudioDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = tr("DEZZNUTS ya decodifica FLAC, ALAC y WAV sin pérdida. ") +
-                        "Estos ajustes deciden cómo se entrega esa señal al DAC del dispositivo. " +
-                        "Ninguno viene activado: pruébalos tú y quédate con el que mejor suene en tu equipo.",
+                    text = tr("DEZZNUTS ya decodifica FLAC, ALAC y WAV sin pérdida. Estos ajustes deciden cómo se entrega esa señal al DAC del dispositivo. Ninguno viene activado: pruébalos tú y quédate con el que mejor suene en tu equipo."),
                     style = MaterialTheme.typography.bodyMedium
                 )
 
                 AudioOption(
-                    title = "Salida en 32 bits (float)",
-                    description = "Evita que el audio de 24 y 32 bits se trunque a 16 bits antes de " +
-                        "mezclar, conservando el detalle fino. En archivos de 16 bits no cambia nada: " +
-                        "solo actúa en alta resolución.",
-                    risk = "Si tu dispositivo no soporta la salida float, los archivos de 24/32 bits " +
-                        "podrían no sonar. Desactívalo si notas silencio.",
+                    title = tr("Salida en 32 bits (float)"),
+                    description = tr("Evita que el audio de 24 y 32 bits se trunque a 16 bits antes de mezclar, conservando el detalle fino. En archivos de 16 bits no cambia nada: solo actúa en alta resolución."),
+                    risk = tr("Si tu dispositivo no soporta la salida float, los archivos de 24/32 bits podrían no sonar. Desactívalo si notas silencio."),
                     checked = floatOutput,
                     onCheckedChange = { enabled ->
                         floatOutput = enabled
@@ -101,11 +96,9 @@ fun HiFiAudioDialog(
                 )
 
                 AudioOption(
-                    title = "Audio offload (bit-perfect)",
-                    description = "Envía el archivo comprimido directamente al DSP, sin remuestreo ni " +
-                        "mezcla: conserva la frecuencia y la profundidad originales. Requiere Android 10+.",
-                    risk = "Depende del chip: algunos lo soportan mal y producen cortes o silencios. " +
-                        "Mientras esté activo no se aplican efectos y la salida float no interviene.",
+                    title = tr("Audio offload (bit-perfect)"),
+                    description = tr("Envía el archivo comprimido directamente al DSP, sin remuestreo ni mezcla: conserva la frecuencia y la profundidad originales. Requiere Android 10+."),
+                    risk = tr("Depende del chip: algunos lo soportan mal y producen cortes o silencios. Mientras esté activo no se aplican efectos y la salida float no interviene."),
                     checked = offload,
                     onCheckedChange = { enabled ->
                         offload = enabled
@@ -115,10 +108,9 @@ fun HiFiAudioDialog(
                 )
 
                 AudioOption(
-                    title = "ReplayGain",
-                    description = "Iguala el volumen entre pistas leyendo la etiqueta del archivo (FLAC, " +
-                        "OGG, MP3). Solo atenúa: nunca amplifica, así que no recorta ni comprime la dinámica.",
-                    risk = "Si el archivo no trae la etiqueta, suena igual que antes.",
+                    title = tr("ReplayGain"),
+                    description = tr("Iguala el volumen entre pistas leyendo la etiqueta del archivo (FLAC, OGG, MP3). Solo atenúa: nunca amplifica, así que no recorta ni comprime la dinámica."),
+                    risk = tr("Si el archivo no trae la etiqueta, suena igual que antes."),
                     checked = replayGain,
                     onCheckedChange = { enabled ->
                         replayGain = enabled
@@ -128,10 +120,9 @@ fun HiFiAudioDialog(
 
                 if (replayGain) {
                     AudioOption(
-                        title = "Permitir subir el volumen",
-                        description = "Si la pista es más baja que la referencia, la sube solo hasta lo que su " +
-                            "pico permite sin recortar (necesita la etiqueta de pico). Sin efecto con offload.",
-                        risk = "Activa el procesador de audio en 32 bits float; con offload no se aplica.",
+                        title = tr("Permitir subir el volumen"),
+                        description = tr("Si la pista es más baja que la referencia, la sube solo hasta lo que su pico permite sin recortar (necesita la etiqueta de pico). Sin efecto con offload."),
+                        risk = tr("Activa el procesador de audio en 32 bits float; con offload no se aplica."),
                         checked = rgBoost,
                         onCheckedChange = { enabled ->
                             rgBoost = enabled
@@ -141,14 +132,13 @@ fun HiFiAudioDialog(
                     TextButton(onClick = {
                         rgAlbum = !rgAlbum
                         HiFiAudio.setReplayGainAlbumMode(context, rgAlbum)
-                    }) { Text(if (rgAlbum) "Modo: álbum (conserva la dinámica del disco)" else "Modo: pista (iguala cada canción)") }
+                    }) { Text(tr(if (rgAlbum) "Modo: álbum (conserva la dinámica del disco)" else "Modo: pista (iguala cada canción)")) }
                 }
 
                 AudioOption(
-                    title = "Preferir DAC USB",
-                    description = "Dirige la salida al DAC USB cuando está conectado, evitando que el " +
-                        "mezclador del sistema lo ignore o remuestree.",
-                    risk = "Si tu DAC no negocia bien, desactívalo para volver a la salida automática.",
+                    title = tr("Preferir DAC USB"),
+                    description = tr("Dirige la salida al DAC USB cuando está conectado, evitando que el mezclador del sistema lo ignore o remuestree."),
+                    risk = tr("Si tu DAC no negocia bien, desactívalo para volver a la salida automática."),
                     checked = preferUsb,
                     onCheckedChange = { enabled ->
                         preferUsb = enabled
@@ -159,22 +149,20 @@ fun HiFiAudioDialog(
                 Column {
                     Text(tr("Fundido de entrada y salida"), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
                     Text(
-                        tr("Sube el volumen al empezar una pista o reanudar y lo baja al final de la pista y al pausar. ") +
-                            "En discos sin cortes (gapless) conviene dejarlo apagado.",
+                        tr("Sube el volumen al empezar una pista o reanudar y lo baja al final de la pista y al pausar. En discos sin cortes (gapless) conviene dejarlo apagado."),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     TextButton(onClick = {
                         val options = Fade.OPTIONS_MS
                         fadeMs = options[(options.indexOf(fadeMs) + 1) % options.size]
                         HiFiAudio.setFadeMs(context, fadeMs)
-                    }) { Text("Duración: ${Fade.label(fadeMs)}") }
+                    }) { Text(tr("Duración: %s").format(if (fadeMs <= 0) tr("Apagado") else Fade.label(fadeMs))) }
                 }
 
                 AudioOption(
-                    title = "Perfiles por salida",
-                    description = "Recuerda ReplayGain y ecualizador por separado para altavoz, cable, Bluetooth " +
-                        "y DAC USB, y los cambia solos al conectar o desconectar.",
-                    risk = "Al cambiar de salida se sustituyen tus ajustes actuales por los guardados de esa salida.",
+                    title = tr("Perfiles por salida"),
+                    description = tr("Recuerda ReplayGain y ecualizador por separado para altavoz, cable, Bluetooth y DAC USB, y los cambia solos al conectar o desconectar."),
+                    risk = tr("Al cambiar de salida se sustituyen tus ajustes actuales por los guardados de esa salida."),
                     checked = profiles,
                     onCheckedChange = { enabled ->
                         profiles = enabled
@@ -184,12 +172,10 @@ fun HiFiAudioDialog(
 
                 val canBitPerfect = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
                 AudioOption(
-                    title = "Bit-perfect con DAC USB",
-                    description = "Pide al DAC USB el formato exacto de cada pista para que el sistema no remuestree ni " +
-                        "mezcle (Android 14+). Solo entra si el DAC ofrece ese formato; si no, todo suena como siempre." +
-                        if (canBitPerfect) "" else " Requiere Android 14.",
-                    risk = "Se desactiva solo con ecualizador, subida de ReplayGain u offload (modifican la señal). " +
-                        "Si tu DAC se porta mal, apágalo.",
+                    title = tr("Bit-perfect con DAC USB"),
+                    description = tr("Pide al DAC USB el formato exacto de cada pista para que el sistema no remuestree ni mezcle (Android 14+). Solo entra si el DAC ofrece ese formato; si no, todo suena como siempre.") +
+                        if (canBitPerfect) "" else tr(" Requiere Android 14."),
+                    risk = tr("Se desactiva solo con ecualizador, subida de ReplayGain u offload (modifican la señal). Si tu DAC se porta mal, apágalo."),
                     checked = bitPerfect && canBitPerfect,
                     enabled = canBitPerfect,
                     onCheckedChange = { enabled ->
@@ -203,7 +189,7 @@ fun HiFiAudioDialog(
                 HorizontalDivider()
 
                 Text(
-                    text = tr("Salidas conectadas: ") + if (outputs.isEmpty()) "ninguna" else "",
+                    text = if (outputs.isEmpty()) tr("Salidas conectadas: ninguna") else tr("Salidas conectadas: "),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
@@ -213,16 +199,13 @@ fun HiFiAudioDialog(
                 }
 
                 Text(
-                    text = tr("Salida nativa del dispositivo: ") +
-                        (sampleRate?.let { "$it Hz" } ?: "desconocida"),
+                    text = if (sampleRate != null) tr("Salida nativa del dispositivo: %s").format("$sampleRate Hz") else tr("Salida nativa del dispositivo: desconocida"),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = tr("El sistema remuestrea a esa frecuencia todo lo que no coincida con ella ") +
-                        "(por ejemplo, un FLAC de CD a 44100 Hz). El offload evita ese remuestreo " +
-                        "en los dispositivos que lo soportan.",
+                    text = tr("El sistema remuestrea a esa frecuencia todo lo que no coincida con ella (por ejemplo, un FLAC de CD a 44100 Hz). El offload evita ese remuestreo en los dispositivos que lo soportan."),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -264,7 +247,7 @@ private fun AudioOption(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "Riesgo: $risk",
+                text = tr("Riesgo: %s").format(risk),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error
             )

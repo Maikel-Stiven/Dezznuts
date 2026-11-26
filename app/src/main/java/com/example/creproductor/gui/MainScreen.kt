@@ -356,7 +356,7 @@ fun MainScreen(
                                  viewModel = viewModel,
                                  onSongClick = { song, queue -> viewModel.playSong(song, customQueue = queue)},
                                  onSeeAllCategoryClick = {type, categorySongs -> open(Detail.Category(type.title, categorySongs)) },
-                                 onMoodClick = { mood, moodSongs -> open(Detail.Category(mood.label, moodSongs)) }
+                                 onMoodClick = { mood, moodSongs -> open(Detail.Category(com.example.creproductor.i18n.I18n.tr(viewModel.getApplication(), mood.label), moodSongs)) }
                              )
                              AppTab.SONGS -> Column(modifier = Modifier.fillMaxSize()) {
                                  Row(verticalAlignment = Alignment.CenterVertically) {
@@ -378,7 +378,7 @@ fun MainScreen(
                                      Box {
                                          var showSortMenu by remember { mutableStateOf(false) }
                                          IconButton(onClick = { showSortMenu = true }) {
-                                             Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Ordenar: ${currentSort.label}")
+                                             Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = tr("Ordenar: %s").format(tr(currentSort.label)))
                                          }
                                          DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
                                              SongSort.entries.forEach { sort ->
@@ -427,7 +427,10 @@ fun MainScreen(
                                  onPlaylistOptionsClick = { playlistForOptions = it },
                                  onPlaylistClick = { open(Detail.PlaylistDetail(it)) }
                              )
-                             AppTab.YT -> YtMusicScreen(onPlay = { viewModel.playYt(it) })
+                             AppTab.YT -> YtMusicScreen(
+                                 onPlay = { viewModel.playYt(it) },
+                                 onPlayQueue = {tracks, index -> viewModel.playYtQueue(tracks, index)}
+                             )
                              AppTab.FOLDERS -> FoldersListScreen(
                                  songs = songs,
                                  onFolderClick = {folderName, folderSongs ->

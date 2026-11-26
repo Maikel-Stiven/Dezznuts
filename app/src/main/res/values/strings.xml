@@ -2,6 +2,18 @@
 <!-- Generado por scripts/gen_strings.py: no editar a mano. -->
 <resources>
     <string name="app_name">DEZZNUTS</string>
+    <string name="s_6b1d9788d8"> Requiere Android 14.</string>
+    <string name="s_469683b084" formatted="false">\"%s\" exportada (%d canciones)</string>
+    <string name="s_d801066f97" formatted="false">\"%s\" se borrará del almacenamiento. No se puede deshacer.</string>
+    <string name="s_a26681e9f5" formatted="false">\"%s\" se borrará del dispositivo. No se puede deshacer esta acción</string>
+    <string name="s_2404328518" formatted="false">\"%s\" se borrará y quedará libre su espacio (máximo %d).</string>
+    <string name="s_f7e829bc91" formatted="false">\"%s\": %d de %d canciones encontradas</string>
+    <string name="s_512a6d99e6" formatted="false">%d archivos de audio revisados</string>
+    <string name="s_f68f9e00d4" formatted="false">%d canciones</string>
+    <string name="s_899370fbd0" formatted="false">%d más no se pueden deducir; edítalas una a una desde su menú (⋮).</string>
+    <string name="s_b1af09ec54" formatted="false">%d reproducciones · %.1f h de música</string>
+    <string name="s_4426097d4c" formatted="false">%d álbumes</string>
+    <string name="s_4c7f9b6a62" formatted="false">%d álbumes •  %d canciones</string>
     <string name="s_837be25a99">0 canciones</string>
     <string name="s_9422a10d8e">1 canción</string>
     <string name="s_eed7503bd0">1 hora</string>
@@ -14,24 +26,34 @@
     <string name="s_256a5c2ab3">Abrir menú</string>
     <string name="s_a5fc234826">Accesos directos</string>
     <string name="s_8669f0380c">Acerca de</string>
+    <string name="s_9295dc8d31">Activa el procesador de audio en 32 bits float; con offload no se aplica.</string>
     <string name="s_10a0f5b1f9">Activar YouTube Music</string>
     <string name="s_3a9cab04c1">Activar aleatorio</string>
     <string name="s_10140fb91e">Activo</string>
     <string name="s_26b9e8736c">Agregada a la cola</string>
     <string name="s_69ea67e383">Agregada a la lista</string>
     <string name="s_4180cb9078">Agregar a la cola de reproducción actual</string>
+    <string name="s_f420439c27">Agregar a la playlist</string>
+    <string name="s_a82dbebfb6">Agregar a playlist</string>
+    <string name="s_6a97cb6101">Agregar a playlist de YT</string>
     <string name="s_53d7dae386">Agregar a una playlist</string>
     <string name="s_b5fdd6ab36">Agregar al final de la cola</string>
     <string name="s_962b3b7614">Agregar pistas</string>
+    <string name="s_b0e21748f9">Ahora no</string>
     <string name="s_9751f876e9">Ajustes</string>
+    <string name="s_3ef496a02c">Al cambiar de salida se sustituyen tus ajustes actuales por los guardados de esa salida.</string>
     <string name="s_fc1bd603dc">Al terminar la canción</string>
     <string name="s_72637db2e5">Al terminar una canción pasa a la siguiente recomendada</string>
     <string name="s_a7567a43eb">Aleatorio</string>
     <string name="s_0ff010fdfa">Alegre</string>
+    <string name="s_7985e4b2e8">Algunas canciones no se pudieron descargar. Revisa tu conexión</string>
     <string name="s_ff934581d9">Almacenamiento</string>
     <string name="s_008c76d9dd">Almacenamiento interno</string>
+    <string name="s_76e75eccff">Altavoz</string>
     <string name="s_bc663d8b93">Ancho de banda (Q)</string>
+    <string name="s_13cf95a16b" formatted="false">Ancho de banda Q de la banda %d</string>
     <string name="s_d97f1097b8">Anterior</string>
+    <string name="s_c7653e9f71">Apagado</string>
     <string name="s_892a534334">Apagado · señal sin tocar</string>
     <string name="s_4b819e3f3d">Apariencia</string>
     <string name="s_4ac3b31103">Aplicar</string>
@@ -41,12 +63,17 @@
     <string name="s_745d1fb24a">Artista</string>
     <string name="s_3c0cf14a7c">Artista desconocido</string>
     <string name="s_0677904445">Artistas</string>
+    <string name="s_0b1e1b19d3" formatted="false">Artistas (%d)</string>
     <string name="s_9f50e92958">Artistas desconocidos</string>
     <string name="s_ef51b8f69e">Artistas más escuchados</string>
     <string name="s_acdac205f5">Audio</string>
     <string name="s_3e5dedf3ba">Audio Hi/Res</string>
+    <string name="s_fa53919029">Audio offload (bit-perfect)</string>
+    <string name="s_8825ff3427">Auto-web</string>
     <string name="s_980a92c105">Avanzado</string>
+    <string name="s_42f085f4ff">Avisar de nuevas versiones</string>
     <string name="s_5bdda331cf">Azul</string>
+    <string name="s_78ed13f7dc" formatted="false">Añadir (%d)</string>
     <string name="s_392b32127f">Añadir a favoritos</string>
     <string name="s_33ff741f6e">Añadir a la cola</string>
     <string name="s_9afe9a7a2b">Añadir a una lista</string>
@@ -63,6 +90,7 @@
     <string name="s_083090cb46">Barra abajo</string>
     <string name="s_3f18b83f17">Barras de frecuencia en el reproductor; no usa internet ni permisos (no con audio offload)</string>
     <string name="s_497ac5c11b">Biblioteca</string>
+    <string name="s_e50241fa60">Bit-perfect con DAC USB</string>
     <string name="s_954773cf25">Blanco</string>
     <string name="s_f48076e5cc">Borrando…</string>
     <string name="s_d7b82b2125">Borrar</string>
@@ -77,20 +105,25 @@
     <string name="s_38e328475e">Buscando tu música…</string>
     <string name="s_9870b9e569">Buscando…</string>
     <string name="s_a62405e2ce">Buscar</string>
+    <string name="s_d143e96555">Buscar actualizaciones</string>
     <string name="s_e31bed9e71">Buscar de nuevo</string>
     <string name="s_fa6fc818fa">Buscar en YouTube Music</string>
     <string name="s_815a6d8447">Buscar en internet (LRCLIB)</string>
     <string name="s_374a1d20f1">Buscar música nueva y filtrar audios cortos</string>
     <string name="s_e8531fcb8c">Buscar y reproducir en YouTube Music</string>
+    <string name="s_7bcb381b4b">Búsquedas recientes</string>
     <string name="s_1e78606368">CANCELAR</string>
+    <string name="s_ea1bd070cd">Cable</string>
     <string name="s_867e97db19">Caché de imágenes borrada</string>
     <string name="s_cd4b6b1adc">Calculando…</string>
     <string name="s_b2e6a42460">Calidad</string>
     <string name="s_406f9aff76">Calidad Hi-Res</string>
     <string name="s_e1a8cc0daf">Calidad sin pérdida</string>
+    <string name="s_022dcf8181">Cambiar aspectos</string>
     <string name="s_c111e0ab9d">Cancelar</string>
     <string name="s_2fdecc06c0">Cancelar temporizador</string>
     <string name="s_e168e120cf">Canciones</string>
+    <string name="s_849014f8a0" formatted="false">Canciones (%d)</string>
     <string name="s_0c4f30c8af">Canciones añadidas a la playlist</string>
     <string name="s_6cce77cdc2">Canciones más escuchadas</string>
     <string name="s_48dca1e240">Canciones, álbumes o artistas</string>
@@ -105,43 +138,76 @@
     <string name="s_21f72c3cc4">Claro</string>
     <string name="s_ddfb28da05">Cola de reproducción</string>
     <string name="s_cb33b51b55">Color a medida</string>
+    <string name="s_1084457160">Color adaptativo</string>
     <string name="s_1bc627cbcf">Color de acento</string>
     <string name="s_57527a36c5">Color de la carátula en el reproductor</string>
+    <string name="s_980f7b63e7">Colores del sistema y bordes redondeados (por defecto)</string>
+    <string name="s_eb892c0ec6">Colores estáticos</string>
+    <string name="s_3aaa310303">Con Wi-Fi siempre suena a la mejor calidad (Opus ~160 kbps); con datos se ahorra la mitad salvo que lo actives</string>
     <string name="s_237f04207d">Con pérdida</string>
     <string name="s_a2d7268014">Conservar</string>
     <string name="s_b5ef5d4062">Copia</string>
     <string name="s_9cdc1f3a29">Copia archivos de audio a las carpetas Música o Descargas y vuelve a buscar.</string>
     <string name="s_aad7136e1b">Copia de seguridad</string>
+    <string name="s_0a8e2a1102" formatted="false">Copia guardada: %d listas y %d favoritas</string>
+    <string name="s_47bbe6c46a" formatted="false">Copia restaurada: %d listas y %d favoritas</string>
+    <string name="s_6b2dc91a43" formatted="false">Corregir %d</string>
     <string name="s_c4a419a39d">Corregir artistas desconocidos</string>
+    <string name="s_0be863773b" formatted="false">Corrigiendo %d canciones…</string>
     <string name="s_0fd5fe0ed5">Cortador de audio</string>
     <string name="s_194c94e91d">Cortando…</string>
+    <string name="s_48a0686f58">Crear</string>
     <string name="s_e4ff026224">Crear lista</string>
     <string name="s_977d0eed0c">Crear lista de reproducción</string>
+    <string name="s_f19b315d40">Crear nueva playlist</string>
+    <string name="s_6fadc4254c">Crear playlist</string>
     <string name="s_fe1efd2ad4">Cuenta de YouTube Music</string>
     <string name="s_3c369a756d">Curva del ecualizador: arrastra los puntos para cambiar frecuencia y ganancia</string>
     <string name="s_c0664e4020">DEZZNUTS necesita permiso para leer los archivos de audio de este teléfono. No sube nada a internet.</string>
+    <string name="s_d21bbcaa2f">DEZZNUTS ya decodifica FLAC, ALAC y WAV sin pérdida. </string>
+    <string name="s_5f24e6e9f1">DEZZNUTS ya decodifica FLAC, ALAC y WAV sin pérdida. Estos ajustes deciden cómo se entrega esa señal al DAC del dispositivo. Ninguno viene activado: pruébalos tú y quédate con el que mejor suene en tu equipo.</string>
+    <string name="s_1b9f359ce4">Dance</string>
     <string name="s_462fc3b8c4">Deducir artista y título del nombre del archivo</string>
+    <string name="s_b50a3a9703">Del sistema</string>
     <string name="s_bc3ba3ba44">Del tema</string>
+    <string name="s_738f846ca7">Depende del chip: algunos lo soportan mal y producen cortes o silencios. Mientras esté activo no se aplican efectos y la salida float no interviene.</string>
     <string name="s_464c34559a">Desactivar aleatorio</string>
+    <string name="s_0b168e165f">Descargada: ya suena sin conexión</string>
+    <string name="s_c3ded3d488">Descargadas</string>
+    <string name="s_7008d44062">Descargando la lista para escuchar sin conexión…</string>
+    <string name="s_fec6b63387">Descargando para escuchar sin conexión…</string>
+    <string name="s_520107ea64">Descargando…</string>
+    <string name="s_800e4fc7bc">Descargando… al terminar, toca la notificación para instalar</string>
+    <string name="s_8b98cb1da3">Descargar</string>
+    <string name="s_0714af1a53">Descargar lista</string>
+    <string name="s_af83703984">Descargar para escuchar sin conexión</string>
     <string name="s_fc3ae14dd1">Descargas</string>
     <string name="s_ef187497c3">Detener</string>
     <string name="s_f614c3838b">Detener playlist al finalizar canción</string>
+    <string name="s_8309e8c349">Dirige la salida al DAC USB cuando está conectado, evitando que el mezclador del sistema lo ignore o remuestree.</string>
     <string name="s_f0229107d0">Duplicados</string>
     <string name="s_cd19b42e01">Duplicados eliminados</string>
     <string name="s_36a370b90b">Duplicados y WhatsApp</string>
     <string name="s_bcb3490aa9">Duplicados y audios de WhatsApp</string>
     <string name="s_63ce53f49d">Duración</string>
+    <string name="s_685fd40170" formatted="false">Duración del corte: %s</string>
+    <string name="s_3ffc684d1a" formatted="false">Duración: %s</string>
     <string name="s_de4a412b33">Dónde buscar</string>
     <string name="s_543366c848">Ecualizador</string>
     <string name="s_efca329986">Ecualizador…</string>
     <string name="s_593ec47528">Editar etiquetas</string>
     <string name="s_c471cecd39">Editar etiquetas de audio</string>
     <string name="s_161941adf8">Editar foto</string>
+    <string name="s_d9905b7aaf">Editar lista de reproducción</string>
     <string name="s_4fd17380c9">Editar portada</string>
     <string name="s_f630bd5391">Editor de etiquetas</string>
+    <string name="s_f38db64bae">El sistema remuestrea a esa frecuencia todo lo que no coincida con ella </string>
+    <string name="s_d190c20988">El sistema remuestrea a esa frecuencia todo lo que no coincida con ella (por ejemplo, un FLAC de CD a 44100 Hz). El offload evita ese remuestreo en los dispositivos que lo soportan.</string>
     <string name="s_47126a4809">Elegir carpeta…</string>
     <string name="s_496fb4e786">Elige una canción desde su menú ⋮ → Cortador de audio</string>
     <string name="s_54e140f9f0">Eliminar</string>
+    <string name="s_782fb7bef0" formatted="false">Eliminar %s</string>
+    <string name="s_cb099d37e4">Eliminar de la playlist</string>
     <string name="s_c3ba62bd2b">Eliminar del dispositivo</string>
     <string name="s_f241dfbbbe">Eliminar del historial</string>
     <string name="s_6a0f9af77f">Eliminar duplicados de la playlist</string>
@@ -154,24 +220,33 @@
     <string name="s_0ac5b9db1d">Energía</string>
     <string name="s_776e6c66ee">Enfoque</string>
     <string name="s_717f44b10b">Enviar comentarios</string>
+    <string name="s_3b0d5ef54a">Envía el archivo comprimido directamente al DSP, sin remuestreo ni mezcla: conserva la frecuencia y la profundidad originales. Requiere Android 10+.</string>
     <string name="s_3ee8288469">Escanear archivos</string>
     <string name="s_c785f029c7">Escanear carpetas</string>
     <string name="s_a40fb92b3b">Escaneo terminado</string>
     <string name="s_79a807bc6b">Escuchar tramo</string>
     <string name="s_2db8d27fae">Ese archivo no es una copia de DEZZNUTS</string>
     <string name="s_a580d59821">Estadísticas</string>
+    <string name="s_6c53337763">Estética retro terminal</string>
+    <string name="s_4842f3485d">Evita que el audio de 24 y 32 bits se trunque a 16 bits antes de mezclar, conservando el detalle fino. En archivos de 16 bits no cambia nada: solo actúa en alta resolución.</string>
     <string name="s_b1f270b433">Exporta la lista como M3U para usarla en otro reproductor, o elimínala (podrás recuperarla con \"Restaurar listas de reproducción\"; las canciones no se borran del dispositivo).</string>
     <string name="s_199bd3f763">Exportar M3U</string>
     <string name="s_4e668e5e6f">Favoritas</string>
     <string name="s_0310057901">Favoritas, reproducciones y listas en un archivo</string>
+    <string name="s_04bc880431">Favorito</string>
     <string name="s_33b332595f">Favoritos</string>
     <string name="s_f1217350a8">Favoritos ❤</string>
     <string name="s_f6fc3bae6c">Fiesta</string>
+    <string name="s_118425e205" formatted="false">Fin %s</string>
+    <string name="s_5c84c09074">Fondo totalmente negro (#000000) para pantallas AMOLED</string>
     <string name="s_57f1dd05b5">Frecuencia</string>
+    <string name="s_aaf0a24f7c">Función no oficial (NewPipeExtractor): puede dejar de funcionar sin aviso y va contra los términos de YouTube. Usa internet y no necesita cuenta</string>
     <string name="s_61e5f39fe7">Función no oficial: puede dejar de funcionar sin aviso y va contra los términos de YouTube.</string>
     <string name="s_6ca8924c6a">Fundido de entrada y salida</string>
     <string name="s_96dcc168d8">Galeria</string>
     <string name="s_0c8484ec92">Ganancia</string>
+    <string name="s_a5e87ccf8b">Graves</string>
+    <string name="s_d53c69a692" formatted="false">Guardado: %s (Música/DEZZNUTS)</string>
     <string name="s_a0b626d6e9">Guardar</string>
     <string name="s_83cb3a3600">Guardar +</string>
     <string name="s_f7234667ac">Guardar copia de seguridad</string>
@@ -179,11 +254,14 @@
     <string name="s_68f28963e7">Guardar playlist en el dispositivo</string>
     <string name="s_e35e1d5966">Guardar preset</string>
     <string name="s_9a7562c630">Géneros</string>
+    <string name="s_ecb1b1f58e">Hay una versión nueva de DEZZNUTS.</string>
     <string name="s_3f19f9e58e">Herramientas</string>
     <string name="s_33fd469210">INICIAR ESCANEO</string>
+    <string name="s_0094338860">Idioma</string>
     <string name="s_1d6d593f6c">Ignorar archivos de menos de (KB)</string>
     <string name="s_d5e215e0fc">Ignorar archivos de menos de (segundos)</string>
     <string name="s_b7673cd41c">Ignorar archivos y carpetas ocultos</string>
+    <string name="s_73a9e66759">Iguala el volumen entre pistas leyendo la etiqueta del archivo (FLAC, OGG, MP3). Solo atenúa: nunca amplifica, así que no recorta ni comprime la dinámica.</string>
     <string name="s_65079b3a27">Ilumina cada palabra de la línea que suena (tiempo estimado)</string>
     <string name="s_8fa121a8b1">Importar lista M3U</string>
     <string name="s_45332d6d5d">Información</string>
@@ -193,6 +271,8 @@
     <string name="s_9c18b1ef16">Iniciar sesión</string>
     <string name="s_98403ff8d1">Iniciar sesión y ver tus canciones con Me gusta</string>
     <string name="s_4f70d8c37e">Inicio</string>
+    <string name="s_fb9c4914ad" formatted="false">Inicio %s</string>
+    <string name="s_8360a9faab">Instrumental</string>
     <string name="s_b998e73105">Intensidad</string>
     <string name="s_74245b1393">Ir al artista</string>
     <string name="s_e87b4364dc">Ir al álbum</string>
@@ -207,20 +287,26 @@
     <string name="s_f3b2257862">Limpiar</string>
     <string name="s_b50ffe9ac5">Limpiar busqueda</string>
     <string name="s_fa5607cb2e">Lista agregada a la cola</string>
+    <string name="s_28a0754c7c">Lista descargada: ya suena sin conexión</string>
     <string name="s_313971b0a5">Lista importada</string>
     <string name="s_00ac32ebe9">Listas de reproducción</string>
+    <string name="s_5267fc6b9b" formatted="false">Listas de reproducción (%d)</string>
     <string name="s_91acde292c">Listo</string>
     <string name="s_d968292229">Lo más escuchado y las horas de música</string>
+    <string name="s_59e6cfa4f4">Loudness</string>
+    <string name="s_d8236230ae">Material 3</string>
     <string name="s_66eb000113">Material You</string>
     <string name="s_f3b81e5828">Me gusta</string>
     <string name="s_1f2b6ac990">Melancólico</string>
     <string name="s_c0af43ec1e">Mi YouTube Music</string>
+    <string name="s_14adb85d35">Mira si hay una versión nueva en GitHub y la descarga</string>
     <string name="s_bf51adae89">Moods:</string>
     <string name="s_1634c2c3af">Morado</string>
     <string name="s_8c9c76a2cf">Mueve la curva para guardar el tuyo</string>
     <string name="s_e4f75d5280">Más</string>
     <string name="s_977c75651c">Más opciones</string>
     <string name="s_6334d01118">Más reproducidas</string>
+    <string name="s_69dbbe33de">Máxima calidad con datos móviles</string>
     <string name="s_a9c9f26a6e">Música que te gustó</string>
     <string name="s_2ac7694229">Naranja</string>
     <string name="s_60cb068581">Navegación</string>
@@ -241,45 +327,67 @@
     <string name="s_fad124fd12">No se encontraron artistas</string>
     <string name="s_1ddcf49d6e">No se encontraron carpetas</string>
     <string name="s_d79a05b31b">No se encontraron géneros</string>
+    <string name="s_ee16afe214" formatted="false">No se encontraron resultados para \"%s\"</string>
     <string name="s_92490130ae">No se encontró en tu biblioteca ninguna canción de esa lista</string>
+    <string name="s_14045a6da4">No se pudieron cargar</string>
+    <string name="s_01e5978968">No se pudieron cargar las canciones.</string>
     <string name="s_896aefef0e">No se pudieron guardar los tags</string>
     <string name="s_0a644cb8b8">No se pudo abrir la canción de YouTube Music</string>
     <string name="s_c2bef4f52a">No se pudo cargar.</string>
     <string name="s_f2606d8b3e">No se pudo cargar. Revisa la conexión o inicia sesión de nuevo.</string>
+    <string name="s_df1a4205bf">No se pudo comprobar. Revisa tu conexión</string>
     <string name="s_f5696aeb96">No se pudo consultar YouTube Music. Revisa la conexión o inténtalo más tarde.</string>
     <string name="s_ffa177d205">No se pudo eliminar</string>
+    <string name="s_8098f4b4d2">No se pudo exportar la lista</string>
     <string name="s_b96b87e99d">No se pudo guardar la copia</string>
+    <string name="s_4b2f460697">No se pudo reproducir la canción</string>
     <string name="s_e68491e91c">Nombre</string>
+    <string name="s_be2cf8c2f1">Nombre de la lista</string>
     <string name="s_939cea4e4f">Nombre de la lista nueva:</string>
     <string name="s_60a28d19c0">Nueva lista</string>
+    <string name="s_2504aa52d2">Nueva playlist de YT Music</string>
+    <string name="s_a2fae95f14" formatted="false">Nueva versión %s</string>
+    <string name="s_770437cbbd">OLED negro Puro</string>
+    <string name="s_9b8e918003" formatted="false">Ocupa actualmente: %s</string>
     <string name="s_dbb09449c2">Océano</string>
     <string name="s_4da5f53f5a">Omarchy</string>
+    <string name="s_f503be3678">Omarge</string>
     <string name="s_64fd3e588e">Opciones</string>
     <string name="s_bff39342a6">Opciones de pista</string>
+    <string name="s_49486610ef" formatted="false">Ordenar: %s</string>
     <string name="s_0285f6d35a">Origen</string>
     <string name="s_9f2b3c2133">Otras</string>
     <string name="s_8e0f5ed990">Pausar</string>
     <string name="s_39fc573771">Pausar la música pasado un tiempo</string>
+    <string name="s_5241589447">Perfiles por salida</string>
     <string name="s_38ae1ac63e">Permitir acceso</string>
+    <string name="s_ad32539377">Permitir subir el volumen</string>
     <string name="s_73866561c5">Personalizado</string>
     <string name="s_6e87613b46">Pestañas arriba</string>
+    <string name="s_0c9cfeb3d2">Pide al DAC USB el formato exacto de cada pista para que el sistema no remuestree ni mezcle (Android 14+). Solo entra si el DAC ofrece ese formato; si no, todo suena como siempre.</string>
+    <string name="s_eac9e53a16">Plano</string>
     <string name="s_4c0145d379">Portada</string>
     <string name="s_35fdf42a6f">Portada animada (en línea)</string>
     <string name="s_b0724582b4">Portada con movimiento</string>
     <string name="s_e4dd7f0b23">Portada con movimiento, color de la carátula, funciones en línea</string>
     <string name="s_da619eb512">Portada de la playlist</string>
+    <string name="s_ca6b8b7b7a">Predeterminado</string>
+    <string name="s_cc518f0c0b">Preferir DAC USB</string>
     <string name="s_6c2f2888c5">Premium</string>
     <string name="s_be78bcf6d4">Quitar</string>
     <string name="s_423142780f">Quitar de favoritos</string>
     <string name="s_0ba79b3253">Quitar de la cola</string>
+    <string name="s_712d3068ae">Quitar descarga</string>
     <string name="s_33f8063887">REPRODUCIENDO DESDE</string>
     <string name="s_d3d64b1846">REPRODUCIR</string>
     <string name="s_7ed1ec1bf2">Recientes</string>
     <string name="s_15fef5ec47">Recién agregadas</string>
     <string name="s_de611f39e3">Recortar la canción que suena (tonos, fragmentos)</string>
+    <string name="s_a1f89568c9">Recuerda ReplayGain y ecualizador por separado para altavoz, cable, Bluetooth y DAC USB, y los cambia solos al conectar o desconectar.</string>
     <string name="s_14f7836294">Recuperarlas al reinstalar o en otro teléfono</string>
     <string name="s_adec7b4f23">Reintentar</string>
     <string name="s_9704b99261">Relax</string>
+    <string name="s_7fe1faf8f0">Reordenar</string>
     <string name="s_cf24f03c8a">Reordenar pista</string>
     <string name="s_a9b5d7d93c">Repetición desactivada</string>
     <string name="s_b82a287496">Repetir canción</string>
@@ -290,6 +398,7 @@
     <string name="s_2d20e2c084">Reproduciendo</string>
     <string name="s_d1a18873dc">Reproducir</string>
     <string name="s_004cc27be9">Reproducir a continuación</string>
+    <string name="s_50262890f8">Reproducir mix</string>
     <string name="s_93abdfb1b3">Reproducir todo</string>
     <string name="s_593868e466">Reproductor de música local pensado para sonar bien y gastar poco, también en teléfonos modestos.</string>
     <string name="s_1d3af03665">Restablecer</string>
@@ -297,25 +406,47 @@
     <string name="s_3706518a53">Restaurar copia</string>
     <string name="s_4158f0f7c9">Restaurar lista de reproducción</string>
     <string name="s_2a762728cb">Restaurar listas de reproducción</string>
+    <string name="s_e99b29acc3" formatted="false">Riesgo: %s</string>
+    <string name="s_468d79c2e0">Rock</string>
     <string name="s_696f812324">Rojo</string>
     <string name="s_2c0d557df1">Rosa</string>
     <string name="s_4373399b0e">Ruta</string>
     <string name="s_88e6839729">Sakura</string>
+    <string name="s_02462b330a">Salida en 32 bits (float)</string>
     <string name="s_b58bfe183f">Salida float, offload, bit-perfect, ReplayGain y fundidos</string>
+    <string name="s_b7f55ffbd0">Salida nativa del dispositivo: </string>
+    <string name="s_e307769d47" formatted="false">Salida nativa del dispositivo: %s</string>
+    <string name="s_8cdfd7a003">Salida nativa del dispositivo: desconocida</string>
+    <string name="s_5d58135e63">Salidas conectadas: </string>
+    <string name="s_6c95405858">Salidas conectadas: ninguna</string>
     <string name="s_852d451b14">Se borrarán las fotos de artistas descargadas y las carátulas extraídas de los archivos. Se volverán a generar cuando hagan falta.</string>
+    <string name="s_e87121372f" formatted="false">Se corrigieron %d de %d</string>
+    <string name="s_119a9368f7">Se desactiva solo con ecualizador, subida de ReplayGain u offload (modifican la señal). Si tu DAC se porta mal, apágalo.</string>
     <string name="s_7759615d19">Se detendrá al terminar la canción</string>
+    <string name="s_92781d35cc" formatted="false">Se detendrá en %d:%02d</string>
+    <string name="s_883adbc91c" formatted="false">Se eliminaran las canciones de \"%s\" del dispositivo. Esta acción no se puede deshacer</string>
+    <string name="s_5d234235e3" formatted="false">Se eliminaron %d archivos del dispositivo</string>
+    <string name="s_cc494c2a31" formatted="false">Se eliminará la playlist \"%s\". ¿Desea eliminar la playlist?</string>
     <string name="s_f3852d02dd">Se enviará a lrclib.net el título, artista, álbum y duración. Se guarda para usarla sin conexión.</string>
     <string name="s_f7b4423ea6">Se guarda como archivo nuevo en Música/DEZZNUTS; el original no se modifica.</string>
     <string name="s_cf8e47e3e7">Seguir con las recomendadas de YouTube</string>
+    <string name="s_96fc8b6840">Seleccionar color</string>
     <string name="s_4c6fdc4a20">Seleccionar todo</string>
     <string name="s_8973c434ac">Selección rápida</string>
     <string name="s_60f9315dce">Sesión iniciada en este teléfono</string>
+    <string name="s_91ef9425ea">Si el archivo no trae la etiqueta, suena igual que antes.</string>
+    <string name="s_43c531c320">Si la pista es más baja que la referencia, la sube solo hasta lo que su pico permite sin recortar (necesita la etiqueta de pico). Sin efecto con offload.</string>
+    <string name="s_3fdf4515d7">Si tu DAC no negocia bien, desactívalo para volver a la salida automática.</string>
+    <string name="s_b094f78df6">Si tu dispositivo no soporta la salida float, los archivos de 24/32 bits podrían no sonar. Desactívalo si notas silencio.</string>
     <string name="s_c4d83a3b6d">Siguiente</string>
     <string name="s_d46fe1067c">Sin canciones</string>
+    <string name="s_1e30781cb3">Sin conexión con YouTube Music. Revisa tu internet</string>
     <string name="s_fa13d000c8">Sin conexión. Inténtalo de nuevo con internet.</string>
     <string name="s_7656cdb783">Sin permiso no se puede guardar el corte</string>
     <string name="s_997ae1ca61">Sin resultados.</string>
     <string name="s_a10ee623b6">Sin sesión: inicia desde la pestaña YT Music</string>
+    <string name="s_1e515e3f44">Sube el volumen al empezar una pista o reanudar y lo baja al final de la pista y al pausar. </string>
+    <string name="s_d4f2413c09">Sube el volumen al empezar una pista o reanudar y lo baja al final de la pista y al pausar. En discos sin cortes (gapless) conviene dejarlo apagado.</string>
     <string name="s_dc1f058c8c">Suena a continuación</string>
     <string name="s_9afb316176">Synthwave</string>
     <string name="s_873caab4d0">Sí</string>
@@ -323,7 +454,10 @@
     <string name="s_b2b2c54d5c">Tarjeta SD</string>
     <string name="s_6ae1bcaff6">Tema</string>
     <string name="s_7dce3ee58e">Temporizador</string>
+    <string name="s_7b5fa0f943">Toca para abrir</string>
     <string name="s_8a3c344036">Todas</string>
+    <string name="s_37878e219c">Todas las canciones</string>
+    <string name="s_a4114a83f4">Todos</string>
     <string name="s_8ac662256d">Tono</string>
     <string name="s_40454f1544">Traer una lista de otro reproductor</string>
     <string name="s_7e3125dccb">Tu música, sin anuncios ni suscripciones</string>
@@ -331,26 +465,38 @@
     <string name="s_3aaea13502">Turquesa</string>
     <string name="s_3b61a2bb47">Tus Me gusta, a mano</string>
     <string name="s_c0f68f8187">Tus canciones con Me gusta</string>
+    <string name="s_45b37ac9b4">Tus playlists</string>
     <string name="s_98a5efa60b">Título</string>
+    <string name="s_38864fab45">Una vez al día pregunta a GitHub si salió una versión nueva (no envía nada tuyo)</string>
+    <string name="s_3ea4362547" formatted="false">Usar «%s» — «%s»</string>
     <string name="s_7963ef51f2">VER TODOS</string>
     <string name="s_dd6ef1b2c3">Ver más</string>
     <string name="s_486f7ff02b">Ver todo</string>
     <string name="s_daba544d2b">Verde</string>
+    <string name="s_2826a47218" formatted="false">Versión %s</string>
     <string name="s_e1fb15444a">Versión, licencia y créditos</string>
     <string name="s_7ccabff150">Visualizador (barras tipo CAVA)</string>
+    <string name="s_44f06a850e">Voces</string>
     <string name="s_84a715a785">Volver</string>
     <string name="s_d0edcaa68d">YT Music</string>
+    <string name="s_100df342b0">Ya está descargada</string>
+    <string name="s_5179932578">Ya tienes la última versión</string>
     <string name="s_1a050f0844">YouTube Music · cuenta de Google</string>
+    <string name="s_a777e1b1cb">canciones</string>
     <string name="s_f717723ab9">cerrar búsqueda</string>
     <string name="s_b8bf7a3963">crear</string>
     <string name="s_2a61a6bbe2">no se encontraron álbumes</string>
     <string name="s_fb23b9ef3a">o escribe arriba para buscar</string>
     <string name="s_b62532159c">opciones</string>
+    <string name="s_b1f68b4bc0">portada editable playlist</string>
     <string name="s_60ab455fc4">volver</string>
+    <string name="s_53ba9b8e86" formatted="false">¿Desea eliminar \"%s\"?</string>
+    <string name="s_5b7ef745e9">¿Desea eliminar del dispositivo?</string>
     <string name="s_ab875ef573">¿Eliminar del dispositivo?</string>
     <string name="s_c3c17530ac">¿Eliminar el preset?</string>
     <string name="s_2c64db8938">Álbum</string>
     <string name="s_c010a7dc0c">Álbum desconocido</string>
     <string name="s_797807e2b1">Álbumes</string>
+    <string name="s_572e3ab065" formatted="false">Álbumes (%d)</string>
     <string name="s_2ef335d2c9">Ámbar</string>
 </resources>

@@ -51,6 +51,7 @@ import kotlinx.coroutines.async
 import com.example.creproductor.data.isYoutube
 import com.example.creproductor.data.withoutBrokenTwins
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -60,8 +61,12 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
+import com.example.creproductor.data.YtOffline
 import androidx.core.content.edit
 import androidx.annotation.OptIn
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.media3.common.util.UnstableApi
 import com.example.creproductor.data.Playlist
 import com.example.creproductor.data.PlaylistSerializer
@@ -69,6 +74,8 @@ import com.example.creproductor.data.RepeatMode
 import com.example.creproductor.data.SongOrganizer
 import com.example.creproductor.data.next
 import com.example.creproductor.service.PlaybackDiagnostics
+import com.example.creproductor.ui.theme.AppAccentPreset
+import com.example.creproductor.ui.theme.AppStyle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -135,7 +142,8 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (key == "fav_ids") syncFavoritesFromPrefs()
             else if (key == HiFiAudio.KEY_REAL_ROUTE) refreshAudioInfo()
-            else if (key == MusicService.KEY_SLEEP_END) _sleepTimerEnd.value = prefs.getLong(MusicService.KEY_SLEEP_END, 0L)
+            else if (key == MusicService.KEY_SLEEP_END) _sleepTimerEnd.value =
+                prefs.getLong(MusicService.KEY_SLEEP_END, 0L)
         }
 
     private val _uiState = MutableStateFlow<UiState>(UiState.PermissionRequired)
@@ -168,7 +176,9 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
 
     /** Orden activo de la pestaña "Canciones" (se recuerda entre sesiones). */
     private val _currentSort = MutableStateFlow(
-        runCatching { SongSort.valueOf(prefs.getString("song_sort", null) ?: "") }.getOrDefault(SongSort.TITLE)
+        runCatching { SongSort.valueOf(prefs.getString("song_sort", null) ?: "") }.getOrDefault(
+            SongSort.TITLE
+        )
     )
     val currentSort: StateFlow<SongSort> = _currentSort.asStateFlow()
 
@@ -193,7 +203,8 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     /** Derivado de [uiState]: solo las canciones marcadas como favoritas. */
     val favoriteSongs: StateFlow<List<Song>> = uiState.map { state ->
         if (state is UiState.Success) state.songs.filter { it.isFavorite } else emptyList()
-    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
+    }.flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
 
     /** Historial de búsquedas recientes (la más reciente primero). */
     private val _searchHistory = MutableStateFlow<List<String>>(emptyList())
@@ -215,6 +226,59 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     private val _playlists = MutableStateFlow<List<Playlist>>(emptyList())
     val playlists: StateFlow<List<Playlist>> = _playlists.asStateFlow()
 
+
+    // Estado y persistencia exclusiva de listas de YT Music
+    private val _ytPlaylists = MutableStateFlow<List<com.example.creproductor.data.YtPlaylist>>(emptyList())
+    val ytPlaylists: StateFlow<List<com.example.creproductor.data.YtPlaylist>> = _ytPlaylists.asStateFlow()
+
+    private val MAX_YT_QUEUE_SIZE = 100
+    private val _appStyle = MutableStateFlow(
+        runCatching {
+            AppStyle.valueOf(prefs.getString("app_style", null) ?: "")
+        }.getOrDefault(AppStyle.MATERIAL_3)
+    )
+
+    val appStyle: StateFlow<AppStyle> = _appStyle.asStateFlow()
+
+    fun setAppStyle(style: AppStyle) {
+        _appStyle.value = style
+        prefs.edit().putString("app_style", style.name).apply()
+    }
+
+    private val _isAdaptiveAccent = MutableStateFlow(
+        prefs.getBoolean("is_adaptive_accent", true)
+    )
+    val isAdaptiveAccent: StateFlow<Boolean> = _isAdaptiveAccent.asStateFlow()
+
+    fun setAdaptiveAccent(enabled: Boolean) {
+        _isAdaptiveAccent.value = enabled
+        prefs.edit().putBoolean("is_adaptive_accent", enabled).apply()
+    }
+
+    private val _accentPreset = MutableStateFlow(
+        runCatching {
+            AppAccentPreset.valueOf(prefs.getString("accent_preset", null) ?: "")
+        }.getOrDefault(AppAccentPreset.DEFAULT)
+    )
+
+    val accentPreset: StateFlow<AppAccentPreset> = _accentPreset.asStateFlow()
+
+    fun setAccentPreset(preset: AppAccentPreset) {
+        _accentPreset.value = preset
+        prefs.edit().putString("accent_preset", preset.name).apply()
+    }
+
+    private val _customAccentColor = MutableStateFlow(
+        Color(prefs.getInt("custom_accent_color", 0xFF85D667.toInt()))
+    )
+
+    val customAccentColor: StateFlow<Color> = _customAccentColor.asStateFlow()
+
+    fun setCustomAccentColor(color: Color) {
+        _customAccentColor.value = color
+        prefs.edit().putInt("custom_accent_color", color.toArgb()).apply()
+    }
+
     /**
      * Canciones visibles en la pestaña "Canciones". Combina tres fuentes:
      * la biblioteca ([uiState]), el [currentFilter] y el [searchQuery]
@@ -225,37 +289,51 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         _currentFilter,
         _searchQuery,
         _currentSort
-    ){
-        state, filter, query, sort ->
+    ) { state, filter, query, sort ->
         if (state !is UiState.Success) return@combine emptyList()
 
         state.songs.filter { song ->
-            val matchesFilter = when (filter){
+            val matchesFilter = when (filter) {
                 SongFilter.ALL -> true
                 SongFilter.FAVORITES -> song.isFavorite
                 SongFilter.RECENT -> true
                 SongFilter.LOSSLESS -> song.quality != QualityTier.LOSSY
                 SongFilter.HIRES -> song.quality == QualityTier.HIRES
             }
-            val matchesQuery = SongOrganizer.matchesQuery(song.title, song.artist, song.album, query)
+            val matchesQuery =
+                SongOrganizer.matchesQuery(song.title, song.artist, song.album, query)
             matchesFilter && matchesQuery
         }.sortedWith(sort.comparator())
-    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
+    }.flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
 
 
     private val _navRequest = MutableStateFlow<NavRequest?>(null)
     val navRequest: StateFlow<NavRequest?> = _navRequest.asStateFlow()
-    fun requestNav(request: NavRequest) { _navRequest.value = request }
-    fun clearNav() { _navRequest.value = null }
+    fun requestNav(request: NavRequest) {
+        _navRequest.value = request
+    }
+
+    fun clearNav() {
+        _navRequest.value = null
+    }
 
     /** Añade la canción al final de la cola; si no hay nada sonando, la reproduce. */
     fun addToQueue(song: Song) {
         val controller = mediaController
-        if (controller == null || controller.mediaItemCount == 0) { playSong(song, customQueue = listOf(song)); return }
-        _currentQueue.value = _currentQueue.value.ifEmpty { (_uiState.value as? UiState.Success)?.songs ?: emptyList() } + song
+        if (controller == null || controller.mediaItemCount == 0) {
+            playSong(song, customQueue = listOf(song)); return
+        }
+        _currentQueue.value = _currentQueue.value.ifEmpty {
+            (_uiState.value as? UiState.Success)?.songs ?: emptyList()
+        } + song
         saveCurrentQueueIds(_currentQueue.value.map { it.id })
         controller.addMediaItems(buildMediaItems(listOf(song)))
-        Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "Agregada a la cola"), Toast.LENGTH_SHORT).show()
+        Toast.makeText(
+            getApplication(),
+            com.example.creproductor.i18n.I18n.tr(getApplication(), "Agregada a la cola"),
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
     /**
@@ -264,8 +342,12 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
      */
     fun playNextInQueue(song: Song) {
         val controller = mediaController
-        if (controller == null || controller.mediaItemCount == 0) { playSong(song, customQueue = listOf(song)); return }
-        val queue = _currentQueue.value.ifEmpty { (_uiState.value as? UiState.Success)?.songs ?: emptyList() }
+        if (controller == null || controller.mediaItemCount == 0) {
+            playSong(song, customQueue = listOf(song)); return
+        }
+        val queue = _currentQueue.value.ifEmpty {
+            (_uiState.value as? UiState.Success)?.songs ?: emptyList()
+        }
         val at = (controller.currentMediaItemIndex + 1).coerceAtMost(queue.size)
         _currentQueue.value = queue.subList(0, at) + song + queue.subList(at, queue.size)
         saveCurrentQueueIds(_currentQueue.value.map { it.id })
@@ -276,15 +358,29 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                 Bundle().apply { putInt(MusicService.EXTRA_INDEX, at) }
             )
         }
-        Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "Suena a continuación"), Toast.LENGTH_SHORT).show()
+        Toast.makeText(
+            getApplication(),
+            com.example.creproductor.i18n.I18n.tr(getApplication(), "Suena a continuación"),
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
     /** Borra el archivo (Android < 11; en 11+ lo hace el sistema con su propia confirmación) y recarga la biblioteca. */
     fun deleteSongLegacy(song: Song) {
         viewModelScope.launch(Dispatchers.IO) {
-            val ok = runCatching { getApplication<Application>().contentResolver.delete(song.contentUri, null, null) > 0 }.getOrDefault(false)
+            val ok = runCatching {
+                getApplication<Application>().contentResolver.delete(
+                    song.contentUri,
+                    null,
+                    null
+                ) > 0
+            }.getOrDefault(false)
             withContext(Dispatchers.Main) {
-                if (!ok) Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "No se pudo eliminar"), Toast.LENGTH_LONG).show()
+                if (!ok) Toast.makeText(
+                    getApplication(),
+                    com.example.creproductor.i18n.I18n.tr(getApplication(), "No se pudo eliminar"),
+                    Toast.LENGTH_LONG
+                ).show()
                 loadSongs(silent = true)
             }
         }
@@ -292,7 +388,11 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
 
     fun addSongToPlaylist(playlistId: String, song: Song) {
         addSongsToPlaylist(playlistId, listOf(song.id))
-        Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "Agregada a la lista"), Toast.LENGTH_SHORT).show()
+        Toast.makeText(
+            getApplication(),
+            com.example.creproductor.i18n.I18n.tr(getApplication(), "Agregada a la lista"),
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
     /** Estado del temporizador de apagado: 0 = apagado, -1 = al final de la canción, otro = hora de fin (ms). */
@@ -321,12 +421,16 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun cancelScan() { scanJob?.cancel(); _scanProgress.value = null }
+    fun cancelScan() {
+        scanJob?.cancel(); _scanProgress.value = null
+    }
 
     /** Cierra el resultado del escaneo (y guarda los filtros aunque no se haya escaneado). */
     fun dismissScan(settings: ScanSettings) {
         if (scanJob?.isActive == true) return
-        if (settings != ScanSettings.read(getApplication())) { settings.save(getApplication()); loadSongs(silent = true) }
+        if (settings != ScanSettings.read(getApplication())) {
+            settings.save(getApplication()); loadSongs(silent = true)
+        }
         _scanProgress.value = null
     }
 
@@ -338,19 +442,30 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         if (_cutting.value) return
         viewModelScope.launch {
             _cutting.value = true
-            val result = withContext(Dispatchers.IO) { AudioCutter.cut(getApplication(), song, startMs, endMs) }
+            val result = withContext(Dispatchers.IO) {
+                AudioCutter.cut(
+                    getApplication(),
+                    song,
+                    startMs,
+                    endMs
+                )
+            }
             _cutting.value = false
             Toast.makeText(
                 getApplication(),
-                if (result != null) "Guardado: ${result.displayName} (Música/DEZZNUTS)" else "No se pudo cortar este archivo",
+                com.example.creproductor.i18n.I18n.tr(getApplication(), if (result != null) "Guardado: %s (Música/DEZZNUTS)" else "No se pudo cortar este archivo").format(result?.displayName),
                 Toast.LENGTH_LONG
             ).show()
-            if (result != null) { onDone(); loadSongs(silent = true) }
+            if (result != null) {
+                onDone(); loadSongs(silent = true)
+            }
         }
     }
 
     /** Pausa si suena (el cortador se abre con la música en silencio para poder previsualizar). */
-    fun pauseIfPlaying() { mediaController?.takeIf { it.isPlaying }?.pause() }
+    fun pauseIfPlaying() {
+        mediaController?.takeIf { it.isPlaying }?.pause()
+    }
 
     private var loadJob: Job? = null
     private var observerJob: Job? = null
@@ -377,13 +492,14 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         startPositionTracker()
         loadSearchHistory()
         loadPlaylist()
+        loadYtPlaylists()
         prefs.registerOnSharedPreferenceChangeListener(favPrefsListener)
         application.contentResolver.registerContentObserver(
             MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, true, mediaStoreObserver
         )
     }
 
-    private fun initMediaController(){
+    private fun initMediaController() {
         val context = getApplication<Application>()
         val sessionToken = SessionToken(
             context,
@@ -415,22 +531,46 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                         _audioInfo.value = describeAudio(tracks)
                     }
 
+                    // Una canción que no se puede abrir (archivo borrado, YouTube sin red y sin copia en disco) no
+                    // debe dejar la cola parada: se avisa y se salta, hasta 3 seguidas para no recorrer toda la cola.
+                    override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                        val app = getApplication<Application>()
+                        Toast.makeText(app, com.example.creproductor.i18n.I18n.tr(app, "No se pudo reproducir la canción"), Toast.LENGTH_SHORT).show()
+                        if (++consecutiveErrors <= 3 && controller.hasNextMediaItem()) {
+                            controller.seekToNextMediaItem()
+                            controller.prepare()
+                            controller.play()
+                        }
+                    }
+
                     override fun onPlaybackStateChanged(playbackState: Int) {
-                        if (playbackState == Player.STATE_ENDED){
+                        if (playbackState == Player.STATE_READY) {
+                            consecutiveErrors = 0
+                            // Las canciones del inicio de YT llegan sin duración: la del archivo, para que se pueda adelantar.
+                            val d = mediaController?.duration ?: C.TIME_UNSET
+                            _currentSong.value?.takeIf { it.isYoutube && it.duration <= 0 && d != C.TIME_UNSET && d > 0 }?.let { s ->
+                                val updated = s.copy(duration = d)
+                                _currentSong.value = updated
+                                _currentQueue.value = _currentQueue.value.map { if (it.id == s.id) updated else it }
+                            }
+                        }
+                        if (playbackState == Player.STATE_ENDED) {
                             _isPlaying.value = false
                             persistPosition()
+
                         }
                     }
 
                     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                      if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO && _repeatMode.value == RepeatMode.STOP_AFTER_CURRENT) {
-                          controller.pause()
-                          controller.seekTo(0, 0L)
-                          return
-                      }
+                        if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO && _repeatMode.value == RepeatMode.STOP_AFTER_CURRENT) {
+                            controller.pause()
+                            controller.seekTo(0, 0L)
+                            return
+                        }
                         mediaItem?.mediaId?.let { idStr ->
 
-                            val allSongs = (_uiState.value as?  UiState.Success)?.songs ?: emptyList()
+                            val allSongs =
+                                (_uiState.value as? UiState.Success)?.songs ?: emptyList()
                             val activeQueue = _currentQueue.value.ifEmpty { allSongs }
 
                             val foundSong = activeQueue.find { it.id.toString() == idStr }
@@ -471,16 +611,22 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
      */
     private var lastTracks: Tracks? = null
 
-    private fun refreshAudioInfo() { lastTracks?.let { _audioInfo.value = describeAudio(it) } }
+    private fun refreshAudioInfo() {
+        lastTracks?.let { _audioInfo.value = describeAudio(it) }
+    }
 
-    @OptIn(UnstableApi :: class)
+    @OptIn(UnstableApi::class)
     private fun describeAudio(tracks: Tracks): String {
         val format = tracks.groups
             .firstOrNull { it.type == C.TRACK_TYPE_AUDIO && it.isSelected }
-            ?.let { g -> (0 until g.length).firstOrNull { g.isTrackSelected(it) }?.let { g.getTrackFormat(it) } }
+            ?.let { g ->
+                (0 until g.length).firstOrNull { g.isTrackSelected(it) }
+                    ?.let { g.getTrackFormat(it) }
+            }
             ?: return ""
         val song = _currentSong.value
-        val bits = AudioQuality.bitsOfPcmEncoding(format.pcmEncoding).takeIf { it > 0 } ?: song?.bitsPerSample ?: 0
+        val bits = AudioQuality.bitsOfPcmEncoding(format.pcmEncoding).takeIf { it > 0 }
+            ?: song?.bitsPerSample ?: 0
         val label = AudioQuality.label(
             format.sampleMimeType,
             format.sampleRate.takeIf { it > 0 } ?: song?.sampleRate ?: 0,
@@ -518,7 +664,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
      * único es MainActivity, dentro de `if (isPlayerFullScreenVisible…)`. Si alguien más empieza
      * a recolectar `currentPositionMs`, el bucle correrá también con la pantalla cerrada.
      */
-    private fun startPositionTracker(){
+    private fun startPositionTracker() {
         viewModelScope.trackPlaybackPosition(
             position = _currentPositionMs,
             isPlaying = _isPlaying,
@@ -540,7 +686,8 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         // Una canción de YouTube no se puede restaurar al reabrir: no pisa la última canción local ni su posición.
         if (songId <= -(1L shl 61)) return
         // Al terminar la pista la posición es la duración; guardar 0 evita reabrir en el final.
-        val position = if (controller.playbackState == Player.STATE_ENDED) 0L else controller.currentPosition
+        val position =
+            if (controller.playbackState == Player.STATE_ENDED) 0L else controller.currentPosition
         prefs.edit {
             putLong("last_position_ms", position)
             putLong("last_song_id", songId)
@@ -548,12 +695,12 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     }
 
 
-    private fun loadSearchHistory(){
+    private fun loadSearchHistory() {
         val raw = prefs.getString("search_history_str", "") ?: ""
         _searchHistory.value = if (raw.isBlank()) emptyList() else raw.split("|")
     }
 
-    fun addSearchHistory(query: String){
+    fun addSearchHistory(query: String) {
         val cleanQuery = query.trim()
         if (cleanQuery.isBlank()) return
         val currentList = _searchHistory.value.toMutableList()
@@ -561,25 +708,25 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         currentList.add(0, cleanQuery)
         val updatedList = currentList.take(10)
         _searchHistory.value = updatedList
-        prefs.edit{putString("search_history_str", updatedList.joinToString ("|"))}
+        prefs.edit { putString("search_history_str", updatedList.joinToString("|")) }
     }
 
-    fun removeFromHistory(query: String){
+    fun removeFromHistory(query: String) {
         val updatedList = _searchHistory.value.filter { it != query }
         _searchHistory.value = updatedList
-        prefs.edit{putString("search_history_str", updatedList.joinToString("|"))}
+        prefs.edit { putString("search_history_str", updatedList.joinToString("|")) }
     }
 
-    fun setFilter(filter: SongFilter){
+    fun setFilter(filter: SongFilter) {
         _currentFilter.value = filter
     }
 
-    fun setSort(sort: SongSort){
+    fun setSort(sort: SongSort) {
         _currentSort.value = sort
         prefs.edit { putString("song_sort", sort.name) }
     }
 
-    fun setSearchQuery(query: String){
+    fun setSearchQuery(query: String) {
         _searchQuery.value = query
     }
 
@@ -593,6 +740,8 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         var porRuta = 0
         val t0 = SystemClock.elapsedRealtime()
         val items = queue.map { song ->
+            // YouTube: la página de la canción; el servicio pide el audio al cargarla.
+            if (song.isYoutube) return@map ytItem(song)
             val uri = playbackUri(song)
             if (uri.scheme == "file") porRuta++
             MediaItem.Builder()
@@ -616,7 +765,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         Log.i(
             "DezzSeek",
             "cola de ${queue.size} pistas: $porRuta por file://, " +
-                "${queue.size - porRuta} por content:// (${SystemClock.elapsedRealtime() - t0} ms)"
+                    "${queue.size - porRuta} por content:// (${SystemClock.elapsedRealtime() - t0} ms)"
         )
         return items
     }
@@ -666,18 +815,25 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         if (missing.isEmpty()) return
         val t0 = SystemClock.elapsedRealtime()
         withContext(Dispatchers.IO.limitedParallelism(4)) {
-            coroutineScope { missing.chunked(250).map { chunk -> async { chunk.forEach { playbackUri(it) } } }.awaitAll() }
+            coroutineScope {
+                missing.chunked(250).map { chunk -> async { chunk.forEach { playbackUri(it) } } }
+                    .awaitAll()
+            }
         }
-        Log.i("DezzSeek", "URI de reproducción precalculados: ${missing.size} en ${SystemClock.elapsedRealtime() - t0} ms")
+        Log.i(
+            "DezzSeek",
+            "URI de reproducción precalculados: ${missing.size} en ${SystemClock.elapsedRealtime() - t0} ms"
+        )
     }
 
-    fun seekTo(positionMs: Long){
+    fun seekTo(positionMs: Long) {
         // Marca el inicio de la medición para la traza de PlaybackDiagnostics.
         PlaybackDiagnostics.markSeekRequest(positionMs)
         _currentPositionMs.value = positionMs
         mediaController?.seekTo(positionMs)
     }
-    fun loadSongs(silent: Boolean = false){
+
+    fun loadSongs(silent: Boolean = false) {
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
             // Traza de carga: `adb logcat -s DezzLoad` (ver también DezzSeek).
@@ -698,22 +854,28 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                     nextPublishAt *= PUBLISH_GROWTH
                     publishSongs(accumulatedSongs.toList())
                     if (++publishes == 1) {
-                        Log.i("DezzLoad", "[+${SystemClock.elapsedRealtime() - t0} ms] primera lista publicada (${accumulatedSongs.size} canciones)")
+                        Log.i(
+                            "DezzLoad",
+                            "[+${SystemClock.elapsedRealtime() - t0} ms] primera lista publicada (${accumulatedSongs.size} canciones)"
+                        )
                     }
                 }
             }
 
-            if (accumulatedSongs.isEmpty()){
+            if (accumulatedSongs.isEmpty()) {
                 _uiState.value = UiState.Empty
             } else if (silent || (_uiState.value as? UiState.Success)?.songs?.size != accumulatedSongs.size) {
                 publishSongs(accumulatedSongs)
                 publishes++
             }
-            Log.i("DezzLoad", "[+${SystemClock.elapsedRealtime() - t0} ms] carga terminada: ${accumulatedSongs.size} canciones, $publishes publicaciones, silent=$silent")
+            Log.i(
+                "DezzLoad",
+                "[+${SystemClock.elapsedRealtime() - t0} ms] carga terminada: ${accumulatedSongs.size} canciones, $publishes publicaciones, silent=$silent"
+            )
         }
     }
 
-    private fun publishSongs(songs: List<Song>){
+    private fun publishSongs(songs: List<Song>) {
         viewModelScope.launch(Dispatchers.Default) {
             val savedFavIds = getSavedFavoritesIds()
             val updated = songs.withoutBrokenTwins().map { song ->
@@ -722,7 +884,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
             // Canciones que ya no están: fuera de la caché (las nuevas se resuelven en el precalentamiento).
             val ids = updated.mapTo(HashSet()) { it.id }
             playbackUriCache.keys.retainAll(ids)
-            withContext(Dispatchers.Main){
+            withContext(Dispatchers.Main) {
                 _uiState.value = UiState.Success(updated)
                 restoreDashboardLists(updated)
             }
@@ -730,9 +892,9 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         }
     }
 
-    private fun registerSongPlay(song: Song){
+    private fun registerSongPlay(song: Song) {
 
-        viewModelScope.launch (Dispatchers.Default){
+        viewModelScope.launch(Dispatchers.Default) {
             val currentCount = playCountMap.getOrDefault(song.id, 0) + 1
             playCountMap[song.id] = currentCount
             savePlayCounts()
@@ -745,38 +907,73 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                 .take(30)
 
             // YouTube Music es opcional: "Reproducción reciente" es solo de la biblioteca local.
-            val updatedRecent = (if (song.isYoutube) _recentPlayedSongs.value else listOf(song) + _recentPlayedSongs.value)
-                .distinctBy{it.id}
-                .take(30)
+            val updatedRecent =
+                (if (song.isYoutube) _recentPlayedSongs.value else listOf(song) + _recentPlayedSongs.value)
+                    .distinctBy { it.id }
+                    .take(30)
 
-            withContext(Dispatchers.Main){
+            withContext(Dispatchers.Main) {
                 _mostPlayedSongs.value = mostPlayed
                 _recentPlayedSongs.value = updatedRecent
             }
 
-            saveRecentIds(updatedRecent.map {it.id})
+            saveRecentIds(updatedRecent.map { it.id })
             // Las de YouTube no existen en la biblioteca: al reabrir la app no se podrían restaurar.
             if (!song.isYoutube) prefs.edit { putLong("last_song_id", song.id) }
         }
     }
 
-    fun playQueue(songs: List<Song>, startIndex: Int = 0){
+    fun playQueue(songs: List<Song>, startIndex: Int = 0) {
         if (songs.isEmpty() || startIndex !in songs.indices) return
         val targetSong = songs[startIndex]
         playSong(targetSong, customQueue = songs)
     }
 
-    fun playSong(song: Song, customQueue: List<Song>? = null){
+    fun playSong(song: Song, customQueue: List<Song>? = null) {
         // Una canción de YouTube Music no tiene archivo: su "uri" es la dirección de la página y el audio se pide al
         // abrirla. Así también suenan desde Reproducción reciente, Más reproducidas o la cola.
         if (song.isYoutube) {
-            playYt(com.example.creproductor.data.YtTrack(
-                song.contentUri.toString(), song.title, song.artist, song.duration / 1000, song.albumArtUri?.toString()
-            ))
+           val currentQueue = _currentQueue.value
+           val targetIndex = currentQueue.indexOfFirst { it.id == song.id }
+
+           if (targetIndex != -1 && customQueue == null){
+               playYtTrackAtIndex(targetIndex)
+               return
+           }
+
+           // Cola mixta (locales + YouTube): va por el camino general, que ya sabe cargar las dos.
+           if (!customQueue.isNullOrEmpty() && customQueue.all { it.isYoutube }) {
+               val ytTracks = customQueue.map { s ->
+                  com.example.creproductor.data.YtTrack(
+                      s.contentUri.toString(),
+                      s.title,
+                      s.artist,
+                      s.duration / 1000,
+                      s.albumArtUri?.toString()
+                  )
+               }
+               val index = customQueue.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+               playYtQueue(ytTracks, index, isStatic = true)
+               return
+           }
+           if (customQueue.isNullOrEmpty()) {
+
+            playYt(
+                com.example.creproductor.data.YtTrack(
+                    song.contentUri.toString(),
+                    song.title,
+                    song.artist,
+                    song.duration / 1000,
+                    song.albumArtUri?.toString()
+                )
+            )
             return
+           }
         }
 
-        val queueToUse= if (!customQueue.isNullOrEmpty()) customQueue else (_uiState.value as? UiState.Success)?.songs ?: listOf(song)
+        val queueToUse =
+            if (!customQueue.isNullOrEmpty()) customQueue else (_uiState.value as? UiState.Success)?.songs
+                ?: listOf(song)
 
         _currentQueue.value = queueToUse
         saveCurrentQueueIds(queueToUse.map { it.id })
@@ -796,16 +993,16 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         // Solo se reutiliza la cola cargada si es la misma (mismas pistas en el mismo orden); con el mismo
         // tamaño pero otras canciones sonaría la pista equivocada.
         val sameQueue = controller.mediaItemCount == queueToUse.size &&
-            queueToUse.indices.all { controller.getMediaItemAt(it).mediaId == queueToUse[it].id.toString() }
-        if (sameQueue){
+                queueToUse.indices.all { controller.getMediaItemAt(it).mediaId == queueToUse[it].id.toString() }
+        if (sameQueue) {
             controller.seekTo(targetIndex, 0L)
             controller.play()
-        }else{
+        } else {
             viewModelScope.launch(Dispatchers.Default) {
                 // Misma ruta que togglePlayPause: caché de URI y respaldo a content:// si la ruta no es legible.
                 val mediaItems = buildMediaItems(queueToUse)
 
-                withContext(Dispatchers.Main){
+                withContext(Dispatchers.Main) {
                     controller.setMediaItems(mediaItems, targetIndex, 0L)
                     controller.prepare()
                     controller.play()
@@ -814,28 +1011,133 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         }
     }
 
+
+    fun loadYtPlaylists() {
+        val raw = prefs.getString("yt_saved_playlists", "") ?: ""
+        _ytPlaylists.value = com.example.creproductor.data.YtPlaylistSerializer.decode(raw)
+    }
+
+    private fun saveYtPlaylists(list: List<com.example.creproductor.data.YtPlaylist>) {
+        _ytPlaylists.value = list
+        prefs.edit().putString("yt_saved_playlists", com.example.creproductor.data.YtPlaylistSerializer.encode(list)).apply()
+    }
+
+    fun createYtPlaylist(name: String) {
+        if (name.isBlank()) return
+        val updated = _ytPlaylists.value + com.example.creproductor.data.YtPlaylist(name = name)
+        saveYtPlaylists(updated)
+    }
+
+    fun deleteYtPlaylist(playlistId: String) {
+        if (playlistId == YtOffline.PLAYLIST_ID) _ytPlaylists.value.firstOrNull { it.id == playlistId }
+            ?.tracks?.forEach { YtOffline.remove(getApplication(), it.url) }
+        val updated = _ytPlaylists.value.filter { it.id != playlistId }
+        saveYtPlaylists(updated)
+    }
+
+    fun addTrackToYtPlaylist(playlistId: String, track: com.example.creproductor.data.YtTrack) {
+        val updated = _ytPlaylists.value.map { playlist ->
+            if (playlist.id == playlistId) {
+                if (playlist.tracks.any { it.url == track.url }) playlist
+                else playlist.copy(tracks = playlist.tracks + track)
+            } else playlist
+        }
+        saveYtPlaylists(updated)
+    }
+
+    fun removeTrackFromYtPlaylist(playlistId: String, trackUrl: String) {
+        if (playlistId == YtOffline.PLAYLIST_ID) YtOffline.remove(getApplication(), trackUrl)
+        val updated = _ytPlaylists.value.map { playlist ->
+            if (playlist.id == playlistId) {
+                playlist.copy(tracks = playlist.tracks.filter { it.url != trackUrl })
+            } else playlist
+        }
+        saveYtPlaylists(updated)
+    }
+
+    // --- Descargas sin conexión (YtOffline) ---
+    private val _ytDownloading = MutableStateFlow<Map<String, Float>>(emptyMap())
+    /** URL de página → progreso 0..1 de lo que se está descargando ahora. */
+    val ytDownloading: StateFlow<Map<String, Float>> = _ytDownloading.asStateFlow()
+    // ponytail: una descarga a la vez y solo mientras vive el proceso; WorkManager si hacen falta listas enormes.
+    private val downloadLock = kotlinx.coroutines.sync.Mutex()
+
+    fun downloadYt(tracks: List<com.example.creproductor.data.YtTrack>) {
+        val app = getApplication<Application>()
+        if (_ytPlaylists.value.none { it.id == YtOffline.PLAYLIST_ID })
+            saveYtPlaylists(listOf(com.example.creproductor.data.YtPlaylist(YtOffline.PLAYLIST_ID, com.example.creproductor.i18n.I18n.tr(app, "Descargadas"))) + _ytPlaylists.value)
+        val pending = tracks.filter { it.url !in _ytDownloading.value && !YtOffline.isDownloaded(app, it.url) }
+        pending.forEach { addTrackToYtPlaylist(YtOffline.PLAYLIST_ID, it) }
+        if (pending.isEmpty()) { toast("Ya está descargada"); return }
+        _ytDownloading.value = _ytDownloading.value + pending.associate { it.url to 0f }
+        toast(if (pending.size == 1) "Descargando para escuchar sin conexión…" else "Descargando la lista para escuchar sin conexión…")
+        viewModelScope.launch(Dispatchers.IO) {
+            var failed = 0
+            for (t in pending) downloadLock.withLock {
+                var shown = 0f
+                val ok = runCatching {
+                    YtOffline.download(app, t.url) { p ->
+                        // Solo cada 2 %: cada bloque recibido redibujaría la lista cientos de veces.
+                        if (p - shown >= 0.02f) { shown = p; _ytDownloading.value = _ytDownloading.value + (t.url to p) }
+                    }
+                }.isSuccess
+                if (!ok) { failed++; YtOffline.remove(app, t.url) }
+                _ytDownloading.value = _ytDownloading.value - t.url
+            }
+            withContext(Dispatchers.Main) {
+                if (failed == 0) toast(if (pending.size == 1) "Descargada: ya suena sin conexión" else "Lista descargada: ya suena sin conexión")
+                else toast("Algunas canciones no se pudieron descargar. Revisa tu conexión")
+            }
+        }
+    }
+
+    fun isYtDownloaded(url: String) = YtOffline.isDownloaded(getApplication(), url)
+
+    fun deleteYtDownload(url: String) = removeTrackFromYtPlaylist(YtOffline.PLAYLIST_ID, url)
+
+    private var isStaticQueue = false
+    fun playYtPlaylist(playlist: com.example.creproductor.data.YtPlaylist, startIndex: Int = 0){
+        if (playlist.tracks.isNotEmpty()){
+            playYtQueue(playlist.tracks, startIndex, isStatic = true)
+        }
+    }
+
     private val ytPlayed = LinkedHashSet<String>()
 
     private fun sameTitle(a: String, b: String): Boolean {
         fun n(t: String) = t.lowercase().substringBefore("(").filter { it.isLetterOrDigit() }
-        val x = n(a); val y = n(b)
+        val x = n(a);
+        val y = n(b)
         return x.isNotEmpty() && y.isNotEmpty() && (x.contains(y) || y.contains(x))
     }
 
-    private fun ytSong(track: com.example.creproductor.data.YtTrack, meta: com.example.creproductor.data.RemoteMetaDataResult?) = Song(
+    private fun ytSong(
+        track: com.example.creproductor.data.YtTrack,
+        meta: com.example.creproductor.data.RemoteMetaDataResult?
+    ) = Song(
         id = -(1L shl 62) - (track.url.hashCode().toLong() and 0xFFFFFFFFL),
-        title = com.example.creproductor.data.YtMusic.cleanTitle(track.title, track.artist), artist = com.example.creproductor.data.YtMusic.cleanArtist(track.artist),
+        title = com.example.creproductor.data.YtMusic.cleanTitle(track.title, track.artist),
+        artist = com.example.creproductor.data.YtMusic.cleanArtist(track.artist),
         album = meta?.album?.takeIf { it.isNotBlank() } ?: "YouTube Music",
-        duration = track.durationSec * 1000, contentUri = Uri.parse(track.url),
+        duration = track.durationSec * 1000,
+        contentUri = Uri.parse(track.url),
         // La miniatura de YouTube es un fotograma de video (16:9, con bordes): la portada oficial es cuadrada y limpia.
-        albumArtUri = (meta?.highResCoverUrl ?: track.thumbnail)?.let(Uri::parse), genre = "YouTube Music"
+        albumArtUri = (meta?.highResCoverUrl ?: track.thumbnail)?.let(Uri::parse),
+        genre = "YouTube Music"
     )
 
-    private suspend fun ytMeta(track: com.example.creproductor.data.YtTrack) = kotlinx.coroutines.withTimeoutOrNull(2500) {
-        com.example.creproductor.data.CoverFetcher.fetchOfficialCover(com.example.creproductor.data.YtMusic.cleanTitle(track.title, track.artist), com.example.creproductor.data.YtMusic.cleanArtist(track.artist))
-    }
+    private suspend fun ytMeta(track: com.example.creproductor.data.YtTrack) =
+        kotlinx.coroutines.withTimeoutOrNull(2500) {
+            com.example.creproductor.data.CoverFetcher.fetchOfficialCover(
+                com.example.creproductor.data.YtMusic.cleanTitle(
+                    track.title,
+                    track.artist
+                ), com.example.creproductor.data.YtMusic.cleanArtist(track.artist)
+            )
+        }
 
-    private fun ytItem(song: Song, audioUrl: String) = MediaItem.Builder().setMediaId(song.id.toString()).setUri(audioUrl)
+    // La URI es la página de la canción: el servicio pide el audio al cargarla (ver YtAudioCache) y lo guarda en disco.
+    private fun ytItem(song: Song) = MediaItem.Builder().setMediaId(song.id.toString()).setUri(song.contentUri)
         .setMediaMetadata(androidx.media3.common.MediaMetadata.Builder()
             .setTitle(song.title).setArtist(song.artist).setAlbumTitle(song.album).setArtworkUri(song.albumArtUri)
             // La sesión de medios sobrevive al cierre de la app; estos extras permiten reconstruir la
@@ -900,98 +1202,133 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     }
 
     /**
-     * Reproduce una canción de YouTube Music. Su dirección de audio caduca, así que se pide justo ahora. La canción y
-     * su portada se muestran al instante y la portada oficial (iTunes) se busca a la vez que la dirección. No se guarda
-     * como "última canción" ni en recientes porque no vive en MediaStore. Al empezar se prepara la siguiente
-     * recomendada por YouTube y se añade a la cola del reproductor, así que sigue sola (y el botón siguiente de la
-     * notificación funciona). Id sintético muy negativo: no choca con los de MediaStore (>0) ni con los de CUE.
+     * Reproduce la cola de YouTube Music desde [index]. Toda la cola va al reproductor con la dirección de la página de
+     * cada canción; el servicio pide el audio al cargarla (ver YtAudioCache), así que siguiente/anterior funcionan
+     * también desde la notificación y los auriculares, y la música sigue con la app cerrada. No se guarda como
+     * "última canción" ni en recientes porque no vive en MediaStore. Id sintético muy negativo: no choca con los de
+     * MediaStore (>0) ni con los de CUE.
      */
-    fun playYt(track: com.example.creproductor.data.YtTrack) {
-        val app = getApplication<Application>()
-        viewModelScope.launch {
-            val t0 = SystemClock.elapsedRealtime()
-            ytPlayed.clear(); ytPlayed += track.url
-            val quick = ytSong(track, null)
-            _currentQueue.value = listOf(quick)
-            _currentSong.value = quick
-            _currentPositionMs.value = 0L
-            val meta = async { ytMeta(track) }
-            val resolved = runCatching { withContext(Dispatchers.IO) { com.example.creproductor.data.YtMusic.resolve(track.url) } }
-                .getOrElse {
-                    Toast.makeText(app, com.example.creproductor.i18n.I18n.tr(app, "No se pudo abrir la canción de YouTube Music"), Toast.LENGTH_SHORT).show()
-                    return@launch
-                }
-            // Las tarjetas del inicio no traen duración: se toma la del audio ya abierto.
-            val song = ytSong(track.takeIf { it.durationSec > 0 } ?: track.copy(durationSec = resolved.durationSec), meta.await())
-            val controller = mediaController ?: return@launch
-            _currentQueue.value = listOf(song)
-            _currentSong.value = song
-            controller.setMediaItem(ytItem(song, resolved.audioUrl))
-            controller.prepare()
-            controller.play()
-            Log.i("DezzYt", "[+${SystemClock.elapsedRealtime() - t0} ms] lista para sonar: ${song.title}")
-            // La siguiente recomendada la prepara ytContinue al empezar esta (onMediaItemTransition).
-        }
-    }
-
-    /** Añade al final de la cola la siguiente recomendada por YouTube (si sigues en esta canción cuando esté lista). */
-    private fun ytQueueNext(current: Song, resolved: com.example.creproductor.data.YtMusic.Resolved) {
-        if (!com.example.creproductor.data.YtMusic.isAutoNext(getApplication())) return
-        viewModelScope.launch {
-            // Otra subida de la misma canción (o la que ya sonó) no cuenta como recomendada.
-            val next = resolved.related.firstOrNull {
-                it.url !in ytPlayed && it.durationSec in 60..900 && !sameTitle(it.title, current.title)
-            } ?: return@launch
-            ytPlayed += next.url
-            val nextResolved = runCatching { withContext(Dispatchers.IO) { com.example.creproductor.data.YtMusic.resolve(next.url) } }.getOrNull() ?: return@launch
-            val song = ytSong(next.takeIf { it.durationSec > 0 } ?: next.copy(durationSec = nextResolved.durationSec), ytMeta(next))
-            val controller = mediaController ?: return@launch
-            if (controller.currentMediaItem?.mediaId != current.id.toString()) return@launch
-            if (controller.currentMediaItemIndex != controller.mediaItemCount - 1) return@launch
-            controller.addMediaItem(ytItem(song, nextResolved.audioUrl))
-            _currentQueue.value = _currentQueue.value + song
-            Log.i("DezzYt", "siguiente recomendada en cola: ${song.title}")
-        }
-    }
-
-    /** Al pasar a una canción de YouTube que es la última de la cola, prepara la siguiente (la dirección ya está en caché). */
-    private fun ytContinue(song: Song) {
+    fun playYtTrackAtIndex(index: Int) {
+        val queue = _currentQueue.value
+        if (index !in queue.indices) return
         val controller = mediaController ?: return
-        if (controller.currentMediaItemIndex != controller.mediaItemCount - 1) return
-        viewModelScope.launch {
-            val resolved = runCatching { withContext(Dispatchers.IO) { com.example.creproductor.data.YtMusic.resolve(song.contentUri.toString()) } }.getOrNull() ?: return@launch
-            ytQueueNext(song, resolved)
+        _currentSong.value = queue[index]
+        _currentPositionMs.value = 0L
+        ytPlayed += queue[index].contentUri.toString()
+        val same = controller.mediaItemCount == queue.size &&
+            queue.indices.all { controller.getMediaItemAt(it).mediaId == queue[it].id.toString() }
+        if (same) controller.seekTo(index, 0L)
+        else controller.setMediaItems(queue.map(::ytItem), index, 0L)
+        controller.prepare()
+        controller.play()
+        // La portada y la recomendada las pone ytContinue desde onMediaItemTransition.
+    }
+
+    private var ytMetaJob: Job? = null
+    private var consecutiveErrors = 0
+
+    /**
+     * Al entrar en una canción de YouTube: su portada oficial (iTunes) sustituye a la miniatura sin cortar el audio y,
+     * si es la última de la cola, se añade la siguiente recomendada por YouTube (la dirección ya la pidió el servicio,
+     * así que sale de la caché de [YtMusic]).
+     */
+    private fun ytContinue(song: Song) {
+        ytMetaJob?.cancel()
+        ytWarmNext(song) // antes que la portada: iTunes va en fila y no debe retrasar la siguiente
+        ytMetaJob = viewModelScope.launch {
+            val url = song.contentUri.toString()
+            launch { ytAppendRecommendation(song, url) } // en paralelo: no espera a la portada
+            val meta = withContext(Dispatchers.IO) {
+                runCatching { ytMeta(com.example.creproductor.data.YtTrack(url, song.title, song.artist, song.duration / 1000, song.albumArtUri?.toString())) }.getOrNull()
+            }
+            val controller = mediaController ?: return@launch
+            if (meta != null) {
+                val updated = song.copy(
+                    album = meta.album.takeIf { it.isNotBlank() } ?: song.album,
+                    albumArtUri = meta.highResCoverUrl?.let(Uri::parse) ?: song.albumArtUri
+                )
+                val q = _currentQueue.value.toMutableList()
+                val i = q.indexOfFirst { it.id == song.id }
+                if (i != -1) { q[i] = updated; _currentQueue.value = q }
+                if (_currentSong.value?.id == song.id) _currentSong.value = updated
+                // Solo si cambia: reemplazar el ítem vuelve a avisar del cambio de canción y entraríamos en bucle.
+                if (i != -1 && i < controller.mediaItemCount && controller.getMediaItemAt(i).mediaId == song.id.toString() &&
+                    controller.getMediaItemAt(i).mediaMetadata.artworkUri != updated.albumArtUri)
+                    controller.replaceMediaItem(i, ytItem(updated))
+            }
         }
     }
 
-    fun togglePlayPause(){
+    private suspend fun ytAppendRecommendation(song: Song, url: String) {
+        val app = getApplication<Application>()
+        val queue = _currentQueue.value
+        if (isStaticQueue || queue.lastOrNull()?.id != song.id || queue.size >= MAX_YT_QUEUE_SIZE ||
+            !com.example.creproductor.data.YtMusic.isAutoNext(app)) return
+        val resolved = withContext(Dispatchers.IO) { runCatching { com.example.creproductor.data.YtMusic.resolve(url) }.getOrNull() } ?: return
+        val next = resolved.related.firstOrNull {
+            it.url !in ytPlayed && it.durationSec in 60..900 && !sameTitle(it.title, song.title)
+        } ?: return
+        if (_currentQueue.value.lastOrNull()?.id != song.id) return
+        ytPlayed += next.url
+        val nextSong = ytSong(next, null)
+        val controller = mediaController ?: return
+        _currentQueue.value = _currentQueue.value + nextSong
+        controller.addMediaItem(ytItem(nextSong))
+        Log.i("DezzYt", "Recomendada añadida al final de la cola: ${nextSong.title}")
+        ytWarmNext(song)
+    }
+
+    /** Pide ya la dirección de la que sigue (queda en la caché de [YtMusic]): al pasar de canción no hay espera. */
+    private fun ytWarmNext(current: Song) {
+        val q = _currentQueue.value
+        val next = q.getOrNull(q.indexOfFirst { it.id == current.id } + 1)?.takeIf { it.isYoutube } ?: return
+        val app = getApplication<Application>()
+        viewModelScope.launch(Dispatchers.IO) {
+            val metered = com.example.creproductor.data.YtMusic.saveData(app)
+            runCatching { com.example.creproductor.data.YtMusic.resolve(next.contentUri.toString(), metered) }
+        }
+    }
+
+    fun playYt(track: com.example.creproductor.data.YtTrack) {
+        isStaticQueue = false
+        ytPlayed.clear()
+        ytPlayed += track.url
+        val quick = ytSong(track, null)
+        _currentQueue.value = listOf(quick)
+        playYtTrackAtIndex(0)
+    }
+
+    fun togglePlayPause() {
         mediaController?.let { controller ->
-            if (controller.isPlaying){
+            if (controller.isPlaying) {
                 controller.pause()
-            }else{
-                if (controller.mediaItemCount == 0 || controller.currentMediaItem == null){
+            } else {
+                if (controller.mediaItemCount == 0 || controller.currentMediaItem == null) {
                     val song = _currentSong.value ?: return
-                    val queueToUse = _currentQueue.value.ifEmpty { (_uiState.value as? UiState.Success)?.songs ?: listOf() }
+                    val queueToUse = _currentQueue.value.ifEmpty {
+                        (_uiState.value as? UiState.Success)?.songs ?: listOf()
+                    }
 
                     viewModelScope.launch(Dispatchers.Default) {
-                        val targetIndex = queueToUse.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+                        val targetIndex =
+                            queueToUse.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
                         val savedPosition = _currentPositionMs.value
                         val mediaItems = buildMediaItems(queueToUse)
 
-                        withContext(Dispatchers.Main){
+                        withContext(Dispatchers.Main) {
                             controller.setMediaItems(mediaItems, targetIndex, savedPosition)
                             controller.prepare()
                             controller.play()
                         }
                     }
-                }else if (controller.playbackState == Player.STATE_ENDED){
+                } else if (controller.playbackState == Player.STATE_ENDED) {
                     controller.seekTo(0, 0L)
                     controller.prepare()
                     controller.play()
-                }else if (controller.playbackState == Player.STATE_IDLE){
+                } else if (controller.playbackState == Player.STATE_IDLE) {
                     controller.prepare()
                     controller.play()
-                }else{
+                } else {
                     controller.play()
                 }
             }
@@ -1002,7 +1339,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
      * Alterna el modo aleatorio. Se apoya en `shuffleModeEnabled` del reproductor
      * (que reordena la cola de verdad) y refleja el resultado en [isShuffleEnabled].
      */
-    fun toggleShuffle(){
+    fun toggleShuffle() {
         mediaController?.let { controller ->
             val newValue = !controller.shuffleModeEnabled
             controller.shuffleModeEnabled = newValue
@@ -1010,12 +1347,12 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun toggleRepeatMode(){
+    fun toggleRepeatMode() {
         val nextMode = _repeatMode.value.next()
-        _repeatMode.value =nextMode
+        _repeatMode.value = nextMode
 
         mediaController?.let { controller ->
-            when (nextMode){
+            when (nextMode) {
                 RepeatMode.OFF -> controller.repeatMode = Player.REPEAT_MODE_OFF
                 RepeatMode.ALL -> controller.repeatMode = Player.REPEAT_MODE_ALL
                 RepeatMode.ONE -> controller.repeatMode = Player.REPEAT_MODE_ONE
@@ -1030,16 +1367,29 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
      */
     fun applyTagSuggestions(items: List<Pair<Song, TagSuggestion>>) {
         if (items.isEmpty()) return
-        Toast.makeText(getApplication(), "Corrigiendo ${items.size} canciones…", Toast.LENGTH_SHORT).show()
+        Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "Corrigiendo %d canciones…").format(items.size), Toast.LENGTH_SHORT)
+            .show()
         viewModelScope.launch {
             var ok = 0
             for ((song, suggestion) in items) {
                 // El álbum desconocido se deja como está (vacío = no tocar).
                 val album = if (TagSuggestions.isUnknown(song.album)) "" else song.album
-                if (AudioTagWriter.writeMetaData(getApplication(), song, suggestion.title, suggestion.artist, album, null)) ok++
+                if (AudioTagWriter.writeMetaData(
+                        getApplication(),
+                        song,
+                        suggestion.title,
+                        suggestion.artist,
+                        album,
+                        null
+                    )
+                ) ok++
             }
             loadSongs(silent = true)
-            Toast.makeText(getApplication(), "Se corrigieron $ok de ${items.size}", Toast.LENGTH_LONG).show()
+            Toast.makeText(
+                getApplication(),
+                com.example.creproductor.i18n.I18n.tr(getApplication(), "Se corrigieron %d de %d").format(ok, items.size),
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 
@@ -1049,7 +1399,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         newArtist: String,
         newAlbum: String,
         coverUriOrUrl: String?
-    ){
+    ) {
         viewModelScope.launch {
             val success = AudioTagWriter.writeMetaData(
                 context = getApplication(),
@@ -1059,11 +1409,18 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
                 newAlbum = newAlbum,
                 coverUrlOrUri = coverUriOrUrl
             )
-            if (success){
+            if (success) {
                 SongCoverCache.invalidate(getApplication(), song)
                 loadSongs(silent = true)
             } else {
-                Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "No se pudieron guardar los tags"), Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    getApplication(),
+                    com.example.creproductor.i18n.I18n.tr(
+                        getApplication(),
+                        "No se pudieron guardar los tags"
+                    ),
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     }
@@ -1082,7 +1439,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
      * **notificación** cambia `fav_ids` fuera del ViewModel, para que la UI no
      * quede desincronizada.
      */
-    private fun syncFavoritesFromPrefs(){
+    private fun syncFavoritesFromPrefs() {
         val currentState = _uiState.value as? UiState.Success ?: return
         val favIds = getSavedFavoritesIds()
         // toggleFavorite ya actualizó el estado antes de guardar: evita remapear toda la biblioteca otra vez.
@@ -1090,54 +1447,56 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         val updatedSongs = currentState.songs.map { it.copy(isFavorite = favIds.contains(it.id)) }
         _uiState.value = UiState.Success(updatedSongs)
 
-        _currentSong.value = _currentSong.value?.let { it.copy(isFavorite = favIds.contains(it.id)) }
+        _currentSong.value =
+            _currentSong.value?.let { it.copy(isFavorite = favIds.contains(it.id)) }
     }
 
-    fun playNext(){
+    fun playNext() {
         mediaController?.let { controller ->
-            if (controller.hasNextMediaItem()){
+            if (controller.hasNextMediaItem()) {
                 controller.seekToNextMediaItem()
             }
         }
     }
 
-    fun playPrevious(){
+    fun playPrevious() {
+
         mediaController?.let { controller ->
-            if (controller.hasPreviousMediaItem()){
+            if (controller.hasPreviousMediaItem()) {
                 controller.seekToPreviousMediaItem()
             }
         }
     }
 
-    fun toggleFavorite(song: Song){
+    fun toggleFavorite(song: Song) {
         val currentState = _uiState.value
-        if (currentState is UiState.Success){
-           val updatedSongs = currentState.songs.map { item ->
-               if (item.id ==  song.id){
-                   item.copy(isFavorite = !item.isFavorite)
-               }else{
-                   item
-               }
-           }
+        if (currentState is UiState.Success) {
+            val updatedSongs = currentState.songs.map { item ->
+                if (item.id == song.id) {
+                    item.copy(isFavorite = !item.isFavorite)
+                } else {
+                    item
+                }
+            }
 
             _uiState.value = UiState.Success(updatedSongs)
 
-            if (_currentSong.value?.id ==  song.id){
+            if (_currentSong.value?.id == song.id) {
                 _currentSong.value = _currentSong.value?.copy(isFavorite = !song.isFavorite)
             }
 
-            val  favIds = updatedSongs.filter { it.isFavorite }.map { it.id }.toSet()
+            val favIds = updatedSongs.filter { it.isFavorite }.map { it.id }.toSet()
             saveFavoriteIds(favIds)
         }
     }
 
-    fun removeFromQueue(song: Song){
-        val updateQueue = _currentQueue.value.filter { it.id  != song.id }
+    fun removeFromQueue(song: Song) {
+        val updateQueue = _currentQueue.value.filter { it.id != song.id }
         _currentQueue.value = updateQueue
         saveCurrentQueueIds(updateQueue.map { it.id })
 
         mediaController?.let { controller ->
-            val indexToRemove = (0 until controller.mediaItemCount).firstOrNull {index ->
+            val indexToRemove = (0 until controller.mediaItemCount).firstOrNull { index ->
                 controller.getMediaItemAt(index).mediaId == song.id.toString()
             }
 
@@ -1147,9 +1506,9 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun moveQueueItem(fromIndex: Int, toIndex: Int){
+    fun moveQueueItem(fromIndex: Int, toIndex: Int) {
         val currentList = _currentQueue.value.toMutableList()
-        if (fromIndex in currentList.indices && toIndex in currentList.indices){
+        if (fromIndex in currentList.indices && toIndex in currentList.indices) {
             val movedItem = currentList.removeAt(fromIndex)
             currentList.add(toIndex, movedItem)
             _currentQueue.value = currentList
@@ -1166,13 +1525,13 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     }
 
     private fun saveCurrentQueueIds(queueIds: List<Long>) {
-        viewModelScope.launch(Dispatchers.IO){
+        viewModelScope.launch(Dispatchers.IO) {
             prefs.edit { putString("last_queue_ids", queueIds.joinToString(",")) }
         }
     }
 
 
-    fun createPlaylist(name: String, coverUri: String?){
+    fun createPlaylist(name: String, coverUri: String?) {
         val newPlaylist = Playlist(name = name, coverUri = coverUri)
         val updated = _playlists.value + newPlaylist
         _playlists.value = updated
@@ -1192,7 +1551,7 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         savePlaylists(updated)
     }
 
-    fun deletePlaylist(playlistId: String){
+    fun deletePlaylist(playlistId: String) {
         _playlists.value.firstOrNull { it.id == playlistId }?.let { gone ->
             saveDeleted((listOf(gone) + _deletedPlaylists.value).take(MAX_DELETED_PLAYLISTS))
         }
@@ -1201,22 +1560,22 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         savePlaylists(updated)
     }
 
-    fun addSongsToPlaylist(playlistId: String, newSongsIds: List<Long>){
+    fun addSongsToPlaylist(playlistId: String, newSongsIds: List<Long>) {
         val updated = _playlists.value.map { playlist ->
-            if (playlist.id == playlistId){
+            if (playlist.id == playlistId) {
                 val combinedIds = (playlist.songIds + newSongsIds).distinct()
                 playlist.copy(songIds = combinedIds)
-            }else playlist
+            } else playlist
         }
         _playlists.value = updated
         savePlaylists(updated)
     }
 
-    fun removeSongFromPlaylist(playlistId: String, songId: Long){
+    fun removeSongFromPlaylist(playlistId: String, songId: Long) {
         val updated = _playlists.value.map { playlist ->
-            if (playlist.id == playlistId){
+            if (playlist.id == playlistId) {
                 playlist.copy(songIds = playlist.songIds.filter { it != songId })
-            }else playlist
+            } else playlist
         }
         _playlists.value = updated
         savePlaylists(updated)
@@ -1227,26 +1586,39 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     private val librarySongs get() = (_uiState.value as? UiState.Success)?.songs.orEmpty()
 
     private suspend fun readText(uri: Uri): String? = withContext(Dispatchers.IO) {
-        runCatching { getApplication<Application>().contentResolver.openInputStream(uri)!!.bufferedReader().use { it.readText() } }.getOrNull()
+        runCatching {
+            getApplication<Application>().contentResolver.openInputStream(uri)!!.bufferedReader()
+                .use { it.readText() }
+        }.getOrNull()
     }
 
     private suspend fun writeText(uri: Uri, text: String): Boolean = withContext(Dispatchers.IO) {
-        runCatching { getApplication<Application>().contentResolver.openOutputStream(uri, "wt")!!.bufferedWriter().use { it.write(text) } }.isSuccess
+        runCatching {
+            getApplication<Application>().contentResolver.openOutputStream(uri, "wt")!!
+                .bufferedWriter().use { it.write(text) }
+        }.isSuccess
     }
 
-    private fun toast(text: String) = Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), text), Toast.LENGTH_LONG).show()
+    private fun toastf(es: String, vararg args: Any?) =
+        Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), es).format(*args), Toast.LENGTH_LONG).show()
+
+    private fun toast(text: String) = Toast.makeText(
+        getApplication(),
+        com.example.creproductor.i18n.I18n.tr(getApplication(), text),
+        Toast.LENGTH_LONG
+    ).show()
 
     fun exportBackup(uri: Uri) {
         val byId = librarySongs.associateBy { it.id }
         val backup = LibraryBackup(
             favorites = getSavedFavoritesIds().mapNotNull { byId[it]?.path },
-            playCounts = playCountMap.toMap().mapNotNull { (id, n) -> byId[id]?.path?.let { it to n } }.toMap(),
+            playCounts = playCountMap.toMap()
+                .mapNotNull { (id, n) -> byId[id]?.path?.let { it to n } }.toMap(),
             playlists = _playlists.value.map { p -> p.name to p.songIds.mapNotNull { byId[it]?.path } }
         )
         viewModelScope.launch {
-            toast(if (writeText(uri, backup.encode()))
-                "Copia guardada: ${backup.playlists.size} listas y ${backup.favorites.size} favoritas"
-            else "No se pudo guardar la copia")
+            if (writeText(uri, backup.encode())) toastf("Copia guardada: %d listas y %d favoritas", backup.playlists.size, backup.favorites.size)
+            else toast("No se pudo guardar la copia")
         }
     }
 
@@ -1268,14 +1640,20 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
             restoreDashboardLists(songs)
 
             var lists = _playlists.value
-            backup.playlists.forEach { (name, paths) -> lists = mergePlaylist(lists, name, matcher.match(paths).map { it.id }) }
+            backup.playlists.forEach { (name, paths) ->
+                lists = mergePlaylist(lists, name, matcher.match(paths).map { it.id })
+            }
             _playlists.value = lists
             savePlaylists(lists)
-            toast("Copia restaurada: ${backup.playlists.size} listas y ${favIds.size} favoritas")
+            toastf("Copia restaurada: %d listas y %d favoritas", backup.playlists.size, favIds.size)
         }
     }
 
-    private fun mergePlaylist(lists: List<Playlist>, name: String, ids: List<Long>): List<Playlist> {
+    private fun mergePlaylist(
+        lists: List<Playlist>,
+        name: String,
+        ids: List<Long>
+    ): List<Playlist> {
         val existing = lists.firstOrNull { it.name == name }
             ?: return lists + Playlist(name = name, songIds = ids.distinct())
         return lists.map { if (it.id == existing.id) it.copy(songIds = (it.songIds + ids).distinct()) else it }
@@ -1286,7 +1664,8 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         val byId = librarySongs.associateBy { it.id }
         val songs = playlist.songIds.mapNotNull { byId[it] }
         viewModelScope.launch {
-            toast(if (writeText(uri, M3u.write(songs))) "\"${playlist.name}\" exportada (${songs.size} canciones)" else "No se pudo exportar la lista")
+            if (writeText(uri, M3u.write(songs))) toastf("\"%s\" exportada (%d canciones)", playlist.name, songs.size)
+            else toast("No se pudo exportar la lista")
         }
     }
 
@@ -1298,54 +1677,55 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
             val lists = mergePlaylist(_playlists.value, name, ids)
             _playlists.value = lists
             savePlaylists(lists)
-            toast("\"$name\": ${ids.size} de ${paths.size} canciones encontradas")
+            toastf("\"%s\": %d de %d canciones encontradas", name, ids.size, paths.size)
         }
     }
 
-    private fun savePlaylists(list: List<Playlist>){
+    private fun savePlaylists(list: List<Playlist>) {
         prefs.edit { putString("saved_playlist", PlaylistSerializer.encode(list)) }
     }
 
-    private fun loadPlaylist(){
-        _deletedPlaylists.value = PlaylistSerializer.decode(prefs.getString("deleted_playlists", "") ?: "")
+    private fun loadPlaylist() {
+        _deletedPlaylists.value =
+            PlaylistSerializer.decode(prefs.getString("deleted_playlists", "") ?: "")
         val str = prefs.getString("saved_playlist", "") ?: ""
         _playlists.value = PlaylistSerializer.decode(str)
     }
 
 
-    private fun saveFavoriteIds(favIds: Set<Long>){
-       prefs.edit { putStringSet("fav_ids", favIds.map { it.toString() }.toSet()) }
+    private fun saveFavoriteIds(favIds: Set<Long>) {
+        prefs.edit { putStringSet("fav_ids", favIds.map { it.toString() }.toSet()) }
     }
 
-    private fun getSavedFavoritesIds(): Set<Long>{
+    private fun getSavedFavoritesIds(): Set<Long> {
         return prefs.getStringSet("fav_ids", emptySet())
             ?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet()
     }
 
-    private fun saveRecentIds(recentIds: List<Long>){
-        prefs.edit { putString("recent_ids", recentIds.joinToString (",")) }
+    private fun saveRecentIds(recentIds: List<Long>) {
+        prefs.edit { putString("recent_ids", recentIds.joinToString(",")) }
     }
 
-    private fun getSavedRecentIds(): List<Long>{
+    private fun getSavedRecentIds(): List<Long> {
         val str = prefs.getString("recent_ids", "") ?: ""
         if (str.isBlank()) return emptyList()
         return str.split(",").mapNotNull { it.trim().toLongOrNull() }
     }
 
-    private fun savePlayCounts(){
-        val str = playCountMap.entries.joinToString(","){ "${it.key}:${it.value}"}
-        prefs.edit{ putString("play_counts", str)}
+    private fun savePlayCounts() {
+        val str = playCountMap.entries.joinToString(",") { "${it.key}:${it.value}" }
+        prefs.edit { putString("play_counts", str) }
     }
 
-    private fun loadSavedPlaycounts(){
+    private fun loadSavedPlaycounts() {
         val str = prefs.getString("play_counts", "") ?: ""
-        if (str.isNotBlank()){
+        if (str.isNotBlank()) {
             str.split(",").forEach { pair ->
                 val parts = pair.split(":")
                 if (parts.size == 2) {
                     val id = parts[0].toLongOrNull()
                     val count = parts[1].toIntOrNull()
-                    if (id != null && count != null){
+                    if (id != null && count != null) {
                         playCountMap[id] = count
                     }
                 }
@@ -1353,9 +1733,9 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         }
     }
 
-    private fun restoreDashboardLists(allSongs: List<Song>){
+    private fun restoreDashboardLists(allSongs: List<Song>) {
         _mostPlayedSongs.value = allSongs
-            .filter { (playCountMap[it.id] ?: 0) > 0}
+            .filter { (playCountMap[it.id] ?: 0) > 0 }
             .sortedByDescending { playCountMap[it.id] ?: 0 }
             .take(30)
 
@@ -1367,13 +1747,13 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
             val savedQueueIds = getSavedQueueIds()
             if (savedQueueIds.isNotEmpty()) {
                 val restoredQueue = savedQueueIds.mapNotNull { songMap[it] }
-                if (restoredQueue.isNotEmpty()){
+                if (restoredQueue.isNotEmpty()) {
                     _currentQueue.value = restoredQueue
                 }
             }
         }
         val lastSongId = prefs.getLong("last_song_id", -1L)
-        if (lastSongId != -1L && _currentSong.value == null){
+        if (lastSongId != -1L && _currentSong.value == null) {
             songMap[lastSongId]?.let { lastSong ->
                 _currentSong.value = lastSong
                 _currentPositionMs.value = prefs.getLong("last_position_ms", 0L)
@@ -1382,8 +1762,8 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
     }
 
     /** Añadé las canciones a la lista de reproducción que este sonando en ese momento **/
-    fun addPlaylistToQueue(playlist: Playlist){
-        val allSongs = (_uiState.value as?  UiState.Success)?.songs ?: return
+    fun addPlaylistToQueue(playlist: Playlist) {
+        val allSongs = (_uiState.value as? UiState.Success)?.songs ?: return
         val songMap = allSongs.associateBy { it.id }
         val playlistSongs = playlist.songIds.mapNotNull { songMap[it] }
         if (playlistSongs.isEmpty()) return
@@ -1393,74 +1773,109 @@ class MusicViewModel (application: Application) : AndroidViewModel(application) 
         saveCurrentQueueIds(updatedQueue.map { it.id })
 
         mediaController?.addMediaItems(buildMediaItems(playlistSongs))
-        Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "Lista agregada a la cola"), Toast.LENGTH_SHORT).show()
+        Toast.makeText(
+            getApplication(),
+            com.example.creproductor.i18n.I18n.tr(getApplication(), "Lista agregada a la cola"),
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
     /** Copia las canciones de una playlist a otra */
-    fun appendPlaylistToPlaylist (sourcePlaylist: Playlist, targetPlaylistId: String){
+    fun appendPlaylistToPlaylist(sourcePlaylist: Playlist, targetPlaylistId: String) {
         addSongsToPlaylist(targetPlaylistId, sourcePlaylist.songIds)
-        Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "Canciones añadidas a la playlist"), Toast.LENGTH_SHORT).show()
+        Toast.makeText(
+            getApplication(),
+            com.example.creproductor.i18n.I18n.tr(
+                getApplication(),
+                "Canciones añadidas a la playlist"
+            ),
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
-    fun updatedPlaylist(playlistId: String, newName: String, newCoverUri: String?){
+    fun updatedPlaylist(playlistId: String, newName: String, newCoverUri: String?) {
         val updated = _playlists.value.map { playlist ->
-            if (playlist.id == playlistId){
+            if (playlist.id == playlistId) {
                 playlist.copy(name = newName, coverUri = newCoverUri)
-            }else playlist
+            } else playlist
         }
         _playlists.value = updated
         savePlaylists(updated)
     }
 
     /** Elimina IDs duplicadas (canciones) dentro de la playlist */
-    fun removeDuplicatesFromPlaylist(playlistId: String){
+    fun removeDuplicatesFromPlaylist(playlistId: String) {
         val updated = _playlists.value.map { playlist ->
-            if (playlist.id == playlistId){
+            if (playlist.id == playlistId) {
                 playlist.copy(songIds = playlist.songIds.distinct())
-            }else playlist
+            } else playlist
         }
         _playlists.value = updated
         savePlaylists(updated)
-        Toast.makeText(getApplication(), com.example.creproductor.i18n.I18n.tr(getApplication(), "Duplicados eliminados"), Toast.LENGTH_LONG).show()
+        Toast.makeText(
+            getApplication(),
+            com.example.creproductor.i18n.I18n.tr(getApplication(), "Duplicados eliminados"),
+            Toast.LENGTH_LONG
+        ).show()
     }
 
     /** Elimina del dispositivo las canciones dentro de la playlist*/
-    fun deletePlaylistSongsFromStorage(playlist: Playlist){
+    fun deletePlaylistSongsFromStorage(playlist: Playlist) {
         val allSongs = (_uiState.value as? UiState.Success)?.songs ?: return
         val songMap = allSongs.associateBy { it.id }
         val playlistSongs = playlist.songIds.mapNotNull { songMap[it] }
 
-        viewModelScope.launch (Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO) {
             var deleteCount = 0
-            for (song in playlistSongs){
+            for (song in playlistSongs) {
                 val ok = runCatching {
-                    getApplication<Application>().contentResolver.delete(song.contentUri, null, null) > 0
+                    getApplication<Application>().contentResolver.delete(
+                        song.contentUri,
+                        null,
+                        null
+                    ) > 0
                 }.getOrDefault(false)
                 if (ok) deleteCount++
             }
 
-            withContext(Dispatchers.Main){
-                Toast.makeText(getApplication(), "Se eliminaron $deleteCount archivos del dispositivo", Toast.LENGTH_SHORT).show()
+            withContext(Dispatchers.Main) {
+                Toast.makeText(
+                    getApplication(),
+                    com.example.creproductor.i18n.I18n.tr(getApplication(), "Se eliminaron %d archivos del dispositivo").format(deleteCount),
+                    Toast.LENGTH_SHORT
+                ).show()
                 loadSongs(silent = true)
             }
         }
     }
 
     /** Mueve la posición de una canción dentro de una playlist y guarda el cambio. */
-    fun movePlaylistSong(playlistId: String, fromIndex: Int, toIndex: Int){
+    fun movePlaylistSong(playlistId: String, fromIndex: Int, toIndex: Int) {
         val updated = _playlists.value.map { playlist ->
-            if (playlist.id == playlistId){
+            if (playlist.id == playlistId) {
                 val currentList = playlist.songIds.toMutableList()
-                if (fromIndex in currentList.indices && toIndex in currentList.indices){
+                if (fromIndex in currentList.indices && toIndex in currentList.indices) {
                     val moveId = currentList.removeAt(fromIndex)
                     currentList.add(toIndex, moveId)
                     playlist.copy(songIds = currentList)
-                }else playlist
-            }else playlist
+                } else playlist
+            } else playlist
         }
         _playlists.value = updated
         savePlaylists(updated)
     }
 
+    fun playYtQueue(tracks: List<com.example.creproductor.data.YtTrack>, startIndex: Int = 0, isStatic: Boolean = true){
+        if (tracks.isEmpty() || startIndex !in tracks.indices) return
+        isStaticQueue = isStatic
+        val limitedTracks = tracks.take(MAX_YT_QUEUE_SIZE)
+        ytPlayed.clear()
+        ytPlayed.addAll(limitedTracks.map { it.url })
+
+        val songQueue = limitedTracks.map { ytSong(it, null) }
+        _currentQueue.value = songQueue
+
+        playYtTrackAtIndex(startIndex)
+    }
 }
 
